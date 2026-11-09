@@ -1,0 +1,89 @@
+<%# Project settings › Issue templates, after the other settings tabs
+    (projects/settings/_issue_categories). %>
+<% source = IssueTemplateSource.find_by(project_id: @project.id) %>
+<% manual = source.nil? || source.manual? %>
+<% set = RedmineIssueTemplate::TemplateSet.for(@project) %>
+<% messages = source ? source.message_list : set.messages %>
+<% files = IssueTemplateFile.where(project_id: @project.id).sort_by { |file| RedmineIssueTemplate::Parser.sort_key(file.path) } %>
+
+<p>
+  <%= link_to sprite_icon('add', l(:label_issue_template_file_new)), new_project_issue_template_path(@project), class: 'icon icon-add' if manual %>
+  <%= link_to sprite_icon('reload', l(:button_issue_template_sync)), project_sync_issue_templates_path(@project),
+              method: :post, class: 'icon icon-reload' if @project.repository %>
+</p>
+
+<p>
+<% if source.nil? || (manual && files.empty?) %>
+  <%= l(:text_issue_template_source_none) %>
+<% elsif manual %>
+  <%= l(:text_issue_template_source_manual) %>
+<% else %>
+  <%= l(source.kind == 'github' ? :text_issue_template_source_github : :text_issue_template_source_repository,
+        folder: source.folder.presence || RedmineIssueTemplate::FOLDERS.first) %>
+<% end %>
+<% if source&.synced_at && !manual %>
+  <%= l(:text_issue_template_synced, revision: source.revision.to_s.first(8).presence || '-', time: format_time(source.synced_at)) %>
+<% end %>
+</p>
+
+<% if Setting.text_formatting != 'common_mark' %>
+<p class="warning"><%= l(:warning_issue_template_text_formatting) %></p>
+<% end %>
+
+<% if files.any? %>
+<table class="list issue-template-files">
+  <thead><tr>
+    <th><%= l(:field_filename) %></th>
+    <th><%= l(:field_name) %></th>
+    <th><%= l(:field_tracker) %></th>
+    <th><%= l(:field_issue_template_valid) %></th>
+    <th></th>
+  </tr></thead>
+  <tbody>
+  <% files.each do |file| %>
+    <% template = set.templates.detect { |t| t.path == file.path } %>
+    <% errors = messages.select { |m| m.path == file.path && m.error? } %>
+    <tr>
+      <td class="name"><%= file.path %></td>
+      <td class="description"><%= template ? template.name : l(:label_issue_template_config) %></td>
+      <td><%= template&.tracker(@project)&.name %></td>
+      <td class="tick">
+        <%# As on Redmine's Information page %>
+        <span class="icon-only icon-<%= errors.empty? ? 'ok' : 'error' %>">
+          <%= errors.empty? ? sprite_icon('checked') : sprite_icon('warning') %>
+        </span>
+      </td>
+      <td class="buttons">
+        <% if manual %>
+          <%= link_to sprite_icon('edit', l(:button_edit)), edit_project_issue_template_path(@project, file), class: 'icon icon-edit' %>
+          <%= delete_link project_issue_template_path(@project, file) %>
+        <% end %>
+      </td>
+    </tr>
+  <% end %>
+  </tbody>
+</table>
+<% else %>
+<p class="nodata"><%= l(:label_no_data) %></p>
+<% end %>
+
+<% errors = messages.select(&:error?) %>
+<% warnings = messages.reject(&:error?) %>
+<% if errors.any? %>
+<div id="errorExplanation">
+  <ul>
+  <% errors.each do |message| %>
+    <li><%= message.path %>: <%= message.text %></li>
+  <% end %>
+  </ul>
+</div>
+<% end %>
+<% if warnings.any? %>
+<div class="flash warning">
+  <ul>
+  <% warnings.each do |message| %>
+    <li><%= message.path %>: <%= message.text %></li>
+  <% end %>
+  </ul>
+</div>
+<% end %>

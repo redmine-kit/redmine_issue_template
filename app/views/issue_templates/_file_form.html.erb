@@ -1,0 +1,7 @@
+<%= error_messages_for 'file' %>
+
+<div class="box tabular">
+<p><%= f.text_field :path, size: 40, required: true %>
+  <em class="info"><%= l(:text_issue_template_path_info) %></em></p>
+<p><%= f.textarea :content, cols: 80, rows: 20, class: 'wiki-edit' %></p>
+</div>

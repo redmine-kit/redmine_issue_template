@@ -1,0 +1,75 @@
+ja:
+  project_module_issue_templates: チケットテンプレート
+  permission_manage_issue_templates: チケットテンプレートの管理
+  label_issue_template_plural: チケットテンプレート
+  label_issue_template_blank: 空のチケット
+  label_issue_template_blank_maintainers: 空のチケット(管理者のみ)
+  label_issue_template_contact_links: ほかの問い合わせ先
+  label_issue_template_file_new: 新しいファイル
+  label_issue_template_config: テンプレートの選択画面(config.yml)
+  button_issue_template_sync: 今すぐ取り込む
+  field_path: ファイル名
+  field_issue_template_valid: 有効
+  text_issue_template_source_none: "このプロジェクトにはチケットテンプレートがありません。ここでファイルを追加するか、プロジェクトのリポジトリの .redmine/ISSUE_TEMPLATE/ に置いてください。"
+  text_issue_template_source_manual: テンプレートはここで編集します。
+  text_issue_template_source_repository: "テンプレートはプロジェクトのリポジトリの %{folder} から取り込んでいます。編集はリポジトリで行います。"
+  text_issue_template_source_github: "テンプレートは GitHub のリポジトリの %{folder} から取り込んでいます。編集は GitHub で行います。"
+  text_issue_template_synced: "リビジョン %{revision} を %{time} に取り込みました。"
+  text_issue_template_path_info: "Markdown のテンプレート(.md)、フォーム(.yml)、または config.yml です。"
+  text_issue_template_upload: 下の「ファイル」の欄で添付してください。
+  warning_issue_template_text_formatting: "テンプレートは Markdown です。テンプレートから作ったチケットを正しく表示するには、管理 › 設定 › 全般 の「テキスト書式」を CommonMark Markdown にしてください。"
+  warning_issue_template_nothing_to_import: リポジトリに取り込むチケットテンプレートがありません。
+  notice_issue_template_synced: チケットテンプレートを取り込みました。
+  error_issue_template_no_repository: このプロジェクトにはリポジトリがありません。
+  error_issue_template_managed_elsewhere: テンプレートはリポジトリから取り込んでいます。変更はリポジトリで行ってください。
+  issue_template_error_unchecked: にチェックを入れてください
+  issue_template_error_separator: ""
+  issue_template_message_duplicate_name: "名前「%{name}」はほかのテンプレートでも使われています"
+  issue_template_message_invalid_yaml: "YAML として読めません: %{detail}"
+  issue_template_message_forbidden_key: "YAML で true や false になるキー(yes、no、on、off など)を使っています。引用符で囲んでください"
+  issue_template_message_redmine_not_map: "redmine はマップにしてください"
+  issue_template_message_redmine_unknown_key: "redmine.%{key} は使えないキーです"
+  issue_template_message_redmine_invalid_value: "redmine.%{key} の値の型が違います"
+  issue_template_message_redmine_invalid_visibility: "redmine.fields.%{field} は shown、hidden、required のいずれかにしてください(%{value} になっています)"
+  issue_template_message_unknown_field: "redmine.fields: %{field} はこのプロジェクトのチケットの入力欄にありません"
+  issue_template_message_unknown_custom_field: "redmine.custom_fields: %{field} はこのプロジェクトのチケットのカスタムフィールドにありません"
+  issue_template_message_unknown_value: "redmine.%{key}: %{value} はこのプロジェクトにありません"
+  issue_template_message_no_front_matter: "先頭に front matter(--- で囲んだ name と about)がありません"
+  issue_template_message_front_matter_not_map: "front matter はマップにしてください"
+  issue_template_message_missing_key: "必須のキー %{key} がありません"
+  issue_template_message_form_not_map: "name、description、body を持つマップにしてください"
+  issue_template_message_not_permitted_key: "%{key} は使えないキーです"
+  issue_template_message_not_string: "%{key} は文字列にしてください"
+  issue_template_message_name_too_short: "name は 4 文字以上にしてください"
+  issue_template_message_body_not_array: "body はリストにしてください"
+  issue_template_message_body_empty: "body を空にはできません"
+  issue_template_message_body_no_field: "body には markdown 以外の入力欄が 1 つ以上必要です"
+  issue_template_message_element_not_map: "body[%{index}]: マップにしてください"
+  issue_template_message_missing_type: "body[%{index}]: 必須のキー type がありません"
+  issue_template_message_invalid_type: "body[%{index}]: %{type} は使えない入力の種類です"
+  issue_template_message_element_key: "body[%{index}]: %{key} は使えないキーです"
+  issue_template_message_invalid_id: "body[%{index}]: id に使えるのは英数字、-、_ だけです"
+  issue_template_message_missing_attributes: "body[%{index}]: attributes がありません"
+  issue_template_message_attribute_key: "body[%{index}]: %{key} は使えない属性です"
+  issue_template_message_missing_attribute: "body[%{index}]: 必須の属性 %{key} がありません"
+  issue_template_message_label_not_string: "body[%{index}]: label は文字列にしてください"
+  issue_template_message_options_boolean: "body[%{index}]: options に真偽値は使えません。yes や true などは引用符で囲んでください"
+  issue_template_message_options_not_unique: "body[%{index}]: options が重複しています"
+  issue_template_message_options_none: "body[%{index}]: options に予約語の none は使えません"
+  issue_template_message_invalid_default: "body[%{index}]: default は選択肢の番号にしてください"
+  issue_template_message_checkbox_label: "body[%{index}]: すべての選択肢に label が必要です"
+  issue_template_message_checkboxes_not_unique: "body[%{index}]: チェックボックスの label が重複しています"
+  issue_template_message_validation_key: "body[%{index}]: %{key} は使えない検証です"
+  issue_template_message_invalid_validation: "body[%{index}]: validations.%{key} の値の型が違います"
+  issue_template_message_ids_not_unique: "body の id が重複しています"
+  issue_template_message_labels_not_unique: "body の label が重複しています"
+  issue_template_message_labels_too_similar: "label が似すぎています。id のない入力欄は、パラメーターにしたときに別のものになる label にしてください"
+  issue_template_message_config_not_map: "マップにしてください"
+  issue_template_message_config_unknown_key: "%{key} は使えないキーです"
+  issue_template_message_invalid_value: "%{key} の値の型が違います"
+  issue_template_message_invalid_contact_link: "contact_links[%{index}]: name、url、about が必要です"
+  issue_template_message_invalid_contact_url: "contact_links[%{index}]: url は http:// か https:// で始めてください"
+  issue_template_message_unknown_type: "type: %{type} という名前のトラッカーはありません"
+  issue_template_message_labels_ignored: "labels: %{labels} は Redmine に当たるものがないので使いません"
+  issue_template_message_projects_ignored: "projects: %{projects} は Redmine に当たるものがないので使いません"
+  issue_template_message_assignees_ignored: "assignees: %{assignees} はこのプロジェクトで担当者にできません"

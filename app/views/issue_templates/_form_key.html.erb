@@ -1,0 +1,4 @@
+<%# The chosen template, kept when Redmine updates the form. %>
+<% if issue.issue_template_active? %>
+<%= hidden_field_tag 'issue_template', issue.issue_template.key, id: nil %>
+<% end %>

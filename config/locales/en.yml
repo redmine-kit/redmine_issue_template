@@ -1,0 +1,75 @@
+en:
+  project_module_issue_templates: Issue templates
+  permission_manage_issue_templates: Manage issue templates
+  label_issue_template_plural: Issue templates
+  label_issue_template_blank: Blank issue
+  label_issue_template_blank_maintainers: Blank issue (maintainers only)
+  label_issue_template_contact_links: Other places to ask
+  label_issue_template_file_new: New file
+  label_issue_template_config: Template chooser (config.yml)
+  button_issue_template_sync: Import now
+  field_path: File name
+  field_issue_template_valid: Valid
+  text_issue_template_source_none: "This project has no issue templates. Add files here, or add them to .redmine/ISSUE_TEMPLATE/ in the project's repository."
+  text_issue_template_source_manual: The templates are edited here.
+  text_issue_template_source_repository: "The templates come from %{folder} in the project's repository and are edited there."
+  text_issue_template_source_github: "The templates come from %{folder} in the GitHub repository and are edited there."
+  text_issue_template_synced: "Imported revision %{revision} on %{time}."
+  text_issue_template_path_info: "A Markdown template (.md), an issue form (.yml) or config.yml."
+  text_issue_template_upload: Attach the files in the Files field below.
+  warning_issue_template_text_formatting: "Templates are Markdown. Set Administration › Settings › General › Text formatting to CommonMark Markdown so that issues made from them are shown correctly."
+  warning_issue_template_nothing_to_import: The repository has no issue templates to import.
+  notice_issue_template_synced: The issue templates were imported.
+  error_issue_template_no_repository: This project has no repository.
+  error_issue_template_managed_elsewhere: The templates come from a repository; change them there.
+  issue_template_error_unchecked: must be checked
+  issue_template_error_separator: " "
+  issue_template_message_duplicate_name: "name \"%{name}\" is used by another template"
+  issue_template_message_invalid_yaml: "is not valid YAML: %{detail}"
+  issue_template_message_forbidden_key: "uses a key that YAML reads as true or false (such as yes, no, on, off); put it in quotes"
+  issue_template_message_redmine_not_map: "redmine must be a map"
+  issue_template_message_redmine_unknown_key: "redmine.%{key} is not a known key"
+  issue_template_message_redmine_invalid_value: "redmine.%{key} has a value of the wrong type"
+  issue_template_message_redmine_invalid_visibility: "redmine.fields.%{field} must be shown, hidden or required, not %{value}"
+  issue_template_message_unknown_field: "redmine.fields: %{field} is not a field of the issue form in this project"
+  issue_template_message_unknown_custom_field: "redmine.custom_fields: %{field} is not a custom field of this project's issues"
+  issue_template_message_unknown_value: "redmine.%{key}: %{value} was not found in this project"
+  issue_template_message_no_front_matter: "has no front matter (--- name, about --- at the top)"
+  issue_template_message_front_matter_not_map: "front matter must be a map"
+  issue_template_message_missing_key: "required key %{key} is missing"
+  issue_template_message_form_not_map: "must be a map with name, description and body"
+  issue_template_message_not_permitted_key: "%{key} is not a permitted key"
+  issue_template_message_not_string: "%{key} must be a string"
+  issue_template_message_name_too_short: "name must be more than 3 characters"
+  issue_template_message_body_not_array: "body must be a list"
+  issue_template_message_body_empty: "body cannot be empty"
+  issue_template_message_body_no_field: "body must contain at least one non-markdown field"
+  issue_template_message_element_not_map: "body[%{index}]: must be a map"
+  issue_template_message_missing_type: "body[%{index}]: required key type is missing"
+  issue_template_message_invalid_type: "body[%{index}]: %{type} is not a valid input type"
+  issue_template_message_element_key: "body[%{index}]: %{key} is not a permitted key"
+  issue_template_message_invalid_id: "body[%{index}]: id can only contain numbers, letters, -, _"
+  issue_template_message_missing_attributes: "body[%{index}]: attributes are missing"
+  issue_template_message_attribute_key: "body[%{index}]: %{key} is not a permitted attribute"
+  issue_template_message_missing_attribute: "body[%{index}]: required attribute key %{key} is missing"
+  issue_template_message_label_not_string: "body[%{index}]: label must be a string"
+  issue_template_message_options_boolean: "body[%{index}]: options must not include booleans; put values such as yes and true in quotes"
+  issue_template_message_options_not_unique: "body[%{index}]: options must be unique"
+  issue_template_message_options_none: "body[%{index}]: options must not include the reserved word, none"
+  issue_template_message_invalid_default: "body[%{index}]: default must be the index of an option"
+  issue_template_message_checkbox_label: "body[%{index}]: every option needs a label"
+  issue_template_message_checkboxes_not_unique: "body[%{index}]: checkboxes must have unique labels"
+  issue_template_message_validation_key: "body[%{index}]: %{key} is not a permitted validation"
+  issue_template_message_invalid_validation: "body[%{index}]: validations.%{key} has a value of the wrong type"
+  issue_template_message_ids_not_unique: "body must have unique ids"
+  issue_template_message_labels_not_unique: "body must have unique labels"
+  issue_template_message_labels_too_similar: "labels are too similar: fields without an id need labels that stay different as parameters"
+  issue_template_message_config_not_map: "must be a map"
+  issue_template_message_config_unknown_key: "%{key} is not a known key"
+  issue_template_message_invalid_value: "%{key} has a value of the wrong type"
+  issue_template_message_invalid_contact_link: "contact_links[%{index}]: name, url and about are required"
+  issue_template_message_invalid_contact_url: "contact_links[%{index}]: url must start with http:// or https://"
+  issue_template_message_unknown_type: "type: no tracker is named %{type}"
+  issue_template_message_labels_ignored: "labels: %{labels} have no equivalent in Redmine and are ignored"
+  issue_template_message_projects_ignored: "projects: %{projects} have no equivalent in Redmine and are ignored"
+  issue_template_message_assignees_ignored: "assignees: %{assignees} cannot be assigned in this project"

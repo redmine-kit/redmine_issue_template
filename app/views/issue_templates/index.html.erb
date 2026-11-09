@@ -1,0 +1,47 @@
+<%# The template chooser, after Redmine's lists (enumerations/index). %>
+<h2><%= l(:label_issue_new) %></h2>
+
+<% if @blank %>
+<p><%= link_to sprite_icon('add', l(@maintainers_only ? :label_issue_template_blank_maintainers : :label_issue_template_blank)),
+               new_project_issue_path(@project, @carried.merge('issue_template' => 'blank')),
+               class: 'icon icon-add' %></p>
+<% end %>
+
+<table class="list issue-templates">
+  <thead><tr>
+    <th><%= l(:field_name) %></th>
+    <th><%= l(:field_description) %></th>
+    <th><%= l(:field_tracker) %></th>
+  </tr></thead>
+  <tbody>
+  <% @set.usable.each do |template| %>
+    <tr>
+      <td class="name"><%= link_to template.name, new_project_issue_path(@project, @carried.merge('issue_template' => template.key)) %></td>
+      <td class="description"><%= template.about %></td>
+      <td><%= template.tracker(@project)&.name %></td>
+    </tr>
+  <% end %>
+  </tbody>
+</table>
+
+<% if @set.config.contact_links.any? %>
+<%# As on Redmine's Information page: a list table, then a break before the next heading. %>
+<br />
+<h3><%= l(:label_issue_template_contact_links) %></h3>
+<table class="list issue-template-contact-links">
+  <thead><tr>
+    <th><%= l(:field_name) %></th>
+    <th><%= l(:field_description) %></th>
+  </tr></thead>
+  <tbody>
+  <% @set.config.contact_links.each do |link| %>
+    <tr>
+      <td class="name"><%= link_to link.name, link.url, class: 'external', rel: 'noopener', target: '_blank' %></td>
+      <td class="description"><%= link.about %></td>
+    </tr>
+  <% end %>
+  </tbody>
+</table>
+<% end %>
+
+<% html_title(l(:label_issue_new)) -%>

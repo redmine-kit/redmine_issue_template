@@ -1,0 +1,6 @@
+<%= title [l(:label_issue_template_plural), settings_project_path(@project, tab: 'issue_templates')], l(:label_issue_template_file_new) %>
+
+<%= labelled_form_for @file, as: :issue_template_file, url: project_issue_templates_path(@project) do |f| %>
+<%= render partial: 'issue_templates/file_form', locals: { f: f } %>
+<%= submit_tag l(:button_create) %>
+<% end %>
