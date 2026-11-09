@@ -1,0 +1,42 @@
+AllCops:
+  TargetRubyVersion: 4.0
+  NewCops: enable
+  SuggestExtensions: false
+  Include:
+    - '**/*.rb'
+    - '**/*.rake'
+    - '**/*.gemspec'
+    - '**/Gemfile'
+    - 'Gemfile.lint'
+
+Style/Documentation:
+  Enabled: false
+
+Metrics/MethodLength:
+  Max: 25
+
+# The checks of the template files follow GitHub's rules one by one
+# (lib/redmine_issue_template/issue_form.rb and its neighbours), which makes
+# a few methods branchy without making them hard to read.
+Metrics/AbcSize:
+  Max: 40
+
+Metrics/CyclomaticComplexity:
+  Max: 11
+
+Metrics/PerceivedComplexity:
+  Max: 12
+
+Metrics/ClassLength:
+  Max: 200
+  Exclude:
+    - 'test/**/*'
+
+Layout/LineLength:
+  Max: 120
+
+# Rake files and test classes are one block by nature.
+Metrics/BlockLength:
+  Exclude:
+    - '**/*.rake'
+    - 'test/**/*'

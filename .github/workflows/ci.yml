@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: bin/lint
+
+  # Redmine's release, and master before the next release. master is not
+  # pinned and does not fail the run.
+  test:
+    needs: lint
+    name: test (Redmine ${{ matrix.redmine }})
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        redmine: ["7.0.3", master]
+    continue-on-error: ${{ matrix.redmine == 'master' }}
+    # id-token: Codecov's upload with OIDC, without a token secret.
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REDMINE_BRANCH: ${{ matrix.redmine == 'master' && 'master' || '' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      # The plugin's tests, then every Redmine test with the plugin installed.
+      - run: bin/test --redmine
+      # The plugin's coverage (coverage/coverage.xml, written by bin/test).
+      - if: matrix.redmine != 'master'
+        uses: codecov/codecov-action@v7.1.1
+        with:
+          use_oidc: true
+          files: coverage/coverage.xml
+          fail_ci_if_error: false
+      - if: always()
+        run: bin/services --down
