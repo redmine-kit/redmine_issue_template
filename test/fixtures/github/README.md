@@ -1,0 +1,1 @@
+The examples in this folder are taken from GitHub's documentation (github/docs, CC-BY-4.0, checked 2026-11-10): "Syntax for issue forms" (bug_report.yml, bug.md, bug_converted.yml) and "Configuring issue templates for your repository" (config.yml). Liquid tags of the docs site were removed.
