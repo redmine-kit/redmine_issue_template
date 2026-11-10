@@ -127,6 +127,43 @@ module RedmineIssueTemplate
       end
     end
 
+    def texts(content, path = 'form.yml')
+      parse(path => content).messages.map(&:text)
+    end
+
+    test 'messages read like Redmine validation errors' do
+      assert_equal ['form.yml: description cannot be blank'], texts("name: Form\nbody:\n#{INPUT}")
+      assert_equal ['form.yml is not valid YAML'], texts("name: Form\n  description: [\n")
+      assert_equal ['form.yml is invalid'], texts("- a\n")
+      assert_equal ['form.yml: name is too short (minimum is 4 characters)'],
+                   texts("name: Bug\ndescription: d\nbody:\n#{INPUT}")
+      assert_equal ['form.yml: body[0]: options: a has already been taken'], texts(form(dropdown('[a, a]')))
+      assert_equal ['config.yml: contact_links[0]: url cannot be blank'],
+                   texts("contact_links:\n- name: A\n  about: b\n", 'config.yml')
+    end
+
+    test 'keys and options YAML reads as booleans are named as written' do
+      assert_equal ['form.yml: On must be quoted'], texts("name: Form\ndescription: d\nOn: 1\nbody:\n#{INPUT}")
+      assert_equal ['form.yml: body[0]: options: yes must be quoted'], texts(form(dropdown('[a, yes]')))
+    end
+
+    test 'messages in Japanese' do
+      ::I18n.with_locale(:ja) do
+        assert_equal ['form.yml: description を入力してください'], texts("name: Form\nbody:\n#{INPUT}")
+        assert_equal ['form.yml は正しい YAML ではありません'], texts("name: Form\n  description: [\n")
+        assert_equal ['form.yml: yes は引用符で囲んでください'], texts("name: Form\ndescription: d\nyes: 1\nbody:\n#{INPUT}")
+        assert_equal ['form.yml: name は4文字以上で入力してください'], texts("name: Bug\ndescription: d\nbody:\n#{INPUT}")
+      end
+    end
+
+    test "Redmine's keys are top-level keys of a form" do
+      form = "name: Form\ndescription: d\ntracker: Bug\npriority: High\nfields:\n  due_date: required\nbody:\n#{INPUT}"
+      set = parse('form.yml' => form)
+      assert_equal [], errors_of(set, 'form.yml')
+      assert_equal 'Bug', set.usable.first.options.tracker
+      assert_equal %w[not_permitted_key], errors_of(parse('form.yml' => "redmine: {}\n#{form}"), 'form.yml')
+    end
+
     test 'a file with errors leaves the others usable' do
       set = parse('broken.yml' => "name: x\n", 'bug.md' => github_fixture('bug.md'))
       assert_equal %w[bug], set.usable.map(&:key)

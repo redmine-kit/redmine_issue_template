@@ -1,0 +1,19 @@
+<%# A template file read-only, after Redmine's show pages (contextual
+    actions, the title) and Information (names and values, text in a box). %>
+<% manual = @source.nil? || @source.manual? %>
+<% if manual %>
+<div class="contextual">
+  <%= link_to sprite_icon('edit', l(:button_edit)), edit_project_issue_template_path(@project, @file), class: 'icon icon-edit' %>
+  <%= delete_link project_issue_template_path(@project, @file) %>
+</div>
+<% end %>
+
+<%= title [l(:label_issue_template_plural), settings_project_path(@project, tab: 'issue_templates')], @file.path %>
+
+<%= render partial: 'issue_templates/source', locals: { source: @source } unless manual %>
+
+<div class="box autoscroll">
+<pre><%= @file.content %></pre>
+</div>
+
+<%= render partial: 'issue_templates/preview' %>

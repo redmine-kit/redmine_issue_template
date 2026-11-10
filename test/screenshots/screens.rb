@@ -13,11 +13,11 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
     ---
     name: Feature request
     about: Suggest an idea for this project
-    labels: [Feature request, enhancement]
-    redmine:
-      priority: Normal
-      fields:
-        estimated_hours: hidden
+    type: Feature request
+    labels: [enhancement]
+    priority: Normal
+    fields:
+      estimated_hours: hidden
     ---
     ## The idea
   MARKDOWN
@@ -45,6 +45,14 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
       visit '/projects/ecookbook/settings/issue_templates'
       assert_selector 'table.list.issue-template-files'
       shoot 'settings', language, selector: '#tab-content-issue_templates'
+    end
+
+    file = IssueTemplateFile.find_by(path: 'feature.md')
+    each_language do |language|
+      visit "/projects/ecookbook/issue_templates/#{file.id}/edit"
+      find('input[name=preview]').click
+      assert_selector '.issue-template-preview'
+      shoot 'preview', language, selector: '#content'
     end
   end
 end

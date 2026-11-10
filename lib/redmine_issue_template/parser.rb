@@ -7,9 +7,6 @@ module RedmineIssueTemplate
   # Each file is checked on its own: a file with errors is reported and left
   # out, the others still work.
   module Parser
-    # Keys that YAML reads as booleans; GitHub forbids them as keys.
-    BOOLEAN_WORDS = %w[y Y yes Yes YES n N no No NO true True TRUE false False FALSE on On ON off Off OFF].freeze
-
     module_function
 
     # files: { "bug.yml" => "...", "config.yml" => "..." } (paths in the folder)
@@ -65,22 +62,20 @@ module RedmineIssueTemplate
     # YAML with only plain data. Errors become messages of the file.
     def load_yaml(path, content, errors)
       data = YAML.safe_load(content.to_s, permitted_classes: [], aliases: false)
-      if forbidden_key?(data)
-        errors << Message.error(path, :forbidden_key)
+      key = YamlNodes.forbidden_key(Psych.parse(content.to_s))
+      if key
+        errors << Message.error(path, :forbidden_key, key: key)
         return nil
       end
       data
-    rescue Psych::Exception => e
-      errors << Message.error(path, :invalid_yaml, detail: e.message.lines.first.to_s.strip)
+    rescue Psych::Exception
+      errors << Message.error(path, :invalid_yaml)
       nil
     end
 
-    def forbidden_key?(data)
-      case data
-      when Hash then data.any? { |key, value| key == true || key == false || forbidden_key?(value) }
-      when Array then data.any? { |value| forbidden_key?(value) }
-      else false
-      end
+    # The first value that appears twice, or nil.
+    def duplicate(values)
+      values.tally.find { |_, count| count > 1 }&.first
     end
 
     # A list given as an array or a comma-separated string (labels, assignees).
@@ -93,7 +88,67 @@ module RedmineIssueTemplate
     end
   end
 
-  # An error or a warning about a file, shown in the project settings.
+  # How each message is written: [sentence, subject]. The sentence is core's
+  # activerecord.errors.messages.<sentence> for MESSAGE_CORE, otherwise
+  # issue_template_error_<sentence>; %{...} in the subject comes from the
+  # message's params. These are I18n's %{...} tokens, not format strings.
+  # rubocop:disable Style/FormatStringToken
+  MESSAGE_CORE = %i[invalid blank taken inclusion exclusion too_short].freeze
+  MESSAGE_SENTENCES = {
+    'invalid_yaml' => [:not_yaml],
+    'form_not_map' => [:invalid],
+    'config_not_map' => [:invalid],
+    'element_not_map' => [:invalid],
+    'contact_link_not_map' => [:invalid],
+    'front_matter_not_map' => [:invalid, 'front matter'],
+    'body_not_array' => [:invalid, 'body'],
+    'redmine_invalid_value' => [:invalid, '%{key}'],
+    'invalid_value' => [:invalid, '%{key}'],
+    'invalid_validation' => [:invalid, 'validations.%{key}'],
+    'not_string' => [:invalid, '%{key}'],
+    'label_not_string' => [:invalid, 'label'],
+    'invalid_default' => [:invalid, 'default'],
+    'invalid_id' => [:invalid, 'id'],
+    'invalid_contact_url' => [:invalid, 'url'],
+    'no_front_matter' => [:blank, 'front matter'],
+    'missing_key' => [:blank, '%{key}'],
+    'missing_type' => [:blank, 'type'],
+    'missing_attributes' => [:blank, 'attributes'],
+    'missing_attribute' => [:blank, 'attributes.%{key}'],
+    'checkbox_label' => [:blank, 'label'],
+    'invalid_contact_link' => [:blank, '%{key}'],
+    'body_empty' => [:blank, 'body'],
+    'name_too_short' => [:too_short, 'name'],
+    'duplicate_name' => [:taken, 'name: %{name}'],
+    'options_not_unique' => [:taken, 'options: %{value}'],
+    'checkboxes_not_unique' => [:taken, 'options: %{value}'],
+    'ids_not_unique' => [:taken, 'id: %{value}'],
+    'labels_not_unique' => [:taken, 'label: %{value}'],
+    'invalid_type' => [:inclusion, 'type'],
+    'redmine_invalid_visibility' => [:inclusion, 'fields.%{field}'],
+    'options_none' => [:exclusion, 'options: %{value}'],
+    'forbidden_key' => [:quoted, '%{key}'],
+    'options_boolean' => [:quoted, 'options: %{value}'],
+    'not_permitted_key' => [:unknown_key, '%{key}'],
+    'element_key' => [:unknown_key, '%{key}'],
+    'attribute_key' => [:unknown_key, 'attributes.%{key}'],
+    'validation_key' => [:unknown_key, 'validations.%{key}'],
+    'config_unknown_key' => [:unknown_key, '%{key}'],
+    'unknown_type' => [:not_found, 'type: %{type}'],
+    'unknown_field' => [:not_found, 'fields: %{field}'],
+    'unknown_custom_field' => [:not_found, 'custom_fields: %{field}'],
+    'unknown_value' => [:not_found, '%{key}: %{value}'],
+    'body_no_field' => [:no_field, 'body'],
+    'labels_too_similar' => [:too_similar, 'label'],
+    'labels_ignored' => [:ignored, 'labels: %{labels}'],
+    'projects_ignored' => [:ignored, 'projects: %{projects}'],
+    'assignees_ignored' => [:ignored, 'assignees: %{assignees}']
+  }.freeze
+  # rubocop:enable Style/FormatStringToken
+
+  # An error or a warning about a file, shown in the project settings, in
+  # Redmine's words: the key it is about and a validation sentence, as
+  # Redmine shows "Subject cannot be blank".
   Message = Struct.new(:path, :level, :key, :params, keyword_init: true) do
     def self.error(path, key, **params)
       new(path: path, level: 'error', key: key.to_s, params: params.transform_keys(&:to_s))
@@ -115,9 +170,38 @@ module RedmineIssueTemplate
       new(path: hash['path'], level: hash['level'], key: hash['key'], params: hash['params'] || {})
     end
 
-    # The text in the user's language (config/locales: issue_template_message_<key>).
+    # The text in the user's language, with the file:
+    # "bug.yml: body[2]: id is invalid", "config.yml is invalid".
     def text
-      ::I18n.t("issue_template_message_#{key}", **params.symbolize_keys, default: key)
+      kind, subject = MESSAGE_SENTENCES.fetch(key, [:invalid])
+      subject = interpolate(subject)
+      scope = params['scope'] || (params.key?('index') ? "body[#{params['index']}]" : nil)
+      return full_message(path, kind) if subject.nil? && scope.nil?
+      return "#{path}: #{full_message(scope, kind)}" if subject.nil?
+
+      [path, scope, full_message(subject, kind)].compact.join(': ')
+    end
+
+    private
+
+    def full_message(subject, kind)
+      message = if MESSAGE_CORE.include?(kind)
+                  ::I18n.t("activerecord.errors.messages.#{kind}", count: params['count'])
+                else
+                  ::I18n.t("issue_template_error_#{kind}")
+                end
+      ::I18n.t('errors.format', attribute: subject, message: message,
+                                default: '%{attribute} %{message}') # rubocop:disable Style/FormatStringToken
+    end
+
+    # The subject with the params filled in; nil when one is missing.
+    def interpolate(subject)
+      return nil if subject.nil?
+
+      names = subject.scan(/%\{(\w+)\}/).flatten
+      return nil unless names.all? { |name| params.key?(name) }
+
+      subject.gsub(/%\{(\w+)\}/) { params[::Regexp.last_match(1)].to_s }
     end
   end
 end

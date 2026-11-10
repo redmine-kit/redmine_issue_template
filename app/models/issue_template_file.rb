@@ -1,15 +1,36 @@
 # frozen_string_literal: true
 
-# A template file of a project: a Markdown template, an issue form or
+# A template file of a project: a Markdown template, a YAML form or
 # config.yml, with its path in the template folder (e.g. "bug.yml").
 class IssueTemplateFile < ApplicationRecord
-  # A file name in the folder: no subfolders, as in GitHub's ISSUE_TEMPLATE.
+  # A file name in the folder: no subfolders, as in ISSUE_TEMPLATE.
   PATH = %r{\A[^/\\\x00-\x1f]+\.(md|ya?ml)\z}
 
   belongs_to :project
 
   validates :path, presence: true, format: { with: PATH }, uniqueness: { scope: :project_id }
   validates :content, length: { maximum: 65_535 }
+  # Files saved in the project settings get the import's input check.
+  validate :check_template, on: :settings
 
   after_commit { RedmineIssueTemplate::TemplateSet.reset! }
+
+  # The path is shown as Redmine's "File" (field_filename).
+  def self.human_attribute_name(attribute, *)
+    attribute.to_s == 'path' ? ::I18n.t(:field_filename) : super
+  end
+
+  private
+
+  # The errors the import would report for this file, with the project's
+  # other files (template names must be unique).
+  def check_template
+    return unless errors.empty?
+
+    files = IssueTemplateFile.where(project_id: project_id).where.not(id: id).pluck(:path, :content).to_h
+    files[path] = content.to_s
+    RedmineIssueTemplate::Parser.parse(files).messages.each do |message|
+      errors.add(:base, message.text) if message.path == path && message.error?
+    end
+  end
 end

@@ -1,0 +1,26 @@
+<%# What users see with the file: the chooser and the New issue form,
+    shown but not usable (inert). The form is Redmine's own. %>
+<% if @preview || @preview_errors.present? %>
+<br />
+<h3><%= l(:label_preview) %></h3>
+<% end %>
+<% if @preview_errors.present? %>
+<div id="errorExplanation">
+  <ul>
+  <% @preview_errors.each do |message| %>
+    <li><%= message.text %></li>
+  <% end %>
+  </ul>
+</div>
+<% elsif @preview %>
+<div class="issue-template-preview" inert>
+  <%= render partial: 'issue_templates/chooser', locals: @preview %>
+  <% if @issue %>
+  <br />
+  <h3><%= l(:label_issue_new) %></h3>
+  <div class="box tabular">
+    <div id="all_attributes"><%= render partial: 'issues/form' %></div>
+  </div>
+  <% end %>
+</div>
+<% end %>

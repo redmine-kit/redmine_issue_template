@@ -5,7 +5,7 @@ module RedmineIssueTemplate
   # GitHub's form schema"), checked with GitHub's rules
   # ("Common validation errors when creating issue forms").
   class IssueForm < Template
-    TOP_LEVEL_KEYS = %w[name description title labels assignees projects type body redmine].freeze
+    TOP_LEVEL_KEYS = (%w[name description title labels assignees projects type body] + RedmineOptions::ATTRIBUTES).freeze
     ELEMENT_KEYS = %w[type id attributes validations].freeze
     TYPES = %w[markdown textarea input dropdown checkboxes upload].freeze
     ATTRIBUTES = {
@@ -81,6 +81,7 @@ module RedmineIssueTemplate
     end
 
     def read(content)
+      @content = content
       @elements = []
       data = Parser.load_yaml(path, content, errors)
       return if data.nil?
@@ -103,7 +104,9 @@ module RedmineIssueTemplate
       %w[name description title type].each do |key|
         errors << Message.error(path, :not_string, key: key) unless data[key].nil? || data[key].is_a?(String)
       end
-      errors << Message.error(path, :name_too_short) if data['name'].is_a?(String) && data['name'].strip.length <= 3
+      return unless data['name'].is_a?(String) && data['name'].strip.length <= 3
+
+      errors << Message.error(path, :name_too_short, count: 4)
     end
 
     def read_body(body)
@@ -167,8 +170,8 @@ module RedmineIssueTemplate
       options = attributes['options']
       return element_error(index, :missing_attribute, key: 'options') unless options.is_a?(Array) && options.any?
 
-      problem = dropdown_options_problem(options)
-      return element_error(index, problem) if problem
+      problem, value = dropdown_options_problem(index, options)
+      return element_error(index, problem, value: value) if problem
 
       default = attributes['default']
       return if default.nil? || (default.is_a?(Integer) && default.between?(0, options.size - 1))
@@ -176,11 +179,21 @@ module RedmineIssueTemplate
       element_error(index, :invalid_default)
     end
 
-    def dropdown_options_problem(options)
-      if options.intersect?([true, false]) then :options_boolean
-      elsif options.map(&:to_s).uniq.size < options.size then :options_not_unique
-      elsif options.any? { |option| option.to_s.strip.casecmp?('none') } then :options_none
+    # [problem, the option it is about], or nil.
+    def dropdown_options_problem(index, options)
+      if options.intersect?([true, false])
+        [:options_boolean, boolean_option(index) || options.find { |option| [true, false].include?(option) }]
+      elsif (duplicate = Parser.duplicate(options.map(&:to_s)))
+        [:options_not_unique, duplicate]
+      elsif (none = options.find { |option| option.to_s.strip.casecmp?('none') })
+        [:options_none, none]
       end
+    end
+
+    # A boolean option as it is written in the file (yes, on, true...).
+    def boolean_option(index)
+      node = YamlNodes.yaml_node(@content, 'body', index, 'attributes', 'options')
+      node&.children&.find { |child| YamlNodes.boolean_word?(child) }&.value
     end
 
     def check_checkboxes(index, attributes)
@@ -190,8 +203,8 @@ module RedmineIssueTemplate
         return element_error(index, :checkbox_label)
       end
 
-      labels = options.map { |option| option['label'] }
-      element_error(index, :checkboxes_not_unique) if labels.uniq.size < labels.size
+      duplicate = Parser.duplicate(options.map { |option| option['label'] })
+      element_error(index, :checkboxes_not_unique, value: duplicate) if duplicate
     end
 
     def check_validations(index, type, validations)
@@ -206,20 +219,18 @@ module RedmineIssueTemplate
     end
 
     def check_unique_ids
-      ids = elements.filter_map(&:id)
-      errors << Message.error(path, :ids_not_unique) if ids.uniq.size < ids.size
+      duplicate = Parser.duplicate(elements.filter_map(&:id))
+      errors << Message.error(path, :ids_not_unique, value: duplicate) if duplicate
     end
 
     # Labels of the fields must be unique, and fields without an id must not
     # have labels that become the same parameter.
     def check_unique_labels
-      labels = fields.map(&:label)
-      errors << Message.error(path, :labels_not_unique) if labels.uniq.size < labels.size
-      refs = fields.reject(&:id).map { |element| element.label.parameterize }
-      return unless refs.uniq.size < refs.size && labels.uniq.size == labels.size
+      duplicate = Parser.duplicate(fields.map(&:label))
+      return errors << Message.error(path, :labels_not_unique, value: duplicate) if duplicate
 
-      errors << Message.error(path,
-                              :labels_too_similar)
+      refs = fields.reject(&:id).map { |element| element.label.parameterize }
+      errors << Message.error(path, :labels_too_similar) if Parser.duplicate(refs)
     end
 
     def element_error(index, key, **params)

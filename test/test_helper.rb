@@ -40,9 +40,9 @@ module RedmineIssueTemplate
 
     # import({ 'bug.md' => '...' }) or import('bug.md' => '...'): Ruby passes a
     # braceless hash with string keys as keywords.
-    def import(files = nil, project = Project.find(1), source: 'manual', **named)
+    def import(files = nil, project = Project.find(1), source: 'manual', folder: nil, **named)
       files ||= named.transform_keys(&:to_s)
-      RedmineIssueTemplate::Importer.import(project, files: files, source: source)
+      RedmineIssueTemplate::Importer.import(project, files: files, source: source, folder: folder)
     end
 
     # A git repository with the given files committed, for Redmine's Git

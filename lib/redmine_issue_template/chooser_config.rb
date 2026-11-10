@@ -62,16 +62,21 @@ module RedmineIssueTemplate
       return @messages << Message.error(path, :invalid_value, key: 'contact_links') unless links.is_a?(Array)
 
       links.each_with_index do |link, index|
-        unless link.is_a?(Hash) && LINK_KEYS.all? { |key| link[key].is_a?(String) && link[key].present? }
-          @messages << Message.error(path, :invalid_contact_link, index: index)
-          next
-        end
-        unless link['url'].match?(%r{\Ahttps?://}i)
-          @messages << Message.error(path, :invalid_contact_url, index: index)
-          next
-        end
+        key, params = link_problem(link)
+        next @messages << Message.error(path, key, **params, scope: "contact_links[#{index}]") if key
+
         @contact_links << ContactLink.new(name: link['name'], url: link['url'], about: link['about'])
       end
+    end
+
+    # [message key, params] for a contact link that can't be shown, or nil.
+    def link_problem(link)
+      return [:contact_link_not_map, {}] unless link.is_a?(Hash)
+
+      missing = LINK_KEYS.find { |key| !(link[key].is_a?(String) && link[key].present?) }
+      return [:invalid_contact_link, { key: missing }] if missing
+
+      [:invalid_contact_url, {}] unless link['url'].match?(%r{\Ahttps?://}i)
     end
   end
 end

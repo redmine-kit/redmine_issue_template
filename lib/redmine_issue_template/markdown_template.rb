@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # What Markdown templates and issue forms have in common: the name and
-  # description shown in the chooser, the title, GitHub's labels, assignees,
-  # type and projects, and the `redmine` options.
+  # What Markdown templates and YAML forms have in common: the name and
+  # description shown in the chooser, the title, labels, assignees, type
+  # and projects, and Redmine's keys.
   class Template
     attr_reader :path, :name, :about, :title, :labels, :assignees, :type, :projects, :options, :errors, :warnings
 
@@ -34,19 +34,17 @@ module RedmineIssueTemplate
       errors + warnings
     end
 
-    # The tracker for the project: `redmine.tracker`, then GitHub's `type`,
-    # then the first label that names a tracker.
+    # The tracker for the project: `redmine.tracker`, then `type`.
     def tracker(project)
-      options.tracker_record(project) ||
-        find_tracker(project, type) ||
-        labels.lazy.map { |label| find_tracker(project, label) }.find(&:itself)
+      options.tracker_record(project) || find_tracker(project, type)
     end
 
-    # The first assignee who can be assigned in the project.
+    # The first entry of `assignees` that can be assigned in the project: a
+    # user by login, or a group by name when Redmine allows assigning issues
+    # to groups (project.assignable_users has the groups then).
     def assignee(project)
       assignable = project.assignable_users.to_a
-      assignees.lazy.map { |login| assignable.detect { |user| user.respond_to?(:login) && user.login.casecmp?(login) } }
-               .find(&:itself)
+      assignees.lazy.map { |entry| find_assignable(assignable, entry) }.find(&:itself)
     end
 
     # Warnings that depend on the project (names that don't resolve, GitHub
@@ -60,17 +58,18 @@ module RedmineIssueTemplate
     def github_key_warnings(project)
       warnings = []
       warnings << Message.warning(path, :unknown_type, type: type) if type.present? && find_tracker(project, type).nil?
-      unmatched = labels.reject { |label| find_tracker(project, label) }
-      warnings << Message.warning(path, :labels_ignored, labels: unmatched.join(', ')) if unmatched.any?
+      warnings << Message.warning(path, :labels_ignored, labels: labels.join(', ')) if labels.any?
       warnings << Message.warning(path, :projects_ignored, projects: projects.join(', ')) if projects.any?
-      unknown = unknown_assignees(project)
+      assignable = project.assignable_users.to_a
+      unknown = assignees.reject { |entry| find_assignable(assignable, entry) }
       warnings << Message.warning(path, :assignees_ignored, assignees: unknown.join(', ')) if unknown.any?
       warnings
     end
 
-    def unknown_assignees(project)
-      logins = project.assignable_users.select { |user| user.respond_to?(:login) }.map { |user| user.login.downcase }
-      assignees.reject { |login| logins.include?(login.downcase) }
+    def find_assignable(assignable, entry)
+      assignable.detect do |principal|
+        principal.is_a?(Group) ? principal.name.casecmp?(entry) : principal.login.to_s.casecmp?(entry)
+      end
     end
 
     def find_tracker(project, name)
@@ -87,7 +86,7 @@ module RedmineIssueTemplate
       @assignees = Parser.list(data['assignees'])
       @projects = Parser.list(data['projects'])
       @type = data['type'].to_s.strip.presence
-      @options = RedmineOptions.parse(path, data['redmine'], errors, warnings)
+      @options = RedmineOptions.parse(path, data, errors)
     end
   end
 

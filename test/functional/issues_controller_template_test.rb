@@ -16,16 +16,15 @@ module RedmineIssueTemplate
       name: Feature request
       about: Suggest an idea
       title: "[Feature] "
-      labels: feature request
-      redmine:
-        priority: High
-        category: Recipes
-        fields:
-          estimated_hours: hidden
-          due_date: required
-          Custom date: hidden
-        custom_fields:
-          Custom date: "2026-12-24"
+      type: Feature request
+      priority: High
+      category: Recipes
+      fields:
+        estimated_hours: hidden
+        due_date: required
+        Custom date: hidden
+      custom_fields:
+        Custom date: "2026-12-24"
       ---
       ## The idea
     MARKDOWN

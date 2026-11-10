@@ -23,9 +23,12 @@ module RedmineIssueTemplate
       assert_select '#tab-issue_templates'
       assert_select 'table.list.issue-template-files tbody tr', 4
       assert_select 'table.list.issue-template-files td.name', text: 'broken.yml'
-      assert_select '#errorExplanation li', text: /broken.yml: required key description is missing/
+      assert_select '#errorExplanation li', text: 'broken.yml: description cannot be blank'
       assert_select 'div.warning li', text: /octo-org/
       assert_select '#tab-content-issue_templates p a.icon-add', text: 'New file'
+      assert_select '#tab-content-issue_templates p a.icon-import', text: 'Import'
+      assert_select '#tab-content-issue_templates p a.icon-help[href=?]', "#{RedmineIssueTemplate::DOCS_URL}format"
+      assert_select 'table.issue-template-source', 0
     end
 
     test 'files from a repository are shown read-only' do
@@ -33,14 +36,15 @@ module RedmineIssueTemplate
       get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
       assert_select '#tab-content-issue_templates p a.icon-add', 0
       assert_select '#tab-content-issue_templates td.buttons a', 0
-      assert_select '#tab-content-issue_templates p',
-                    text: %r{come from .github/ISSUE_TEMPLATE|come from .redmine/ISSUE_TEMPLATE}
+      assert_select 'table.issue-template-source td.name', text: 'Repository'
+      assert_select 'table.issue-template-source td', text: %r{\A\.(github|redmine)/ISSUE_TEMPLATE\z}
+      assert_select 'table.issue-template-source td.name', text: 'Updated'
     end
 
     test 'the tab warns when the text formatting is not CommonMark' do
       with_settings text_formatting: 'textile' do
         get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
-        assert_select 'p.warning', text: /CommonMark/
+        assert_select 'p.warning', text: 'Text formatting is not CommonMark Markdown (GitHub Flavored).'
       end
     end
 

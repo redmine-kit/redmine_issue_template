@@ -8,6 +8,7 @@ module RedmineIssueTemplate
   VERSION = '0.1.0'
 
   # The folders read from the repository, the first one with files wins.
+  DOCS_URL = 'https://redmine-kit.github.io/redmine_issue_template/'
   FOLDERS = ['.redmine/ISSUE_TEMPLATE', '.github/ISSUE_TEMPLATE'].freeze
 
   # Where a project's files come from (IssueTemplateSource#kind).
@@ -16,7 +17,7 @@ module RedmineIssueTemplate
   module_function
 
   def setup
-    %w[parser markdown_template issue_form chooser_config redmine_options template_set
+    %w[yaml_nodes parser redmine_options markdown_template issue_form chooser_config template_set
        body_composer importer repository_source issue_patch issues_controller_patch
        projects_helper_patch repository_patch hooks].each do |file|
       require_relative "redmine_issue_template/#{file}"

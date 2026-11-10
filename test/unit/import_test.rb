@@ -40,19 +40,17 @@ module RedmineIssueTemplate
         ---
         name: Feature
         about: Ask for a feature
-        redmine:
-          tracker: Feature request
-          priority: High
-          category: Recipes
-          fixed_version: "2.0"
-          custom_fields:
-            Searchable field: value
-          fields:
-            assigned_to: hidden
-            due_date: required
-            Database: hidden
-            Nope: hidden
-          unknown: 1
+        tracker: Feature request
+        priority: High
+        category: Recipes
+        fixed_version: "2.0"
+        custom_fields:
+          Searchable field: value
+        fields:
+          assigned_to: hidden
+          due_date: required
+          Database: hidden
+          Nope: hidden
         ---
         Text
       MARKDOWN
@@ -65,20 +63,40 @@ module RedmineIssueTemplate
       assert_equal expected, defaults.except('subject')
       visibility = template.options.visibility(@project)
       assert_equal({ hidden: %w[assigned_to_id 1], required: %w[due_date] }, visibility)
-      assert_equal %w[redmine_unknown_key unknown_field], source.message_list.map(&:key).sort
+      assert_equal %w[unknown_field], source.message_list.map(&:key).sort
     end
 
-    test 'the tracker comes from type, then labels' do
+    test 'the tracker comes from type; labels are not used' do
       by_type = "---\nname: By type\nabout: a\ntype: support request\n---\n"
       by_label = "---\nname: By label\nabout: a\nlabels: [question, bug]\n---\n"
       import('a.md' => by_type, 'b.md' => by_label)
       set = RedmineIssueTemplate::TemplateSet.for(@project)
       assert_equal 'Support request', set.find('a').tracker(@project).name
-      assert_equal 'Bug', set.find('b').tracker(@project).name
+      assert_nil set.find('b').tracker(@project)
+      warning = set.find('b').project_warnings(@project).detect { |m| m.key == 'labels_ignored' }
+      assert_equal 'question, bug', warning.params['labels']
+    end
+
+    test 'the assignee is the first user or group that can be assigned' do
+      Member.create!(principal: Group.find(10), project: @project, role_ids: [1])
+      import('a.md' => "---\nname: Assign\nabout: a\nassignees: [nobody, A Team, JSmith]\n---\n")
+      template = RedmineIssueTemplate::TemplateSet.for(@project).find('a')
+      # A project loaded for each setting: Project caches assignable_users.
+      ignored = ->(project) { template.project_warnings(project).detect { |m| m.key == 'assignees_ignored' }.params }
+      with_settings issue_group_assignment: '1' do
+        project = Project.find(@project.id)
+        assert_equal Group.find(10), template.assignee(project)
+        assert_equal 'nobody', ignored.call(project)['assignees']
+      end
+      with_settings issue_group_assignment: '0' do
+        project = Project.find(@project.id)
+        assert_equal User.find(2), template.assignee(project)
+        assert_equal 'nobody, A Team', ignored.call(project)['assignees']
+      end
     end
 
     test 'invalid redmine options are errors' do
-      content = "---\nname: Bad\nabout: a\nredmine:\n  is_private: maybe\n  fields:\n    assigned_to: invisible\n---\n"
+      content = "---\nname: Bad\nabout: a\nis_private: maybe\nfields:\n  assigned_to: invisible\n---\n"
       source = import('bad.md' => content)
       assert_equal %w[redmine_invalid_value redmine_invalid_visibility], source.message_list.select(&:error?).map(&:key)
       assert_not RedmineIssueTemplate::TemplateSet.for(@project).any?

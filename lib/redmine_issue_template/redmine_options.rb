@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # The `redmine` key of a template (docs/format.md#redmine-keys): the
-  # issue's attributes and the visibility of the form's fields. Names are
+  # Redmine's keys of a template (docs/format.md#redmine-keys), at the top
+  # level next to the other keys: the issue's attributes and the visibility
+  # of the form's fields. Names are
   # resolved against a project when the template is used (#resolve).
   class RedmineOptions
     ATTRIBUTES = %w[tracker priority category fixed_version is_private custom_fields fields].freeze
@@ -18,18 +19,9 @@ module RedmineIssueTemplate
 
     attr_reader :tracker, :priority, :category, :fixed_version, :is_private, :custom_fields, :fields
 
-    def self.parse(path, data, errors, warnings)
-      return new({}) if data.nil?
-
-      unless data.is_a?(Hash)
-        errors << Message.error(path, :redmine_not_map)
-        return new({})
-      end
-
-      (data.keys.map(&:to_s) - ATTRIBUTES).each do |key|
-        warnings << Message.warning(path, :redmine_unknown_key, key: key)
-      end
-      options = new(data)
+    # data: the template's top-level keys.
+    def self.parse(path, data, errors)
+      options = new(data.slice(*ATTRIBUTES))
       options.check(path, errors)
       options
     end

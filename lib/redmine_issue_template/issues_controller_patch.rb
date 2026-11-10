@@ -23,7 +23,7 @@ module RedmineIssueTemplate
 
       @issue.issue_template = template
       @issue.issue_template_answers = issue_template_answers_param
-      apply_issue_template_hidden_values(template)
+      IssueTemplateDefaults.new(template, @project).apply_hidden(@issue)
     end
 
     def issue_template_set
@@ -76,20 +76,6 @@ module RedmineIssueTemplate
       params[:issue] = ActionController::Parameters.new(attrs)
     end
 
-    # Hidden fields are not in the form, so the template's values are set
-    # directly, on every request.
-    def apply_issue_template_hidden_values(template)
-      defaults = IssueTemplateDefaults.new(template, @project).attributes
-      hidden = @issue.issue_template_visibility[:hidden]
-      defaults.except('custom_field_values').each do |name, value|
-        next unless hidden.include?(name) && @issue.respond_to?("#{name}=")
-
-        @issue.public_send("#{name}=", value)
-      end
-      custom = (defaults['custom_field_values'] || {}).slice(*hidden)
-      @issue.custom_field_values = custom if custom.any?
-    end
-
     def issue_template_answers_param
       answers = params[:issue_template_answers]
       return {} if answers.blank?
@@ -120,6 +106,33 @@ module RedmineIssueTemplate
       custom = options.custom_field_values(@project)
       values['custom_field_values'] = custom if custom.any?
       values
+    end
+
+    # Hidden fields are not in the form, so the template's values are set
+    # directly, on every request.
+    def apply_hidden(issue)
+      defaults = attributes
+      hidden = issue.issue_template_visibility[:hidden]
+      defaults.except('custom_field_values').each do |name, value|
+        next unless hidden.include?(name) && issue.respond_to?("#{name}=")
+
+        issue.public_send("#{name}=", value)
+      end
+      custom = (defaults['custom_field_values'] || {}).slice(*hidden)
+      issue.custom_field_values = custom if custom.any?
+    end
+
+    # A new issue of the project as the template's form shows it, for the
+    # preview in the project settings.
+    def new_issue(user = User.current)
+      issue = Issue.new(project: @project, author: user)
+      issue.issue_template = @template
+      issue.issue_template_answers = {}
+      issue.safe_attributes = attributes
+      issue.tracker ||= issue.allowed_target_trackers(user).first
+      issue.status ||= issue.default_status
+      apply_hidden(issue)
+      issue
     end
 
     private

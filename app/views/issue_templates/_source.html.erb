@@ -1,0 +1,20 @@
+<%# Where the templates come from, as names and values (admin/info). %>
+<table class="list issue-template-source">
+  <tr>
+    <td class="name"><%= source.kind == 'github' ? 'GitHub' : l(:label_repository) %></td>
+    <td><%= source.folder.presence || RedmineIssueTemplate::FOLDERS.first %></td>
+  </tr>
+  <% if source.revision.present? %>
+  <tr>
+    <td class="name"><%= l(:label_revision) %></td>
+    <td><%= source.revision.first(8) %></td>
+  </tr>
+  <% end %>
+  <% if source.synced_at %>
+  <tr>
+    <td class="name"><%= l(:field_updated_on) %></td>
+    <td><%= format_time(source.synced_at) %></td>
+  </tr>
+  <% end %>
+</table>
+<br />
