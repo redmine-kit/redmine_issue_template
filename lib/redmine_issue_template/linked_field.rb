@@ -84,10 +84,18 @@ module RedmineIssueTemplate
       case attribute
       when 'priority_id' then IssuePriority.active.map { |priority| [priority.name, priority.id] }
       when 'category_id' then issue.project.issue_categories.map { |category| [category.name, category.id] }
-      when 'fixed_version_id' then issue.assignable_versions.map { |version| [version.name, version.id] }
+      when 'fixed_version_id' then version_choices(issue)
       when 'assigned_to_id' then issue.assignable_users.map { |principal| [principal.name, principal.id] }
       when 'done_ratio' then (0..10).map { |step| ["#{step * 10} %", step * 10] }
       else custom_field_choices(issue)
+      end
+    end
+
+    # As Redmine names versions: shared versions of other projects with the
+    # project's name.
+    def version_choices(issue)
+      issue.assignable_versions.map do |version|
+        [version.project == issue.project ? version.name : version.to_s_with_project, version.id]
       end
     end
 

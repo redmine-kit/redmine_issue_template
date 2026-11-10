@@ -233,14 +233,18 @@ module RedmineIssueTemplate
       import('linked.yml' => LINKED)
       get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
       assert_response :success
-      versions = Issue.new(project: @project, tracker_id: 1).assignable_versions.map(&:name)
-      assert_select 'select[name=?] option', 'issue_template_answers[version]', text: versions.first
+      versions = Issue.new(project: @project, tracker_id: 1).assignable_versions
+      own = versions.index { |version| version.project == @project && version.name == '2.0' }
+      assert_select 'select[name=?] option', 'issue_template_answers[version]', text: '2.0'
+      # Shared versions of other projects have the project's name, as in Redmine.
+      shared = versions.find { |version| version.project != @project }
+      assert_select 'select[name=?] option', 'issue_template_answers[version]', text: shared.to_s_with_project if shared
       assert_select 'select[name=?] option', 'issue_template_answers[database]', text: 'PostgreSQL'
       %w[fixed_version_id custom_field_values_1 due_date].each { |id| assert_select "#issue-form #issue_#{id}", 0 }
 
       post :create, params: {
         project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Linked', fixed_version_id: '' },
-        issue_template_answers: { 'version' => versions.index('2.0').to_s, 'database' => '0', 'due' => '2026-12-31',
+        issue_template_answers: { 'version' => own.to_s, 'database' => '0', 'due' => '2026-12-31',
                                   'what' => 'x' }
       }
       issue = Issue.order(:id).last
