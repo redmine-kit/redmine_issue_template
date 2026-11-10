@@ -75,7 +75,7 @@ module RedmineIssueTemplate
     end
 
     def issue_without_template_allowed?
-      IssueTemplateSource.blank_issues_enabled?(@project, issue_template_set.config) ||
+      issue_template_set.config.blank_issues_enabled? ||
         User.current.allowed_to?(:manage_issue_templates, @project)
     end
 

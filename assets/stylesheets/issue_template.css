@@ -29,3 +29,15 @@ div.flash.warning.issue-template-warnings > svg.icon-svg {
 div.flash.warning.issue-template-warnings ul {
   font-size: 0.9em;
 }
+
+/* The chooser's settings in the project settings, apart from the list of
+   files above them; the contact links' fields fill their columns. */
+fieldset.issue-template-chooser-settings {
+  margin-block-start: 16px;
+}
+table.issue-template-contact-links td {
+  text-align: start;
+}
+table.issue-template-contact-links input {
+  inline-size: 95%;
+}

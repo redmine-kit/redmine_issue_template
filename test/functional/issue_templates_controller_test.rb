@@ -121,10 +121,29 @@ module RedmineIssueTemplate
       end
     end
 
-    test 'the project setting for issues without a template' do
-      patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '0' }
+    test 'the chooser\'s settings are saved as config.yml' do
+      patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '0',
+                                 contact_links: [{ name: 'Forum', url: 'https://example.com/forum', about: 'Ask here' },
+                                                 { name: '', url: '', about: '' }] }
       assert_redirected_to '/projects/ecookbook/settings/issue_templates'
-      assert_not IssueTemplateSource.find_by(project: @project).blank_issues_enabled
+      config = RedmineIssueTemplate::TemplateSet.for(@project).config
+      assert_not config.blank_issues_enabled?
+      links = config.contact_links.map { |link| [link.name, link.url, link.about] }
+      assert_equal [['Forum', 'https://example.com/forum', 'Ask here']], links
+
+      # A link the chooser can't show is refused, and config.yml stays as it was.
+      patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '1',
+                                 contact_links: [{ name: 'Bad', url: 'javascript:alert(1)', about: 'x' }] }
+      assert_redirected_to '/projects/ecookbook/settings/issue_templates'
+      assert_match(/contact_links\[0\]/, flash[:error])
+      assert_not RedmineIssueTemplate::TemplateSet.for(@project).config.blank_issues_enabled?
+    end
+
+    test 'the chooser\'s settings of templates from a repository are not saved here' do
+      import(github_files, @project, source: 'repository')
+      patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '1' }
+      assert_redirected_to '/projects/ecookbook/settings/issue_templates'
+      assert_equal 'Edit the templates in the repository.', flash[:error]
     end
 
     test 'the preview works for a manager who cannot add issues' do

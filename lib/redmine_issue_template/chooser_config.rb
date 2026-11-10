@@ -15,6 +15,14 @@ module RedmineIssueTemplate
       new(nil)
     end
 
+    # config.yml with the given settings, as the project settings save it.
+    #   contact_links: [{ "name" => ..., "url" => ..., "about" => ... }]
+    def self.dump(blank_issues_enabled:, contact_links:)
+      data = { 'blank_issues_enabled' => blank_issues_enabled }
+      data['contact_links'] = contact_links if contact_links.any?
+      data.to_yaml.delete_prefix("---\n")
+    end
+
     def self.parse(path, content)
       config = new(path)
       config.read(content.to_s)
@@ -31,11 +39,6 @@ module RedmineIssueTemplate
     # True unless config.yml says otherwise: the chooser offers a blank issue.
     def blank_issues_enabled?
       @blank_issues_enabled
-    end
-
-    # Whether config.yml sets blank_issues_enabled; else the project settings do.
-    def blank_issues_set?
-      @blank_issues_set == true
     end
 
     def read(content)
@@ -56,7 +59,6 @@ module RedmineIssueTemplate
       value = data['blank_issues_enabled']
       if [true, false].include?(value)
         @blank_issues_enabled = value
-        @blank_issues_set = true
       else
         @messages << Message.error(path, :invalid_value, key: 'blank_issues_enabled')
       end

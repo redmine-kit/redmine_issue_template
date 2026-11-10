@@ -9,7 +9,7 @@ class IssueTemplatesController < ApplicationController
   before_action :authorize_chooser, only: :index
   before_action :authorize, except: :index
   before_action :find_file, only: %i[show edit update destroy]
-  before_action :require_manual, only: %i[new create edit update destroy]
+  before_action :require_manual, only: %i[settings new create edit update destroy]
 
   # What Redmine's issue form needs, for the preview.
   helper :issues, :journals, :projects, :custom_fields, :issue_relations, :watchers, :attachments
@@ -18,16 +18,24 @@ class IssueTemplatesController < ApplicationController
   def index
     @set = RedmineIssueTemplate::TemplateSet.for(@project)
     @carried = request.query_parameters.except('issue_template')
-    @blank = IssueTemplateSource.blank_issues_enabled?(@project, @set.config) ||
-             User.current.allowed_to?(:manage_issue_templates, @project)
+    @blank = @set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, @project)
   end
 
-  # Whether issues can be created without a template, when config.yml
-  # doesn't say.
+  # The chooser's settings from the project settings: config.yml, made
+  # again from the form and checked as an edited file.
   def settings
-    source = IssueTemplateSource.for(@project)
-    source.update!(blank_issues_enabled: params[:blank_issues_enabled] == '1')
-    flash[:notice] = l(:notice_successful_update)
+    file = IssueTemplateFile.where(project_id: @project.id, path: %w[config.yml config.yaml]).first ||
+           IssueTemplateFile.new(project: @project, path: 'config.yml')
+    file.content = RedmineIssueTemplate::ChooserConfig.dump(
+      blank_issues_enabled: params[:blank_issues_enabled] == '1', contact_links: contact_links_param
+    )
+    if file.save(context: :settings)
+      RedmineIssueTemplate::Importer.refresh(@project)
+      flash[:notice] = l(:notice_successful_update)
+    else
+      # Redmine shows flash messages as HTML.
+      flash[:error] = file.errors.full_messages.map { |message| ERB::Util.html_escape(message) }.join('<br>')
+    end
     redirect_to_settings
   end
 
@@ -108,8 +116,7 @@ class IssueTemplatesController < ApplicationController
     return if @preview_errors.any?
 
     if RedmineIssueTemplate::Parser.kind(file.path) == :config
-      @preview = { templates: set.usable, config: set.config,
-                   blank: IssueTemplateSource.blank_issues_enabled?(@project, set.config) }
+      @preview = { templates: set.usable, config: set.config, blank: set.config.blank_issues_enabled? }
     else
       preview_template(set.templates.detect { |template| template.path == file.path })
     end
@@ -127,6 +134,19 @@ class IssueTemplatesController < ApplicationController
     return deny_access unless @project.module_enabled?(:issue_templates)
 
     deny_access unless User.current.allowed_to?(:add_issues, @project)
+  end
+
+  # The form's contact links, without the empty rows.
+  def contact_links_param
+    rows = params[:contact_links]
+    return [] unless rows.is_a?(Array)
+
+    rows.filter_map do |row|
+      next unless row.respond_to?(:permit)
+
+      link = %w[name url about].to_h { |key| [key, row.permit(:name, :url, :about)[key].to_s.strip] }
+      link if link.values.any?(&:present?)
+    end
   end
 
   def find_file

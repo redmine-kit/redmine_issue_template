@@ -32,8 +32,10 @@ module RedmineIssueTemplate
       assert_select '#tab-content-issue_templates p a.icon-import', text: 'Import'
       assert_select '#tab-content-issue_templates p a.icon-help[href=?]', "#{RedmineIssueTemplate::DOCS_URL}format"
       assert_select 'table.issue-template-source', 0
-      # config.yml sets blank_issues_enabled: the setting can't be changed here.
-      assert_select 'input[type=checkbox][name=blank_issues_enabled][disabled=disabled]'
+      # config.yml's settings, editable: its two links and a row to add one.
+      assert_select 'input[type=checkbox][name=blank_issues_enabled]:not([checked]):not([disabled])'
+      assert_select 'table.issue-template-contact-links tbody tr', 3
+      assert_select 'input[name=?][value=?]', 'contact_links[][name]', 'GitHub Community Support'
     end
 
     test 'files from a repository are shown read-only' do
@@ -44,6 +46,10 @@ module RedmineIssueTemplate
       assert_select 'table.issue-template-source td.name', text: 'Repository'
       assert_select 'table.issue-template-source td', text: %r{\A\.(github|redmine)/ISSUE_TEMPLATE\z}
       assert_select 'table.issue-template-source td.name', text: 'Updated'
+      # config.yml is the repository's: shown, not edited.
+      assert_select 'input[type=checkbox][name=blank_issues_enabled][disabled=disabled]'
+      assert_select 'table.issue-template-contact-links tbody tr', 2
+      assert_select '#tab-content-issue_templates input[type=submit]', 0
     end
 
     test 'the tab warns when the text formatting is not CommonMark' do

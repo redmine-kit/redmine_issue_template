@@ -333,16 +333,12 @@ module RedmineIssueTemplate
       end
     end
 
-    test 'issues without a template follow the project settings without config.yml' do
+    test 'issues without a template are allowed without config.yml' do
       import('feature.md' => FEATURE)
       @request.session[:user_id] = 3
       Role.find(2).add_permission!(:add_issues)
       post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'Allowed' } }
       assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
-
-      IssueTemplateSource.for(@project).update!(blank_issues_enabled: false)
-      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'Refused' } }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
     end
 
     test 'create and continue opens the same template again' do
