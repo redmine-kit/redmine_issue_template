@@ -8,7 +8,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 
 ## Rules
 
-- **The template format.** The plugin reads Markdown templates, YAML issue forms and `config.yml` from the template folder and checks them with its own rules. Redmine's keys are top-level keys whose names no other key uses. Document every key and what it does in the issue form in [format.md](docs/format.md).
+- **The template format.** The plugin reads Markdown templates, YAML issue forms and `config.yml` from the template folder and checks them with its own rules. Redmine's keys are top-level keys whose names no other key uses, and `link` on a YAML form's field. They belong in `.redmine/ISSUE_TEMPLATE/`; the files of `.github/ISSUE_TEMPLATE/` keep to GitHub's format. Document every key and what it does in the issue form in [format.md](docs/format.md).
 - **The plugin in its own terms.** The documentation, the screens and the messages describe what the plugin does. They never describe GitHub's behavior or compare the plugin with GitHub.
 - **Redmine's own screens.** The chooser, the settings tab and the file pages follow Redmine's core screens (enumerations, project settings tabs, issue categories); the issue form stays Redmine's form. Plugin CSS only with a reason.
 - **Redmine's extension points only:** do not edit Redmine's own files. The plugin prepends modules to `Issue`, `IssuesController`, `ProjectsHelper` and the `Repository` classes; keep them small.

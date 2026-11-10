@@ -169,6 +169,36 @@ The values these keys set can't be changed in the form: the form shows them as t
 
 The tracker and the subject are always shown, as Redmine requires them: the tracker as text when the template sets it. The project can't be changed while a template applies, since the template's values belong to the project it was chosen in. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only.
 
+### Links
+
+In a YAML form, `link` on an `input`, `textarea` or `dropdown` element links the field to a field of the issue. The answer sets that field, the form leaves the issue's field out, and the answer is not written into the description.
+
+```yaml
+body:
+  - type: dropdown
+    id: version
+    link: fixed_version
+    attributes:
+      label: Version
+    validations:
+      required: true
+  - type: input
+    id: due
+    link: due_date
+    attributes:
+      label: When do you need it?
+```
+
+| `link` | The field it sets |
+| --- | --- |
+| `priority`, `category`, `fixed_version`, `assigned_to`, `done_ratio` | The issue's field of that name, from a dropdown |
+| `start_date`, `due_date`, `estimated_hours` | The issue's field of that name, from an input |
+| A custom field's name or id | The custom field |
+
+- A linked dropdown without `options` offers the field's choices: the project's priorities, categories, open versions or assignable users, or the custom field's values. With `options`, each option sets the choice of the same name, compared without case.
+- A link that the project doesn't have is reported as a warning in the project settings; the field's answer then goes into the description.
+- Like the [Redmine keys](#redmine-keys), `link` belongs in `.redmine/ISSUE_TEMPLATE/` or in the project settings. Keep the files of `.github/ISSUE_TEMPLATE/` without it.
+
 ## Other keys
 
 Some keys have no Redmine equivalent. They don't stop a template from working; the project settings list them as warnings.

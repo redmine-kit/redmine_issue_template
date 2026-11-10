@@ -66,10 +66,12 @@ module RedmineIssueTemplate
     # Values the template sets: the template's value, whatever the request
     # says (before Redmine assigns them, so that the tracker comes first).
     # The project: the issue stays in the project the template was chosen in.
+    # Fields linked to a form's field: the form's answer sets them.
     def restrict_issue_template_params(template)
       attrs = params[:issue].respond_to?(:to_unsafe_h) ? params[:issue].to_unsafe_h : {}
       hidden = template.options.visibility(@project)[:hidden] | ['project_id']
       hidden |= ['description'] if template.form?
+      hidden |= LinkedField.for(template, @project).map(&:attribute)
       attrs = attrs.except(*hidden)
       custom = attrs['custom_field_values'].is_a?(Hash) ? attrs['custom_field_values'].except(*hidden) : {}
       IssueTemplateDefaults.new(template, @project).fixed.except(*hidden).each do |name, value|

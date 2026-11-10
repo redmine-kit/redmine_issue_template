@@ -131,6 +131,24 @@ module RedmineIssueTemplate
       parse(path => content).messages.map(&:text)
     end
 
+    test 'links of form fields' do
+      form = lambda do |elements|
+        "name: Form\ndescription: d\nbody:\n#{elements}"
+      end
+      dropdown = "- type: dropdown\n  link: fixed_version\n  attributes:\n    label: Version\n"
+      set = parse('a.yml' => form.call(dropdown))
+      assert_equal [], errors_of(set, 'a.yml')
+      assert_equal 'fixed_version', set.usable.first.fields.first.link
+
+      checkbox = "- type: checkboxes\n  link: category\n  attributes:\n    label: C\n    options:\n      - label: x\n"
+      assert_equal %w[link_type], errors_of(parse('a.yml' => form.call(checkbox)), 'a.yml')
+      assert_equal %w[links_not_unique],
+                   errors_of(parse('a.yml' => form.call(dropdown + dropdown.sub('Version', 'Again'))), 'a.yml')
+      # Without a link, a dropdown needs its options.
+      unlinked = dropdown.sub("  link: fixed_version\n", '')
+      assert_equal %w[missing_attribute], errors_of(parse('a.yml' => form.call(unlinked)), 'a.yml')
+    end
+
     test 'messages read like Redmine validation errors' do
       assert_equal ['form.yml: description cannot be blank'], texts("name: Form\nbody:\n#{INPUT}")
       assert_equal ['form.yml is not valid YAML'], texts("name: Form\n  description: [\n")

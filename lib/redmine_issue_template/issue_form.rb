@@ -5,7 +5,7 @@ module RedmineIssueTemplate
   # rules for its keys and fields.
   class IssueForm < Template
     TOP_LEVEL_KEYS = (%w[name description title labels assignees projects type body] + RedmineOptions::ATTRIBUTES).freeze
-    ELEMENT_KEYS = %w[type id attributes validations].freeze
+    ELEMENT_KEYS = %w[type id attributes validations link].freeze
     TYPES = %w[markdown textarea input dropdown checkboxes upload].freeze
     ATTRIBUTES = {
       'markdown' => %w[value],
@@ -26,7 +26,7 @@ module RedmineIssueTemplate
     ID = /\A[A-Za-z0-9_-]+\z/
 
     # One element of the form's body.
-    Element = Struct.new(:index, :type, :id, :attributes, :validations, keyword_init: true) do
+    Element = Struct.new(:index, :type, :id, :attributes, :validations, :link, keyword_init: true) do
       def field?
         type != 'markdown'
       end
@@ -79,6 +79,12 @@ module RedmineIssueTemplate
       elements.select(&:field?)
     end
 
+    # Links that the project doesn't have, as warnings.
+    def project_warnings(project)
+      unknown = fields.select { |element| element.link && LinkedField.resolve(project, element.link).nil? }
+      super + unknown.map { |element| Message.warning(path, :unknown_link, field: element.label, link: element.link) }
+    end
+
     def read(content)
       @content = content
       @elements = []
@@ -128,10 +134,11 @@ module RedmineIssueTemplate
       return element_error(index, :missing_attributes) unless attributes.is_a?(Hash)
 
       validations = item['validations'].is_a?(Hash) ? item['validations'] : {}
-      check_attributes(index, type, attributes)
+      link = check_link(index, type, item['link'])
+      check_attributes(index, type, attributes, linked: !link.nil?)
       check_validations(index, type, validations)
       @elements << Element.new(index: index, type: type, id: item['id']&.to_s, attributes: attributes,
-                               validations: validations)
+                               validations: validations, link: link)
     end
 
     # The element's type, or nil after reporting why it has none.
@@ -153,7 +160,16 @@ module RedmineIssueTemplate
       element_error(index, :invalid_id) if item['id'] && !ID.match?(item['id'].to_s)
     end
 
-    def check_attributes(index, type, attributes)
+    # The element's link (docs/format.md#links), or nil.
+    def check_link(index, type, link)
+      return nil if link.nil?
+      return element_error(index, :link_type, type: type) unless LinkedField::TYPES.include?(type)
+      return element_error(index, :not_string, key: 'link') unless link.is_a?(String) && link.strip.present?
+
+      link.strip
+    end
+
+    def check_attributes(index, type, attributes, linked: false)
       (attributes.keys.map(&:to_s) - ATTRIBUTES[type]).each { |key| element_error(index, :attribute_key, key: key) }
       if type == 'markdown'
         element_error(index, :missing_attribute, key: 'value') unless attributes['value'].is_a?(String)
@@ -161,12 +177,14 @@ module RedmineIssueTemplate
       end
       element_error(index, :missing_attribute, key: 'label') unless attributes.key?('label')
       element_error(index, :label_not_string) if attributes.key?('label') && !attributes['label'].is_a?(String)
-      check_dropdown(index, attributes) if type == 'dropdown'
+      check_dropdown(index, attributes, linked) if type == 'dropdown'
       check_checkboxes(index, attributes) if type == 'checkboxes'
     end
 
-    def check_dropdown(index, attributes)
+    # A linked dropdown can leave out its options: it offers the issue's.
+    def check_dropdown(index, attributes, linked)
       options = attributes['options']
+      return if linked && options.nil? && attributes['default'].nil?
       return element_error(index, :missing_attribute, key: 'options') unless options.is_a?(Array) && options.any?
 
       problem, value = dropdown_options_problem(index, options)
@@ -220,6 +238,8 @@ module RedmineIssueTemplate
     def check_unique_ids
       duplicate = Parser.duplicate(elements.filter_map(&:id))
       errors << Message.error(path, :ids_not_unique, value: duplicate) if duplicate
+      duplicate = Parser.duplicate(elements.filter_map(&:link))
+      errors << Message.error(path, :links_not_unique, value: duplicate) if duplicate
     end
 
     # Labels of the fields must be unique, and fields without an id must not

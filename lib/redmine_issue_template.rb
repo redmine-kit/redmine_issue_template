@@ -17,7 +17,7 @@ module RedmineIssueTemplate
   module_function
 
   def setup
-    %w[yaml_nodes parser redmine_options markdown_template issue_form chooser_config template_set
+    %w[yaml_nodes parser redmine_options linked_field markdown_template issue_form chooser_config template_set
        body_composer importer repository_source issue_patch issues_controller_patch
        projects_helper_patch repository_patch hooks].each do |file|
       require_relative "redmine_issue_template/#{file}"

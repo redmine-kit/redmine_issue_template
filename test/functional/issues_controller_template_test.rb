@@ -202,6 +202,54 @@ module RedmineIssueTemplate
       assert_equal 3, Issue.order(:id).last.tracker_id
     end
 
+    LINKED = <<~YAML
+      name: Linked form
+      description: Fields that set the issue's fields
+      type: Bug
+      body:
+        - type: dropdown
+          id: version
+          link: fixed_version
+          attributes:
+            label: Version
+        - type: dropdown
+          id: database
+          link: Database
+          attributes:
+            label: Database
+            options: [PostgreSQL, MySQL]
+        - type: input
+          id: due
+          link: due_date
+          attributes:
+            label: Due
+        - type: input
+          id: what
+          attributes:
+            label: What
+    YAML
+
+    test 'linked fields offer and set the issue\'s fields, outside the description' do
+      import('linked.yml' => LINKED)
+      get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
+      assert_response :success
+      versions = Issue.new(project: @project, tracker_id: 1).assignable_versions.map(&:name)
+      assert_select 'select[name=?] option', 'issue_template_answers[version]', text: versions.first
+      assert_select 'select[name=?] option', 'issue_template_answers[database]', text: 'PostgreSQL'
+      %w[fixed_version_id custom_field_values_1 due_date].each { |id| assert_select "#issue-form #issue_#{id}", 0 }
+
+      post :create, params: {
+        project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Linked', fixed_version_id: '' },
+        issue_template_answers: { 'version' => versions.index('2.0').to_s, 'database' => '0', 'due' => '2026-12-31',
+                                  'what' => 'x' }
+      }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_equal ['2.0', 'PostgreSQL', Date.new(2026, 12, 31)],
+                   [issue.fixed_version&.name, issue.custom_field_value(1), issue.due_date]
+      assert_equal "### What\n\nx", issue.description.gsub("\r\n", "\n")
+    end
+
     test 'the request cannot change the values the template sets' do
       post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
                               issue: { tracker_id: '1', subject: 'More recipes', description: 'Text', priority_id: '4',

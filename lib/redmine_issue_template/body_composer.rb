@@ -10,14 +10,18 @@ module RedmineIssueTemplate
     # textarea and a single dropdown, an array of option indexes for a
     # multiple dropdown and for checkboxes. files: the names of the issue's
     # attachments, listed under an upload field.
-    def initialize(form, answers, files: [])
+    # linked: the fields that set the issue's fields instead (LinkedField),
+    # left out of the description.
+    def initialize(form, answers, files: [], linked: [])
       @form = form
       @answers = (answers || {}).to_h.transform_keys(&:to_s)
       @files = files
+      @linked = linked
     end
 
     def compose
-      @form.fields.map { |element| "### #{element.label}\n\n#{answer(element)}" }.join("\n\n")
+      fields = @form.fields.reject { |element| @linked.include?(element) }
+      fields.map { |element| "### #{element.label}\n\n#{answer(element)}" }.join("\n\n")
     end
 
     # The fields whose answer breaks a validation: [[element, :blank], ...].
@@ -72,9 +76,12 @@ module RedmineIssueTemplate
       "```#{element.attributes['render']}\n#{text}\n```"
     end
 
+    # The chosen options' labels. A linked dropdown without options offers
+    # the issue's choices: the chosen indexes then.
     def chosen(element)
       Array(raw(element)).filter_map do |index|
         next if index.to_s.empty?
+        next index.to_s if element.link && element.options.empty?
 
         element.options[index.to_i]&.to_s if index.to_s.match?(/\A\d+\z/)
       end

@@ -186,6 +186,38 @@ fields:
 
 トラッカーと題名は、Redmine が必須にしているので、いつも表示します。トラッカーは、テンプレートで決めたときは文字で表示します。プロジェクトは、テンプレートを使っている間は変更できません。テンプレートの値は、テンプレートを選んだプロジェクトのものだからです。Redmine の規則もそのまま効きます。トラッカーで無効にした項目は、テンプレートで `shown` にしても出ず、ワークフローで読み取り専用にした項目は読み取り専用のままです。
 
+<a id="links"></a>
+
+### 項目とのつなぎ込み
+
+YAML フォームの `input`、`textarea`、`dropdown` の要素に `link` を書くと、その入力欄をチケットの項目につなげます。回答はその項目に入り、画面からはチケットの項目を外し、回答は説明に書きません。
+
+```yaml
+body:
+  - type: dropdown
+    id: version
+    link: fixed_version
+    attributes:
+      label: Version
+    validations:
+      required: true
+  - type: input
+    id: due
+    link: due_date
+    attributes:
+      label: When do you need it?
+```
+
+| `link` | 入る項目 |
+| --- | --- |
+| `priority`、`category`、`fixed_version`、`assigned_to`、`done_ratio` | チケットの同じ名前の項目(優先度、カテゴリ、対象バージョン、担当者、進捗率)。`dropdown` で選ぶ |
+| `start_date`、`due_date`、`estimated_hours` | チケットの同じ名前の項目(開始日、期日、予定工数)。`input` に書く |
+| カスタムフィールドの名前か ID | そのカスタムフィールド |
+
+- `options` のない `dropdown` は、その項目の選択肢を出します。プロジェクトの優先度、カテゴリ、未完了のバージョン、担当者にできるユーザー、カスタムフィールドの値です。`options` を書いたときは、各選択肢を、同じ名前の選択肢に、大文字と小文字を区別せずに対応させます。
+- プロジェクトにないつなぎ先は、プロジェクトの設定に警告として出します。その入力欄の回答は説明に書きます。
+- `link` は、[Redmine のキー](#redmine-keys)と同じく、`.redmine/ISSUE_TEMPLATE/` かプロジェクトの設定で使います。`.github/ISSUE_TEMPLATE/` のファイルには書きません。
+
 <a id="other-keys"></a>
 
 ## ほかのキー

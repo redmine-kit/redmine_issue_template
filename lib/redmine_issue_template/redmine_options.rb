@@ -117,11 +117,16 @@ module RedmineIssueTemplate
       warnings
     end
 
+    # A custom field of the project's issues, by id or by name without case.
+    def self.find_custom_field(project, name)
+      fields = project.all_issue_custom_fields
+      fields.detect { |field| field.id.to_s == name.to_s } || fields.detect { |field| field.name.casecmp?(name.to_s) }
+    end
+
     private
 
     def custom_field(project, name)
-      fields = project.all_issue_custom_fields
-      fields.detect { |field| field.id.to_s == name.to_s } || fields.detect { |field| field.name.casecmp?(name.to_s) }
+      self.class.find_custom_field(project, name)
     end
 
     def find_named(scope, name)

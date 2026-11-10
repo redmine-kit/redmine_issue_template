@@ -52,7 +52,10 @@
   <% when 'dropdown' %>
   <p>
     <%= label_tag field_id do %><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %><% end %>
-    <% options = element.options.each_with_index.map { |option, index| [option.to_s, index.to_s] } %>
+    <%# A linked dropdown offers the choices of the issue's field. %>
+    <% link = issue.issue_template_links.find { |linked| linked.element.equal?(element) } %>
+    <% labels = link ? link.choices(issue).map(&:first) : element.options %>
+    <% options = labels.each_with_index.map { |option, index| [option.to_s, index.to_s] } %>
     <% if element.multiple? %>
     <%= select_tag "#{name}[]", options_for_select(options, Array(value)), id: field_id, multiple: true, form: form %>
     <% else %>
