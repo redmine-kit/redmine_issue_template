@@ -189,6 +189,8 @@ body:
       label: When do you need it?
 ```
 
+![The issue form of a template whose "Broken in version" and "Database" fields set the target version and the custom field: neither is in Redmine's box below](./images/issue-form-link.png)
+
 | `link` | The field it sets |
 | --- | --- |
 | `priority`, `category`, `fixed_version`, `assigned_to`, `done_ratio` | The issue's field of that name, from a dropdown |

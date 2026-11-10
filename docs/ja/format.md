@@ -208,6 +208,8 @@ body:
       label: When do you need it?
 ```
 
+![「Broken in version」と「Database」の入力欄が、対象バージョンとカスタムフィールドにつながったテンプレートの入力画面。下の Redmine のボックスには、その 2 つの項目がない](./images/issue-form-link.png)
+
 | `link` | 入る項目 |
 | --- | --- |
 | `priority`、`category`、`fixed_version`、`assigned_to`、`done_ratio` | チケットの同じ名前の項目(優先度、カテゴリ、対象バージョン、担当者、進捗率)。`dropdown` で選ぶ |
