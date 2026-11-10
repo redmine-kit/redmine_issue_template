@@ -6,7 +6,7 @@
 
 ## フォルダー
 
-Redmine は、プロジェクトのリポジトリの既定のブランチで、次のうちテンプレートファイルがある最初のフォルダーを読みます。
+Redmine は、プロジェクトのリポジトリのデフォルトブランチで、次のうちテンプレートファイルがある最初のフォルダーを読みます。
 
 1. `.redmine/ISSUE_TEMPLATE/`
 2. `.github/ISSUE_TEMPLATE/`
@@ -172,13 +172,13 @@ fields:
 | `custom_fields` | カスタムフィールドの名前(か ID)と値 |
 | `fields` | 入力欄の表示 |
 
-名前は大文字と小文字を区別せずに比べます。プロジェクトにない名前は、プロジェクトの設定に警告として出し、その項目は Redmine の既定のままになります。
+名前は大文字と小文字を区別せずに比べます。プロジェクトにない名前は、プロジェクトの設定に警告として出し、その項目は Redmine のデフォルトのままになります。
 
 <a id="fields-of-the-form"></a>
 
 ### 入力欄の表示
 
-`fields` では、入力欄ごとに `shown`(既定)、`hidden`、`required` を決めます。`hidden` の入力欄は画面に出さず、テンプレートで決めた値を入れます。`required` の入力欄は、Redmine のワークフローで必須にした項目と同じように、印を付けて検証します。指定できる名前は `assigned_to`(担当者)、`category`(カテゴリ)、`fixed_version`(対象バージョン)、`parent_issue`(親チケット)、`start_date`(開始日)、`due_date`(期日)、`estimated_hours`(予定工数)、`done_ratio`(進捗率)、`description`(説明。Markdown テンプレートだけで、YAML フォームでは常に入力欄に置き換わる)、`priority`(優先度)、`is_private`(プライベート)、`watchers`(ウォッチャー)と、カスタムフィールドの名前か ID です。
+`fields` では、入力欄ごとに `shown`(デフォルト)、`hidden`、`required` を決めます。`hidden` の入力欄は画面に出さず、テンプレートで決めた値を入れます。`required` の入力欄は、Redmine のワークフローで必須にした項目と同じように、印を付けて検証します。指定できる名前は `assigned_to`(担当者)、`category`(カテゴリ)、`fixed_version`(対象バージョン)、`parent_issue`(親チケット)、`start_date`(開始日)、`due_date`(期日)、`estimated_hours`(予定工数)、`done_ratio`(進捗率)、`description`(説明。Markdown テンプレートだけで、YAML フォームでは常に入力欄に置き換わる)、`priority`(優先度)、`is_private`(プライベート)、`watchers`(ウォッチャー)と、カスタムフィールドの名前か ID です。
 
 トラッカー、題名、プロジェクトは、Redmine が必須にしているので、いつも表示します。Redmine の規則もそのまま効きます。トラッカーで無効にした項目は、テンプレートで `shown` にしても出ず、ワークフローで読み取り専用にした項目は読み取り専用のままです。
 

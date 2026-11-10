@@ -5,14 +5,14 @@
 | 取得元 | ファイルを取り込むタイミング | 編集する場所 |
 | --- | --- | --- |
 | リポジトリ | プロジェクトのメインのリポジトリを取得したとき、または「インポート」を押したとき | リポジトリ |
-| GitHub | [Redmine GitHub](https://github.com/redmine-kit/redmine_github) が、既定のブランチへの push を受け取ったとき | GitHub |
+| GitHub | [Redmine GitHub](https://github.com/redmine-kit/redmine_github) が、デフォルトブランチへの push を受け取ったとき | GitHub |
 | プロジェクトの設定 | タブでファイルを編集したとき | Redmine |
 
 <a id="the-projects-repository"></a>
 
 ## プロジェクトのリポジトリ
 
-Redmine がプロジェクトのメインのリポジトリのコミットを取得すると、プラグインは既定のブランチのテンプレートフォルダーを読み、保存したファイルと比べます。取得するのは、「コミットを自動取得する」を有効にしてリポジトリを開いたとき、cron から `Repository.fetch_changesets` を実行したとき、Redmine のリポジトリの Web サービスを呼んだときです。ファイルが違えば取り込み直し、フォルダーを最後に変えたリビジョンを記録します。読み込みには Redmine 自身のリポジトリのアダプターを使うので、Redmine が対応するすべての SCM で動きます。
+Redmine がプロジェクトのメインのリポジトリのコミットを取得すると、プラグインはデフォルトブランチのテンプレートフォルダーを読み、保存したファイルと比べます。取得するのは、「コミットを自動取得する」を有効にしてリポジトリを開いたとき、cron から `Repository.fetch_changesets` を実行したとき、Redmine のリポジトリの Web サービスを呼んだときです。ファイルが違えば取り込み直し、フォルダーを最後に変えたリビジョンを記録します。読み込みには Redmine 自身のリポジトリのアダプターを使うので、Redmine が対応するすべての SCM で動きます。
 
 プロジェクトの設定の「インポート」は、取得を待たずに、すぐにフォルダーを読みます。
 
@@ -22,7 +22,7 @@ Redmine がプロジェクトのメインのリポジトリのコミットを取
 
 ## Redmine GitHub
 
-[Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub App で GitHub のリポジトリとつなぎます。既定のブランチへの push で `.redmine/ISSUE_TEMPLATE/` か `.github/ISSUE_TEMPLATE/` が変わったという通知が GitHub から届くと、Redmine GitHub はそのフォルダー(ファイルがある最初のもの)を読み、ファイルをこのプラグインに渡します。
+[Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub App で GitHub のリポジトリとつなぎます。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` か `.github/ISSUE_TEMPLATE/` が変わったという通知が GitHub から届くと、Redmine GitHub はそのフォルダー(ファイルがある最初のもの)を読み、ファイルをこのプラグインに渡します。
 
 ```ruby
 RedmineIssueTemplate::Importer.import(
