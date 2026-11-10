@@ -23,6 +23,7 @@ module RedmineIssueTemplate
       assert_select '#tab-issue_templates'
       assert_select 'table.list.issue-template-files tbody tr', 4
       assert_select 'table.list.issue-template-files td.name', text: 'broken.yml'
+      assert_select 'table.list.issue-template-files td', text: 'Template chooser', count: 0
       assert_select '#errorExplanation li', text: 'broken.yml: description cannot be blank'
       assert_select 'div.warning li', text: /octo-org/
       assert_select '#tab-content-issue_templates p a.icon-add', text: 'New file'

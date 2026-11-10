@@ -3,7 +3,6 @@ ja:
   permission_manage_issue_templates: チケットテンプレートの管理
   label_issue_template_plural: チケットテンプレート
   label_issue_template_blank: 空白のチケット
-  label_issue_template_config: テンプレート選択画面
   label_issue_template_contact_links: その他の連絡先
   label_issue_template_file_new: 新しいファイル
   text_issue_template_path_info: ".md、.yml、config.yml"

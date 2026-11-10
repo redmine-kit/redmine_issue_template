@@ -36,7 +36,7 @@
     <% errors = messages.select { |m| m.path == file.path && m.error? } %>
     <tr>
       <td class="name"><%= link_to file.path, project_issue_template_path(@project, file) %></td>
-      <td class="description"><%= template ? template.name : l(:label_issue_template_config) %></td>
+      <td class="description"><%= template&.name %></td>
       <td><%= template&.tracker(@project)&.name %></td>
       <td class="tick">
         <%# As on Redmine's Information page %>

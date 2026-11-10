@@ -1,9 +1,6 @@
-<%# What users see with the file: the chooser and the New issue form,
-    shown but not usable (inert). The form is Redmine's own. %>
-<% if @preview || @preview_errors.present? %>
-<br />
-<h3><%= l(:label_preview) %></h3>
-<% end %>
+<%# What users see with the file: the chooser and Redmine's New issue form,
+    shown but not usable (inert). In a box with a legend, as the issue
+    edit page groups its fields (issues/_edit). %>
 <% if @preview_errors.present? %>
 <div id="errorExplanation">
   <ul>
@@ -13,14 +10,15 @@
   </ul>
 </div>
 <% elsif @preview %>
-<div class="issue-template-preview" inert>
+<div class="box">
+<fieldset class="tabular issue-template-preview" inert>
+  <legend><%= l(:label_preview) %></legend>
   <%= render partial: 'issue_templates/chooser', locals: @preview %>
   <% if @issue %>
   <br />
   <h3><%= l(:label_issue_new) %></h3>
-  <div class="box tabular">
-    <div id="all_attributes"><%= render partial: 'issues/form' %></div>
-  </div>
+  <div id="all_attributes"><%= render partial: 'issues/form' %></div>
   <% end %>
+</fieldset>
 </div>
 <% end %>

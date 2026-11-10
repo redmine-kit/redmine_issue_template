@@ -2,9 +2,8 @@
 
 <%= labelled_form_for @file, as: :issue_template_file, url: project_issue_template_path(@project, @file), method: :patch do |f| %>
 <%= render partial: 'issue_templates/file_form', locals: { f: f } %>
+<%= render partial: 'issue_templates/preview' %>
 <%= submit_tag l(:button_save) %>
 <%= submit_tag l(:label_preview), name: 'preview' %>
 <%= link_to l(:button_cancel), settings_project_path(@project, tab: 'issue_templates') %>
 <% end %>
-
-<%= render partial: 'issue_templates/preview' %>

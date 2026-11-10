@@ -101,7 +101,7 @@ module RedmineIssueTemplate
       assert_response :success
       assert_empty IssueTemplateFile.where(project: @project)
       assert_select 'textarea#issue_template_file_content', text: /name: Feature/
-      assert_select 'h3', text: 'Preview'
+      assert_select 'div.box > fieldset.issue-template-preview[inert] > legend', text: 'Preview'
       assert_select '.issue-template-preview[inert]' do
         assert_select 'table.issue-templates td.name', text: 'Feature'
         assert_select 'table.issue-templates td', text: 'Feature request'
