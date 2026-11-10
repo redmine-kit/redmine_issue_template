@@ -21,7 +21,11 @@ module RedmineIssueTemplate
       record = IssueTemplateSource.for(project)
       IssueTemplateFile.transaction do
         IssueTemplateFile.where(project_id: project.id).delete_all
-        files.each { |path, content| IssueTemplateFile.create!(project: project, path: path, content: content) }
+        # A file too long to store is kept empty, with its error.
+        files.each do |path, content|
+          content = '' if content.length > Parser::MAX_LENGTH
+          IssueTemplateFile.create!(project: project, path: path, content: content)
+        end
         record.attributes = { kind: source, folder: folder, revision: revision, digest: digest(files),
                               synced_at: Time.current }
         record.message_list = messages(project, files)

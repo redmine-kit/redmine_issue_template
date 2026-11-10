@@ -9,12 +9,20 @@ module RedmineIssueTemplate
   module Parser
     module_function
 
+    # The longest file, as IssueTemplateFile stores it.
+    MAX_LENGTH = 65_535
+
     # files: { "bug.yml" => "...", "config.yml" => "..." } (paths in the folder)
     def parse(files)
       templates = []
       config = nil
       messages = []
       files.sort_by { |path, _| sort_key(path) }.each do |path, content|
+        if content.to_s.length > MAX_LENGTH
+          messages << Message.error(path, :file_too_long, count: MAX_LENGTH)
+          next
+        end
+
         case kind(path)
         when :config
           config = ChooserConfig.parse(path, content)
@@ -30,6 +38,7 @@ module RedmineIssueTemplate
         end
       end
       check_unique_names(templates, messages)
+      check_unique_keys(templates, messages)
       TemplateSet.new(templates: templates, config: config || ChooserConfig.default, messages: messages)
     end
 
@@ -45,6 +54,17 @@ module RedmineIssueTemplate
     # YAML forms come before Markdown templates, each alphanumerically.
     def sort_key(path)
       [kind(path) == :markdown ? 1 : 0, File.basename(path)]
+    end
+
+    # Two files can't have the same id in URLs (bug.yml and bug.md): the
+    # first in the chooser's order keeps it.
+    def check_unique_keys(templates, messages)
+      templates.group_by(&:key).each_value do |same|
+        same.drop(1).each do |template|
+          template.errors << Message.error(template.path, :duplicate_key, key: template.key)
+          messages << template.errors.last
+        end
+      end
     end
 
     # Template names must be unique among all templates.
@@ -68,7 +88,9 @@ module RedmineIssueTemplate
         return nil
       end
       data
-    rescue Psych::Exception
+    # Deeply nested YAML exhausts the stack (SystemStackError is not a
+    # StandardError, and would stop the repository's fetch).
+    rescue Psych::Exception, SystemStackError
       errors << Message.error(path, :invalid_yaml)
       nil
     end
@@ -93,9 +115,10 @@ module RedmineIssueTemplate
   # issue_template_error_<sentence>; %{...} in the subject comes from the
   # message's params. These are I18n's %{...} tokens, not format strings.
   # rubocop:disable Style/FormatStringToken
-  MESSAGE_CORE = %i[invalid blank taken inclusion exclusion too_short].freeze
+  MESSAGE_CORE = %i[invalid blank taken inclusion exclusion too_short too_long].freeze
   MESSAGE_SENTENCES = {
     'invalid_yaml' => [:not_yaml],
+    'file_too_long' => [:too_long],
     'form_not_map' => [:invalid],
     'config_not_map' => [:invalid],
     'element_not_map' => [:invalid],
@@ -121,6 +144,7 @@ module RedmineIssueTemplate
     'body_empty' => [:blank, 'body'],
     'name_too_short' => [:too_short, 'name'],
     'duplicate_name' => [:taken, 'name: %{name}'],
+    'duplicate_key' => [:taken, 'issue_template=%{key}'],
     'options_not_unique' => [:taken, 'options: %{value}'],
     'checkboxes_not_unique' => [:taken, 'options: %{value}'],
     'ids_not_unique' => [:taken, 'id: %{value}'],
@@ -149,7 +173,7 @@ module RedmineIssueTemplate
   }.freeze
   # rubocop:enable Style/FormatStringToken
 
-  # An error or a warning about a file, shown in the project settings, in
+  # An error or a warning about a file, shown on the file's page, in
   # Redmine's words: the key it is about and a validation sentence, as
   # Redmine shows "Subject cannot be blank".
   Message = Struct.new(:path, :level, :key, :params, keyword_init: true) do

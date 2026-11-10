@@ -131,6 +131,16 @@ module RedmineIssueTemplate
       parse(path => content).messages.map(&:text)
     end
 
+    test 'files that are too deep, too long or share an id' do
+      deep = "name: Deep\ndescription: d\nbody: #{'[' * 20_000}#{']' * 20_000}\n"
+      assert_equal %w[invalid_yaml], errors_of(parse('deep.yml' => deep), 'deep.yml')
+      long = "---\nname: Long\nabout: a\n---\n#{'x' * RedmineIssueTemplate::Parser::MAX_LENGTH}"
+      assert_equal %w[file_too_long], errors_of(parse('long.md' => long), 'long.md')
+      set = parse('bug.yml' => github_fixture('bug_report.yml'), 'bug.md' => github_fixture('bug.md'))
+      assert_equal %w[duplicate_key], errors_of(set, 'bug.md')
+      assert_equal 'bug.yml', set.find('bug').path
+    end
+
     test 'links of form fields' do
       form = lambda do |elements|
         "name: Form\ndescription: d\nbody:\n#{elements}"
