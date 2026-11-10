@@ -15,7 +15,7 @@ Style/Documentation:
 Metrics/MethodLength:
   Max: 25
 
-# The checks of the template files follow GitHub's rules one by one
+# The checks of the template files go through the rules one by one
 # (lib/redmine_issue_template/issue_form.rb and its neighbours), which makes
 # a few methods branchy without making them hard to read.
 Metrics/AbcSize:

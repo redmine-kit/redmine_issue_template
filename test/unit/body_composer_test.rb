@@ -14,7 +14,7 @@ module RedmineIssueTemplate
       RedmineIssueTemplate::BodyComposer.new(form, answers, files: files)
     end
 
-    test 'the answers are written as GitHub writes the issue body' do
+    test 'the answers are written into the description under a heading per field' do
       answers = { 'contact' => '', 'what-happened' => "It crashed.\n", 'version' => '1', 'browsers' => %w[0 2],
                   'logs' => 'Error: boom', 'terms' => ['0'] }
       expected = <<~MARKDOWN.chomp

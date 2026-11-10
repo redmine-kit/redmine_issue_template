@@ -42,12 +42,12 @@ module RedmineIssueTemplate
       nil
     end
 
-    # GitHub lists YAML forms before Markdown templates, each alphanumerically.
+    # YAML forms come before Markdown templates, each alphanumerically.
     def sort_key(path)
       [kind(path) == :markdown ? 1 : 0, File.basename(path)]
     end
 
-    # Template names must be unique among all templates (GitHub's rule).
+    # Template names must be unique among all templates.
     def check_unique_names(templates, messages)
       templates.group_by(&:name).each do |name, same|
         next if name.blank? || same.size < 2

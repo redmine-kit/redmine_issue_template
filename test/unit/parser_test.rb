@@ -14,12 +14,12 @@ module RedmineIssueTemplate
       set.messages.select { |m| m.path == path && m.error? }.map(&:key)
     end
 
-    test "GitHub's examples parse without errors" do
+    test 'the example templates parse without errors' do
       set = parse(github_files)
       assert_equal([], set.messages.select(&:error?).map { |m| [m.path, m.key] })
       assert_equal %w[bug_report bug], set.usable.map(&:key)
-      # The converted form has the Markdown template's name on purpose: GitHub
-      # tells to delete the Markdown file when adding the form.
+      # The converted form has the Markdown template's name on purpose, so it
+      # replaces the Markdown template: the two together are an error.
       converted = parse('bug_converted.yml' => github_fixture('bug_converted.yml'))
       assert_equal [], converted.messages.select(&:error?).map(&:key)
       assert_equal %w[duplicate_name], errors_of(parse('a.yml' => github_fixture('bug_converted.yml'),
@@ -92,7 +92,7 @@ module RedmineIssueTemplate
       "- type: dropdown\n  attributes:\n    label: L\n    options: #{options}\n#{extra}"
     end
 
-    test "GitHub's rules for issue forms" do
+    test 'the rules for issue forms' do
       cases = {
         "description: d\nbody:\n#{INPUT}" => %w[missing_key],
         "name: Form\ndescription: d\ninput: x\nbody:\n#{INPUT}" => %w[not_permitted_key],

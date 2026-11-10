@@ -47,15 +47,15 @@ module RedmineIssueTemplate
       assignees.lazy.map { |entry| find_assignable(assignable, entry) }.find(&:itself)
     end
 
-    # Warnings that depend on the project (names that don't resolve, GitHub
-    # keys without a Redmine equivalent).
+    # Warnings that depend on the project (names that don't resolve, keys
+    # that set nothing in Redmine).
     def project_warnings(project)
-      options.resolve(project, path) + github_key_warnings(project)
+      options.resolve(project, path) + key_warnings(project)
     end
 
     private
 
-    def github_key_warnings(project)
+    def key_warnings(project)
       warnings = []
       warnings << Message.warning(path, :unknown_type, type: type) if type.present? && find_tracker(project, type).nil?
       warnings << Message.warning(path, :labels_ignored, labels: labels.join(', ')) if labels.any?

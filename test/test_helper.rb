@@ -25,7 +25,7 @@ module RedmineIssueTemplate
       File.read(File.join(FIXTURES, 'github', name))
     end
 
-    # The examples of GitHub's documentation, as a template folder.
+    # The example templates (test/fixtures/github/README.md), as a template folder.
     def github_files
       %w[bug_report.yml bug.md config.yml].to_h { |name| [name, github_fixture(name)] }
     end

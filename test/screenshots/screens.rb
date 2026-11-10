@@ -3,7 +3,7 @@
 require_relative 'screenshot_case'
 require_relative '../test_helper'
 
-# The screens of docs/README.md: GitHub's examples as the templates of the
+# The screens of docs/README.md: the example templates as the templates of the
 # eCookbook project, plus a file with an error and a template with warnings
 # for the settings tab.
 class RedmineIssueTemplateScreenshotsTest < ScreenshotCase

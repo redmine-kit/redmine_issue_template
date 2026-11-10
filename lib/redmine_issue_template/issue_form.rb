@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # A YAML issue form (GitHub's "Syntax for issue forms" and "Syntax for
-  # GitHub's form schema"), checked with GitHub's rules
-  # ("Common validation errors when creating issue forms").
+  # A YAML issue form (docs/format.md), checked with the plugin's
+  # rules for its keys and fields.
   class IssueForm < Template
     TOP_LEVEL_KEYS = (%w[name description title labels assignees projects type body] + RedmineOptions::ATTRIBUTES).freeze
     ELEMENT_KEYS = %w[type id attributes validations].freeze
@@ -36,8 +35,8 @@ module RedmineIssueTemplate
         attributes['label'].to_s
       end
 
-      # The name of the answer in the form's parameters: the id, or the
-      # label made into a parameter as GitHub does.
+      # The name of the answer in the form's parameters: the id, or else the
+      # label made into a parameter.
       def ref
         id.presence || label.parameterize
       end

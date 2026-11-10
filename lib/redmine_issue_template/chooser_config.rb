@@ -2,8 +2,7 @@
 
 module RedmineIssueTemplate
   # config.yml of the template folder: whether blank issues are allowed and
-  # the contact links shown in the chooser (GitHub's "Configuring the
-  # template chooser").
+  # the contact links shown in the chooser (docs/format.md).
   class ChooserConfig
     KEYS = %w[blank_issues_enabled contact_links].freeze
     LINK_KEYS = %w[name url about].freeze
@@ -29,7 +28,7 @@ module RedmineIssueTemplate
       @messages = []
     end
 
-    # GitHub's default is true: the chooser offers a blank issue.
+    # True unless config.yml says otherwise: the chooser offers a blank issue.
     def blank_issues_enabled?
       @blank_issues_enabled
     end

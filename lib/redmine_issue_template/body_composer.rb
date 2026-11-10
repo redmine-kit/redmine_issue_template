@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # The answers of an issue form, as GitHub writes them into the issue body:
-  # a "### <label>" heading per field and the answer below it.
+  # The answers of an issue form, written into the issue's description: a
+  # "### <label>" heading per field and the answer below it.
   class BodyComposer
     NO_RESPONSE = '_No response_'
 

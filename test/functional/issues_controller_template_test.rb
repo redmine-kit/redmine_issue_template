@@ -106,7 +106,7 @@ module RedmineIssueTemplate
       assert_select 'select[name=?][multiple=multiple]', 'issue_template_answers[browsers][]'
       assert_select 'input[type=checkbox][name=?]', 'issue_template_answers[terms][]'
       assert_select 'div.wiki', text: /Thanks for taking the time/
-      # Markdown in descriptions, as GitHub renders it.
+      # Markdown in descriptions is rendered.
       assert_select 'em.info a[href=?]', 'https://example.com', text: 'Code of Conduct'
     end
 

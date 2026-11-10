@@ -4,7 +4,7 @@ module RedmineIssueTemplate
   # The YAML text as it is written, for what loading it loses: keys and
   # values such as yes or on, which YAML reads as true or false.
   module YamlNodes
-    # Words that YAML reads as booleans; GitHub forbids them as keys.
+    # Words that YAML reads as booleans; they are not allowed as keys.
     BOOLEAN_WORDS = %w[y Y yes Yes YES n N no No NO true True TRUE false False FALSE on On ON off Off OFF].freeze
 
     module_function

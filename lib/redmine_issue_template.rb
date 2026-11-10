@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# GitHub's issue templates in Redmine (docs/design.md): a template chooser for
+# Issue templates for Redmine (docs/design.md): a template chooser for
 # "New issue", Markdown templates, YAML issue forms and config.yml, read from
 # the project's repository (.redmine/ISSUE_TEMPLATE/ or .github/ISSUE_TEMPLATE/)
 # or edited in the project settings.
