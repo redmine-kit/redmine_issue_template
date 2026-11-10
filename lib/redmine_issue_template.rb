@@ -5,7 +5,7 @@
 # the project's repository (.redmine/ISSUE_TEMPLATE/ or .github/ISSUE_TEMPLATE/)
 # or edited in the project settings.
 module RedmineIssueTemplate
-  VERSION = '0.1.0'
+  VERSION = '0.1.1'
 
   # The folders read from the repository, the first one with files wins.
   DOCS_URL = 'https://redmine-kit.github.io/redmine_issue_template/'
