@@ -8,7 +8,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 
 [日本語](README.ja.md)
 
-> **Status:** early development.
+> **Status:** early development. It is implemented and tested on Redmine 7.0.3.
 
 - Markdown templates, YAML forms and `config.yml` for the chooser, with the tracker, priority, category, target version and custom fields in the same files.
 - Each template can hide fields of the issue form or make them required.
