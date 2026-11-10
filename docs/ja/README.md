@@ -13,7 +13,7 @@ Redmine Issue Template は、GitHub のチケット(Issue)のテンプレート�
 | [導入](setup.md) | 動作環境、インストール、設定、テスト |
 | [テンプレートの形式](format.md) | Markdown のテンプレート、フォーム、`config.yml`、`redmine` キー、GitHub のキーと Redmine の対応 |
 | [取り込みと同期](sync.md) | テンプレートの取得元、取り込むタイミング、Redmine GitHub との連携 |
-| [設計](design.md) | 目的、決めたこと、対象外のこと |
+| [設計](design.md) | 目的、決定事項、対象外 |
 
 <a id="screens"></a>
 
