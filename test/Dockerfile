@@ -12,7 +12,10 @@ RUN if [ -n "$REDMINE_BRANCH" ]; then \
     curl -fsSLo /tmp/redmine.tar.gz "https://github.com/redmine/redmine/archive/refs/heads/${REDMINE_BRANCH}.tar.gz" \
     && mkdir /redmine && tar -xzf /tmp/redmine.tar.gz -C /redmine --strip-components=1; \
   else \
-    curl -fsSLo /tmp/redmine.tar.gz "https://www.redmine.org/releases/redmine-${REDMINE_VERSION}.tar.gz" \
+    # redmine.org can close the connection before the end: continue the download.
+    for attempt in 1 2 3 4 5; do \
+      curl -fsSL -C - -o /tmp/redmine.tar.gz "https://www.redmine.org/releases/redmine-${REDMINE_VERSION}.tar.gz" && break; \
+    done \
     && echo "${REDMINE_SHA256}  /tmp/redmine.tar.gz" | sha256sum -c - \
     && tar -xzf /tmp/redmine.tar.gz -C / && mv "/redmine-${REDMINE_VERSION}" /redmine; \
   fi \
