@@ -7,8 +7,8 @@
 module RedmineIssueTemplate
   VERSION = '0.1.1'
 
-  # The folders read from the repository, the first one with files wins.
   DOCS_URL = 'https://redmine-kit.github.io/redmine_issue_template/'
+  # The folders read from the repository, the first one with files wins.
   FOLDERS = ['.redmine/ISSUE_TEMPLATE', '.github/ISSUE_TEMPLATE'].freeze
 
   # Where a project's files come from (IssueTemplateSource#kind).

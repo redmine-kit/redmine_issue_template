@@ -194,7 +194,11 @@ module RedmineIssueTemplate
       import('question.yml' => question)
       get :new, params: { project_id: 'ecookbook', issue_template: 'question' }
       assert_response :success
-      assert_select '.issue-template-fields select#issue_tracker_id[form=issue-form][onchange*=updateIssueFrom]'
+      tracker = '.issue-template-fields select#issue_template_tracker_id[form=issue-form][onchange*=updateIssueFrom]'
+      assert_select tracker do
+        assert_select 'option', Issue.new(project: @project).allowed_target_trackers(User.find(2)).count
+        assert_select 'option[selected=selected][value="1"]'
+      end
       assert_select '#issue-form select#issue_tracker_id', 0
 
       post :create, params: { project_id: 'ecookbook', issue_template: 'question',
@@ -252,6 +256,44 @@ module RedmineIssueTemplate
       assert_equal ['2.0', 'PostgreSQL', Date.new(2026, 12, 31)],
                    [issue.fixed_version&.name, issue.custom_field_value(1), issue.due_date]
       assert_equal "### What\n\nx", issue.description.gsub("\r\n", "\n")
+    end
+
+    test 'links follow Redmine\'s rules for the user, and a blank answer keeps the default' do
+      import('linked.yml' => LINKED)
+      WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'fixed_version_id',
+                                 rule: 'readonly')
+      get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
+      assert_response :success
+      # Read-only for the user: not linked, and without options nothing to choose.
+      assert_select 'select[name=?]', 'issue_template_answers[version]', 0
+      assert_select 'select[name=?]', 'issue_template_answers[database]'
+
+      post :create, params: { project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Blank' },
+                              issue_template_answers: { 'version' => '0', 'database' => '', 'what' => 'x' } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_nil issue.fixed_version
+      assert_equal CustomField.find(1).default_value.to_s, issue.custom_field_value(1).to_s
+    end
+
+    test 'parameters of unexpected shapes are ignored' do
+      get :new, params: { project_id: 'ecookbook', issue_template: 'feature', issue: { custom_field_values: 'x' } }
+      assert_response :success
+      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_answers: 'x',
+                              issue: { tracker_id: '1', subject: 'Shapes', custom_fields: ['x'] } }
+      assert_response :success
+      assert_select '#errorExplanation'
+    end
+
+    test 'a hidden value needs the permission to set the field' do
+      import('secret.md' => "---\nname: Secret\nabout: s\nis_private: true\nfields:\n  is_private: hidden\n---\nText\n")
+      # Developers can add issues but can't make them private.
+      @request.session[:user_id] = 3
+      post :create, params: { project_id: 'ecookbook', issue_template: 'secret',
+                              issue: { tracker_id: '1', subject: 'Hidden', description: 'Text' } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_not issue.is_private?
     end
 
     test 'the request cannot change the values the template sets' do

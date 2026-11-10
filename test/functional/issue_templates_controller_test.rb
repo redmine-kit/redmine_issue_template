@@ -121,6 +121,15 @@ module RedmineIssueTemplate
       end
     end
 
+    test 'the preview works for a manager who cannot add issues' do
+      import(github_files)
+      Role.find(1).remove_permission!(:add_issues)
+      file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
+      get :show, params: { project_id: 'ecookbook', id: file.id }
+      assert_response :success
+      assert_select '.issue-template-preview'
+    end
+
     test 'the page of a file shows its warnings' do
       import(github_files)
       file = IssueTemplateFile.find_by(project: @project, path: 'bug_report.yml')

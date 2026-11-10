@@ -1,5 +1,6 @@
 <%# The chooser's lists, after Redmine's lists (enumerations/index).
-    Locals: templates, config, blank (show the blank issue link). %>
+    Locals: templates, config, blank (show the blank issue link), carried
+    (parameters kept for the form). %>
 <% carried = local_assigns[:carried] || {} %>
 <% if blank %>
 <p><%= link_to sprite_icon('add', l(:label_issue_template_blank)),

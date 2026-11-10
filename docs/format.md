@@ -111,7 +111,7 @@ It crashed.
 
 ### Checks
 
-Each file is checked: the required keys, the permitted keys and attributes, unique ids and labels, labels that stay different when made into parameters, at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), and a `name` longer than 3 characters. A file that breaks a rule is listed with its errors in the project settings and left out of the chooser; the other files still work.
+Each file is checked: the required keys, the permitted keys and attributes, unique ids and labels, labels that stay different when made into parameters, at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), a `name` longer than 3 characters, at most 65,535 characters per file, and no two files with the same id (`bug.yml` and `bug.md`; the first in the chooser's order keeps it). A file that breaks a rule is marked in the project settings, with its errors on its page, and left out of the chooser; the other files still work.
 
 Each problem is shown as the file, the key and Redmine's validation message, for example `bug.yml: body[2]: id is invalid` or `bug.yml: description cannot be blank`. The "Help" link of the project settings opens this page.
 
@@ -165,7 +165,7 @@ The values these keys set can't be changed in the form: the form shows them as t
 
 ### Fields of the form
 
-`fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and keeps the value the template sets; a required field is marked and checked as Redmine marks and checks the fields its workflow requires. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; a YAML form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
+`fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and gets the value the template sets, when Redmine lets the user set that field; a required field is marked and checked as Redmine marks and checks the fields its workflow requires. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; a YAML form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
 
 The tracker and the subject are always shown, as Redmine requires them: the tracker as text when the template sets it. The project can't be changed while a template applies, since the template's values belong to the project it was chosen in. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only.
 
@@ -198,7 +198,9 @@ body:
 | A custom field's name or id | The custom field |
 
 - A linked dropdown without `options` offers the field's choices: the project's priorities, categories, open versions or assignable users, or the custom field's values. With `options`, each option sets the choice of the same name, compared without case.
-- A link that the project doesn't have is reported as a warning in the project settings; the field's answer then goes into the description.
+- A link that the project doesn't have is reported as a warning on the template's page; the field's answer then goes into the description.
+- Links follow Redmine's rules for the user: a field the workflow makes read-only, a field the tracker disables or a custom field the user can't see is not linked. Its answer goes into the description, and a dropdown without `options` is left out, having nothing to choose.
+- A blank answer leaves the field's default. Of two links to the same field, the first sets it.
 - Like the [Redmine keys](#redmine-keys), `link` belongs in `.redmine/ISSUE_TEMPLATE/` or in the project settings. Keep the files of `.github/ISSUE_TEMPLATE/` without it.
 
 ## Other keys

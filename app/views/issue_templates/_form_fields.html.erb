@@ -1,8 +1,6 @@
-<%# An issue form's text, tracker, subject and fields, in a box of their own above the
-    box of the issue's attributes. The box is outside Redmine's form (the
-    hook's place, under the page's title), so each field belongs to the form
-    by its form attribute: it is submitted with the form, and Redmine's
-    updates of the form leave it as it is. %>
+<%# A form's text, tracker, subject and fields, in a box above Redmine's
+    form. The fields join the form by their form attribute, so they are
+    submitted with it and Redmine's updates of the form leave them alone. %>
 <% if issue.issue_template_active? && issue.issue_template.form? %>
 <% composer = issue.issue_template_composer %>
 <% form = 'issue-form' %>
@@ -16,10 +14,12 @@
 <% if issue.issue_template_visibility[:fixed].include?('tracker_id') %>
 <p><label><%= l(:field_tracker) %></label> <span class="issue-template-value"><%= issue.tracker %></span></p>
 <% else %>
-<%# Redmine's tracker field, with Redmine's update of the form when it changes. %>
+<%# Not Redmine's id: Redmine's form, rendered again on each update, resets
+    #issue_tracker_id to the tracker it was rendered with. %>
 <p>
-  <%= label_tag 'issue_tracker_id' do %><%= l(:field_tracker) %><span class="required"> *</span><% end %>
-  <%= select_tag 'issue[tracker_id]', trackers_options_for_select(issue), id: 'issue_tracker_id', form: form,
+  <%= label_tag 'issue_template_tracker_id' do %><%= l(:field_tracker) %><span class="required"> *</span><% end %>
+  <%= select_tag 'issue[tracker_id]', options_for_select(trackers_options_for_select(issue), issue.tracker_id),
+                 id: 'issue_template_tracker_id', form: form,
                  onchange: "updateIssueFrom('#{escape_javascript update_issue_form_path(issue.project, issue)}', this)" %>
 </p>
 <% end %>
@@ -27,11 +27,11 @@
   <%= label_tag 'issue_subject' do %><%= l(:field_subject) %><span class="required"> *</span><% end %>
   <%= text_field_tag 'issue[subject]', issue.subject, id: 'issue_subject', size: 80, maxlength: 255, form: form %>
 </p>
-<% issue.issue_template.elements.drop_while { |element| element.type == 'markdown' }.each do |element| %>
+<% (issue.issue_template.elements.drop_while { |element| element.type == 'markdown' } - issue.issue_template_dropped).each do |element| %>
   <% name = "issue_template_answers[#{element.ref}]" %>
   <% field_id = "issue_template_answer_#{element.ref}" %>
   <% value = composer.value(element) %>
-  <%# Checkbox options that must be checked are marked on the option. %>
+  <%# Only validations.required marks the field; required checkbox options are marked on the option. %>
   <% required = element.required? %>
   <% case element.type %>
   <% when 'markdown' %>
@@ -72,6 +72,7 @@
       <%= issue_template_markdown(option[:label], inline: true) %><%= content_tag(:span, ' *', class: 'required') if option[:required] %>
     </label>
     <% end %>
+    <%# Posts the answer when nothing is checked, so that the field doesn't go back to its default. %>
     <%= hidden_field_tag "#{name}[]", '', id: nil, form: form %>
     <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
   </p>

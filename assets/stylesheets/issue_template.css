@@ -1,14 +1,11 @@
-/* A template's form: the subject is in the box above, so the
-   Private checkbox (floated right at the top of Redmine's form) no longer
-   has the subject beside it. The attributes start below it instead of
-   being squeezed by it. */
+/* A form's subject is in the box above, so the attributes start below
+   Redmine's Private checkbox, floated at the top of the form. */
 #all_attributes #attributes {
   clear: both;
 }
 
-/* The values a template sets, as text: in the box of a field (Redmine's
-   input: padding, margin and border), so that the row lines up with the
-   rows of fields. */
+/* The values a template sets, as text, with the box of Redmine's inputs,
+   so that their rows line up with the rows of fields. */
 .issue-template-value {
   display: inline-block;
   vertical-align: middle;
@@ -18,8 +15,7 @@
   line-height: normal;
 }
 
-/* The warnings of the project settings: as Redmine's error box above them
-   (#errorExplanation), without the extra space above a flash message. */
+/* A file's warnings, laid out as Redmine's #errorExplanation. */
 div.flash.warning.issue-template-warnings {
   margin-block-start: 0;
   position: relative;

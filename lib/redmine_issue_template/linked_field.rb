@@ -15,14 +15,30 @@ module RedmineIssueTemplate
 
     attr_reader :element, :attribute
 
-    # The form's linked fields that the project has: [LinkedField, ...].
-    def self.for(form, project)
-      return [] unless form.form? && project
+    # The links that apply to the new issue: the field exists in the project
+    # and Redmine lets the user set it (Issue#issue_template_settable?). The
+    # first of two links to the same field wins.
+    def self.for(issue)
+      form = issue.issue_template
+      return [] unless form&.form? && issue.project
 
-      form.fields.filter_map do |element|
-        attribute = resolve(project, element.link)
-        new(element, attribute) if attribute
+      linked = []
+      form.fields.each do |element|
+        attribute = resolve(issue.project, element.link)
+        next if attribute.nil? || linked.any? { |link| link.attribute == attribute }
+        next unless issue.issue_template_settable?(attribute)
+
+        linked << new(element, attribute)
       end
+      linked
+    end
+
+    # The attributes the form's links name in the project, whether they apply
+    # or not: the request can't set them.
+    def self.attributes(form, project)
+      return [] unless form.form?
+
+      form.fields.filter_map { |element| resolve(project, element.link) }.uniq
     end
 
     # 'fixed_version_id', a custom field's id ("3"), or nil.
@@ -47,7 +63,6 @@ module RedmineIssueTemplate
     def choices(issue)
       available = issue_choices(issue)
       return available if element.options.empty?
-
       # A field without a list of values (text) takes the option as it is.
       return element.options.map { |option| [option.to_s, option.to_s] } if available.empty?
 
@@ -57,27 +72,34 @@ module RedmineIssueTemplate
       end
     end
 
-    # Sets the issue's field from the posted answer, unless the tracker
-    # disables the field.
+    # Sets the issue's field from the posted answer. A blank answer leaves
+    # Redmine's default.
     def apply(issue, answer)
-      return if !custom_field? && issue.disabled_core_fields.include?(attribute)
-
       value = element.type == 'dropdown' ? chosen(issue, answer) : answer.to_s.strip
+      return if value.blank?
+
       if custom_field?
         issue.custom_field_values = { attribute => value }
       else
-        issue.public_send("#{attribute}=", value.presence)
+        issue.public_send("#{attribute}=", value)
       end
     end
 
     private
 
+    # The chosen values; one, unless the field takes several.
     def chosen(issue, answer)
       list = choices(issue)
       values = Array(answer).filter_map do |index|
-        list[index.to_i]&.last if index.to_s.match?(/\A\d+\z/)
+        list[index.to_i]&.last&.to_s if index.to_s.match?(/\A\d+\z/)
       end
-      element.multiple? ? values.map(&:to_s) : values.first.to_s
+      custom_field(issue)&.multiple? ? values : values.first
+    end
+
+    def custom_field(issue)
+      return nil unless custom_field?
+
+      issue.available_custom_fields.detect { |field| field.id.to_s == attribute }
     end
 
     def issue_choices(issue)
@@ -91,22 +113,17 @@ module RedmineIssueTemplate
       end
     end
 
+    # Empty for fields without a list of values (text, numbers, dates).
+    def custom_field_choices(issue)
+      custom_field(issue)&.possible_values_options(issue).to_a.map { |option| Array(option).values_at(0, -1) }
+    end
+
     # As Redmine names versions: shared versions of other projects with the
     # project's name.
     def version_choices(issue)
       issue.assignable_versions.map do |version|
         [version.project == issue.project ? version.name : version.to_s_with_project, version.id]
       end
-    end
-
-    def custom_field_choices(issue)
-      return [] unless custom_field?
-
-      field = issue.available_custom_fields.detect { |custom_field| custom_field.id.to_s == attribute }
-      return [] unless field
-
-      # Empty for fields without a list of values (text, numbers, dates).
-      field.possible_values_options(issue).map { |option| option.is_a?(Array) ? option : [option, option] }
     end
   end
 end

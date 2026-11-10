@@ -1,6 +1,5 @@
-<%# Under the page's title: what the template is for and, for a form, the
-    box of its subject and fields, which starts with that text and the
-    form's first markdown elements. %>
+<%# Under the page's title: a form's box (_form_fields), or a Markdown
+    template's description. %>
 <% if issue.issue_template_active? %>
 <% template = issue.issue_template %>
 <% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %><% end %>

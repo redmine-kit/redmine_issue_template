@@ -6,27 +6,25 @@ module RedmineIssueTemplate
   class BodyComposer
     NO_RESPONSE = '_No response_'
 
-    # answers: { ref => value } as the form posts them: a string for input,
-    # textarea and a single dropdown, an array of option indexes for a
-    # multiple dropdown and for checkboxes. files: the names of the issue's
-    # attachments, listed under an upload field.
-    # linked: the fields that set the issue's fields instead (LinkedField),
-    # left out of the description.
-    def initialize(form, answers, files: [], linked: [])
+    # answers: { ref => a string, or option indexes for multiple dropdowns and
+    # checkboxes }. files: attachment names for upload fields. linked: fields
+    # that set the issue's fields instead. dropped: fields the form leaves out.
+    def initialize(form, answers, files: [], linked: [], dropped: [])
       @form = form
       @answers = (answers || {}).to_h.transform_keys(&:to_s)
       @files = files
       @linked = linked
+      @dropped = dropped
     end
 
     def compose
-      fields = @form.fields.reject { |element| @linked.include?(element) }
+      fields = @form.fields.reject { |element| @linked.include?(element) || @dropped.include?(element) }
       fields.map { |element| "### #{element.label}\n\n#{answer(element)}" }.join("\n\n")
     end
 
     # The fields whose answer breaks a validation: [[element, :blank], ...].
     def problems
-      @form.fields.each_with_object([]) do |element, problems|
+      (@form.fields - @dropped).each_with_object([]) do |element, problems|
         problem = problem(element)
         problems << [element, problem] if problem
       end
@@ -76,8 +74,8 @@ module RedmineIssueTemplate
       "```#{element.attributes['render']}\n#{text}\n```"
     end
 
-    # The chosen options' labels. A linked dropdown without options offers
-    # the issue's choices: the chosen indexes then.
+    # The chosen options' labels. A linked dropdown without options has the
+    # issue's choices: its indexes are enough for the required check.
     def chosen(element)
       Array(raw(element)).filter_map do |index|
         next if index.to_s.empty?

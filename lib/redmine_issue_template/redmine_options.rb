@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # Redmine's keys of a template (docs/format.md#redmine-keys), at the top
-  # level next to the other keys: the issue's attributes and the visibility
-  # of the form's fields. Names are
-  # resolved against a project when the template is used (#resolve).
+  # Redmine's keys of a template (docs/format.md#redmine-keys): the issue's
+  # attributes and the visibility of the form's fields. Names are resolved
+  # against a project when the template is used.
   class RedmineOptions
     ATTRIBUTES = %w[tracker priority category fixed_version is_private custom_fields fields].freeze
     # Fields of the issue form whose visibility a template can set, and the

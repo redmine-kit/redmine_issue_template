@@ -5,6 +5,8 @@ module RedmineIssueTemplate
   # out of the form, the ones it requires are required as Redmine requires
   # fields, and an issue form's answers become the description.
   module IssuePatch
+    # The callbacks run after Redmine's own (force_default_value_on_noneditable_custom_fields,
+    # clear_disabled_fields), and the links before the description is composed.
     def self.prepended(base)
       base.attr_reader :issue_template
       base.attr_accessor :issue_template_answers
@@ -13,15 +15,16 @@ module RedmineIssueTemplate
       base.validate :validate_issue_template_answers, on: :create
     end
 
-    # The template applies while the issue is new; edits later use
-    # Redmine's own form.
     def issue_template=(template)
       @issue_template = template
       @issue_template_visibility = nil
       @issue_template_links = nil
+      # Redmine caches the workflow's rules, read with the fields before.
       @workflow_rule_by_attribute = nil
     end
 
+    # The template applies while the issue is new; edits later use
+    # Redmine's own form.
     def issue_template_active?
       new_record? && issue_template.present?
     end
@@ -45,7 +48,28 @@ module RedmineIssueTemplate
     def issue_template_links
       return [] unless issue_template_active?
 
-      @issue_template_links ||= LinkedField.for(issue_template, project)
+      @issue_template_links ||= LinkedField.for(self)
+    end
+
+    # Linked fields that can't apply and have no options of their own: the
+    # form leaves them out, since they would have nothing to choose.
+    def issue_template_dropped
+      return [] unless issue_template_active? && issue_template.form?
+
+      linked = issue_template_links.map(&:element)
+      issue_template.fields.select { |element| element.link && element.options.empty? && !linked.include?(element) }
+    end
+
+    # Whether Redmine lets the user set the field on this issue by its own
+    # rules, without the template's: the workflow's read-only fields, the
+    # fields the tracker disables, custom fields the user can't see.
+    def issue_template_settable?(attribute, user = User.current)
+      if attribute.match?(/\A\d+\z/)
+        method(:editable_custom_field_values).super_method.call(user)
+                                             .any? { |value| value.custom_field_id.to_s == attribute }
+      else
+        method(:safe_attribute_names).super_method.call(user).include?(attribute)
+      end
     end
 
     # The fields the form leaves out or shows as text.
@@ -80,18 +104,19 @@ module RedmineIssueTemplate
 
     def issue_template_composer
       BodyComposer.new(issue_template, issue_template_answers,
-                       files: saved_attachments.map(&:filename), linked: issue_template_links.map(&:element))
+                       files: saved_attachments.map(&:filename), linked: issue_template_links.map(&:element),
+                       dropped: issue_template_dropped)
     end
 
     private
 
     # On create, Redmine resets the custom fields the user can't edit to their
-    # defaults. Fields the template hides or sets are not editable in the
-    # form, but keep the value the template gives them.
+    # defaults. Fields the template hides, sets or links are not editable in
+    # the form, but keep their value when Redmine lets the user set them.
     def force_default_value_on_noneditable_custom_fields
       return super unless issue_template_active?
 
-      locked = issue_template_locked
+      locked = issue_template_locked.select { |id| issue_template_settable?(id) }
       kept = custom_field_values.select { |value| locked.include?(value.custom_field_id.to_s) }
                                 .to_h { |value| [value, value.value] }
       super
