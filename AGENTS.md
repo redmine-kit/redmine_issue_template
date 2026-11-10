@@ -8,11 +8,12 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 
 ## Rules
 
-- **GitHub's format first.** Files that work on GitHub work here unchanged. Follow GitHub's documentation ("Syntax for issue forms", "Syntax for GitHub's form schema", "Configuring issue templates for your repository", "Common validation errors when creating issue forms"); Redmine settings go only under the `redmine` key. Document every GitHub key's mapping in [format.md](docs/format.md).
+- **The template format.** The plugin reads Markdown templates, YAML issue forms and `config.yml` from the template folder and checks them with its own rules. Redmine's keys are top-level keys whose names no other key uses. Document every key and what it does in the issue form in [format.md](docs/format.md).
+- **The plugin in its own terms.** The documentation, the screens and the messages describe what the plugin does. They never describe GitHub's behavior or compare the plugin with GitHub.
 - **Redmine's own screens.** The chooser, the settings tab and the file pages follow Redmine's core screens (enumerations, project settings tabs, issue categories); the issue form stays Redmine's form. Plugin CSS only with a reason.
 - **Redmine's extension points only:** do not edit Redmine's own files. The plugin prepends modules to `Issue`, `IssuesController`, `ProjectsHelper` and the `Repository` classes; keep them small.
 - **Pages never read the repository.** Imports store the files; pages read the stored files.
-- **Tests:** added code has tests, run with Redmine's own mechanism (`bin/test` runs them in Docker with PostgreSQL; [setup.md](docs/setup.md#tests)). GitHub's own examples are in `test/fixtures/github/`.
+- **Tests:** added code has tests, run with Redmine's own mechanism (`bin/test` runs them in Docker with PostgreSQL; [setup.md](docs/setup.md#tests)). The example templates in `test/fixtures/github/` are tested as they are.
 - **No secrets in the repository.**
 
 ## Documentation
