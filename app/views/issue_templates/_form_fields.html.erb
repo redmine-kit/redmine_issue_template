@@ -1,25 +1,52 @@
-<%# An issue form's fields, in the issue form's tabular layout. %>
+<%# An issue form's text, tracker, subject and fields, in a box of their own above the
+    box of the issue's attributes. The box is outside Redmine's form (the
+    hook's place, under the page's title), so each field belongs to the form
+    by its form attribute: it is submitted with the form, and Redmine's
+    updates of the form leave it as it is. %>
 <% if issue.issue_template_active? && issue.issue_template.form? %>
 <% composer = issue.issue_template_composer %>
-<% issue.issue_template.elements.each do |element| %>
+<% form = 'issue-form' %>
+<div class="box tabular issue-template-fields">
+<%# In div.wiki, as the markdown elements, so that the text starts at the
+    box's edge rather than at the fields. %>
+<% if issue.issue_template.about.present? %><div class="wiki"><p><%= issue.issue_template.about %></p></div><% end %>
+<% issue.issue_template.elements.take_while { |element| element.type == 'markdown' }.each do |element| %>
+<div class="wiki"><%= issue_template_markdown(element.attributes['value']) %></div>
+<% end %>
+<% if issue.issue_template_visibility[:fixed].include?('tracker_id') %>
+<p><label><%= l(:field_tracker) %></label> <span class="issue-template-value"><%= issue.tracker %></span></p>
+<% else %>
+<%# Redmine's tracker field, with Redmine's update of the form when it changes. %>
+<p>
+  <%= label_tag 'issue_tracker_id' do %><%= l(:field_tracker) %><span class="required"> *</span><% end %>
+  <%= select_tag 'issue[tracker_id]', trackers_options_for_select(issue), id: 'issue_tracker_id', form: form,
+                 onchange: "updateIssueFrom('#{escape_javascript update_issue_form_path(issue.project, issue)}', this)" %>
+</p>
+<% end %>
+<p>
+  <%= label_tag 'issue_subject' do %><%= l(:field_subject) %><span class="required"> *</span><% end %>
+  <%= text_field_tag 'issue[subject]', issue.subject, id: 'issue_subject', size: 80, maxlength: 255, form: form %>
+</p>
+<% issue.issue_template.elements.drop_while { |element| element.type == 'markdown' }.each do |element| %>
   <% name = "issue_template_answers[#{element.ref}]" %>
   <% field_id = "issue_template_answer_#{element.ref}" %>
   <% value = composer.value(element) %>
-  <% required = element.required? || (element.type == 'checkboxes' && element.checkbox_options.any? { |o| o[:required] }) %>
+  <%# Checkbox options that must be checked are marked on the option. %>
+  <% required = element.required? %>
   <% case element.type %>
   <% when 'markdown' %>
   <div class="wiki"><%= issue_template_markdown(element.attributes['value']) %></div>
   <% when 'input' %>
   <p>
     <%= label_tag field_id do %><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %><% end %>
-    <%= text_field_tag name, value, id: field_id, size: 60, placeholder: element.attributes['placeholder'] %>
+    <%= text_field_tag name, value, id: field_id, size: 60, placeholder: element.attributes['placeholder'], form: form %>
     <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
   </p>
   <% when 'textarea' %>
   <p>
     <%= label_tag field_id do %><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %><% end %>
     <%= text_area_tag name, value, id: field_id, cols: 60, rows: 6, placeholder: element.attributes['placeholder'],
-                      class: (element.attributes['render'].present? ? nil : 'wiki-edit') %>
+                      class: (element.attributes['render'].present? ? nil : 'wiki-edit'), form: form %>
     <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
   </p>
   <% when 'dropdown' %>
@@ -27,9 +54,9 @@
     <%= label_tag field_id do %><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %><% end %>
     <% options = element.options.each_with_index.map { |option, index| [option.to_s, index.to_s] } %>
     <% if element.multiple? %>
-    <%= select_tag "#{name}[]", options_for_select(options, Array(value)), id: field_id, multiple: true %>
+    <%= select_tag "#{name}[]", options_for_select(options, Array(value)), id: field_id, multiple: true, form: form %>
     <% else %>
-    <%= select_tag name, options_for_select(options, value), id: field_id, include_blank: !element.attributes.key?('default') %>
+    <%= select_tag name, options_for_select(options, value), id: field_id, include_blank: !element.attributes.key?('default'), form: form %>
     <% end %>
     <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
   </p>
@@ -38,11 +65,11 @@
     <label><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %></label>
     <% element.checkbox_options.each_with_index do |option, index| %>
     <label class="block">
-      <%= check_box_tag "#{name}[]", index.to_s, Array(value).map(&:to_s).include?(index.to_s), id: "#{field_id}_#{index}" %>
+      <%= check_box_tag "#{name}[]", index.to_s, Array(value).map(&:to_s).include?(index.to_s), id: "#{field_id}_#{index}", form: form %>
       <%= issue_template_markdown(option[:label], inline: true) %><%= content_tag(:span, ' *', class: 'required') if option[:required] %>
     </label>
     <% end %>
-    <%= hidden_field_tag "#{name}[]", '', id: nil %>
+    <%= hidden_field_tag "#{name}[]", '', id: nil, form: form %>
     <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
   </p>
   <% when 'upload' %>
@@ -52,4 +79,5 @@
   </p>
   <% end %>
 <% end %>
+</div>
 <% end %>

@@ -34,7 +34,9 @@ assignees: ''
 
 ## YAML forms
 
-A YAML form has `name`, `description` and `body`, and optionally `title`, `labels`, `assignees`, `type` and `projects`. The form shows its fields in place of the description, and the answers become the description when the issue is created. This example is from GitHub's documentation:
+A YAML form has `name`, `description` and `body`, and optionally `title`, `labels`, `assignees`, `type` and `projects`. The form shows its fields in place of the description, and the answers become the description when the issue is created.
+
+On the "New issue" page, a box above Redmine's form holds the form: its `description`, the `markdown` elements it starts with, the tracker, the subject and the fields. Redmine's box below holds the issue's other attributes, the files and the watchers. This example is from GitHub's documentation:
 
 ```yaml
 name: Bug Report
@@ -159,11 +161,13 @@ fields:
 
 Names are compared without case. A name that the project doesn't have is reported as a warning in the project settings, and the field keeps Redmine's default.
 
+The values these keys set can't be changed in the form: the form shows them as text, as Redmine shows a field the user can't change, and the issue gets the template's value whatever the request says. `title`, the body of a Markdown template and `assignees` are only what the form starts with, and can be changed.
+
 ### Fields of the form
 
 `fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and keeps the value the template sets; a required field is marked and checked as Redmine marks and checks the fields its workflow requires. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; a YAML form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
 
-The tracker, the subject and the project are always shown, as Redmine requires them. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only.
+The tracker and the subject are always shown, as Redmine requires them: the tracker as text when the template sets it. The project can't be changed while a template applies, since the template's values belong to the project it was chosen in. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only.
 
 ## Other keys
 

@@ -67,11 +67,15 @@ module RedmineIssueTemplate
       get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
       assert_response :success
       assert_select 'input[name=issue_template][value=feature]'
-      assert_select 'select#issue_tracker_id option[selected=selected][value="2"]'
+      # The values the template sets are text, not fields.
+      assert_select 'select#issue_tracker_id', 0
+      assert_select 'p', text: /Tracker\s+Feature request/
       assert_select 'input#issue_subject[value=?]', '[Feature] '
       assert_select 'textarea#issue_description', text: /\A## The idea/
-      assert_select 'select#issue_priority_id option[selected=selected][value="6"]'
-      assert_select 'select#issue_category_id option[selected=selected][value="2"]'
+      assert_select 'select#issue_priority_id', 0
+      assert_select 'p', text: /Priority\s+High/
+      assert_select 'select#issue_category_id', 0
+      assert_select 'p', text: /Category\s+Recipes/
       assert_select 'input#issue_estimated_hours', 0
       assert_select 'label[for=issue_due_date] span.required'
       assert_select '#issue_custom_field_values_8', 0
@@ -96,8 +100,14 @@ module RedmineIssueTemplate
     test 'an issue form shows its fields instead of the description' do
       get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
       assert_response :success
-      assert_select 'select#issue_tracker_id option[selected=selected][value="1"]'
-      assert_select 'input#issue_subject[value=?]', '[Bug]: '
+      assert_select '.issue-template-fields p', text: /Tracker\s+Bug/
+      assert_select '#issue-form p', text: /Tracker/, count: 0
+      # The subject and the fields are in a box above Redmine's form, and
+      # belong to the form.
+      assert_select '#issue-form input#issue_subject', 0
+      assert_select '.issue-template-fields input#issue_subject[form=issue-form][value=?]', '[Bug]: '
+      assert_select '.issue-template-fields textarea[form=issue-form][name=?]', 'issue_template_answers[what-happened]'
+      assert_select 'head link[rel=stylesheet][href^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-'
       assert_select 'textarea#issue_description', 0
       assert_select 'input[name=?]', 'issue_template_answers[contact]'
       assert_select 'textarea[name=?]', 'issue_template_answers[what-happened]', text: 'A bug happened!'
@@ -105,6 +115,9 @@ module RedmineIssueTemplate
                     text: '1.0.2 (Default)'
       assert_select 'select[name=?][multiple=multiple]', 'issue_template_answers[browsers][]'
       assert_select 'input[type=checkbox][name=?]', 'issue_template_answers[terms][]'
+      # A required option is marked on the option, not on the field.
+      assert_select 'p:has(input[name="issue_template_answers[terms][]"]) > label:not(.block) span.required', 0
+      assert_select 'p:has(input[name="issue_template_answers[terms][]"]) label.block span.required'
       assert_select 'div.wiki', text: /Thanks for taking the time/
       # Markdown in descriptions is rendered.
       assert_select 'em.info a[href=?]', 'https://example.com', text: 'Code of Conduct'
@@ -140,8 +153,62 @@ module RedmineIssueTemplate
                            form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '3', subject: 'x' },
                            issue_template_answers: { 'contact' => 'me@example.com' } }, xhr: true
       assert_response :success
-      assert_include 'issue_template_answers[contact]', response.body
-      assert_include 'me@example.com', response.body
+      # The form's fields are outside the part Redmine updates.
+      assert_not_include 'issue_template_answers[contact]', response.body
+      assert_not_include 'issue[subject]', response.body
+    end
+
+    test 'the project stays the one the template was chosen in' do
+      # Without a template, Redmine offers the subprojects.
+      get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
+      assert_select 'select#issue_project_id'
+
+      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+      assert_response :success
+      assert_select 'select#issue_project_id', 0
+
+      post :new, params: { project_id: 'ecookbook', issue_template: 'feature',
+                           form_update_triggered_by: 'issue_project_id',
+                           issue: { project_id: '5', tracker_id: '2', subject: 'x' } }, xhr: true
+      assert_response :success
+      assert_not_include 'issue_project_id', response.body
+
+      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                              issue: { project_id: '5', tracker_id: '2', subject: 'More recipes', description: 'Text',
+                                       priority_id: '6', due_date: '2026-12-01' } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_equal 1, issue.project_id
+    end
+
+    test 'a form without a tracker offers Redmine\'s trackers in its box' do
+      question = <<~YAML
+        name: Question
+        description: Ask
+        body:
+          - type: input
+            id: what
+            attributes:
+              label: What
+      YAML
+      import('question.yml' => question)
+      get :new, params: { project_id: 'ecookbook', issue_template: 'question' }
+      assert_response :success
+      assert_select '.issue-template-fields select#issue_tracker_id[form=issue-form][onchange*=updateIssueFrom]'
+      assert_select '#issue-form select#issue_tracker_id', 0
+
+      post :create, params: { project_id: 'ecookbook', issue_template: 'question',
+                              issue: { tracker_id: '3', subject: 'How?' }, issue_template_answers: { 'what' => 'x' } }
+      assert_equal 3, Issue.order(:id).last.tracker_id
+    end
+
+    test 'the request cannot change the values the template sets' do
+      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                              issue: { tracker_id: '1', subject: 'More recipes', description: 'Text', priority_id: '4',
+                                       category_id: '1', due_date: '2026-12-01' } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_equal [2, 6, 2], [issue.tracker_id, issue.priority_id, issue.category_id]
     end
 
     test 'blank issues: off in config.yml, still offered to those who manage the templates' do

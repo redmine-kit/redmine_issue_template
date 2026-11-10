@@ -3,7 +3,7 @@
 <% source = IssueTemplateSource.find_by(project_id: @project.id) %>
 <% manual = source.nil? || source.manual? %>
 <% set = RedmineIssueTemplate::TemplateSet.for(@project) %>
-<% messages = source ? source.message_list : set.messages %>
+<% messages = IssueTemplateSource.messages_for(@project, source) %>
 <% files = IssueTemplateFile.where(project_id: @project.id).sort_by { |file| RedmineIssueTemplate::Parser.sort_key(file.path) } %>
 
 <p>
@@ -15,6 +15,11 @@
 </p>
 
 <%= render partial: 'issue_templates/source', locals: { source: source } unless manual %>
+
+<%# The problems themselves are on each file's page. %>
+<% if messages.any?(&:error?) %>
+<div id="errorExplanation"><%= notice_icon('error') %><%= l(:text_issue_template_files_with_errors) %></div>
+<% end %>
 
 <% if Setting.text_formatting != 'common_mark' %>
 <% common_mark = Redmine::WikiFormatting.formats_for_select.to_h.invert['common_mark'] %>
@@ -56,25 +61,4 @@
 </table>
 <% else %>
 <p class="nodata"><%= l(:label_no_data) %></p>
-<% end %>
-
-<% errors = messages.select(&:error?) %>
-<% warnings = messages.reject(&:error?) %>
-<% if errors.any? %>
-<div id="errorExplanation">
-  <ul>
-  <% errors.each do |message| %>
-    <li><%= message.text %></li>
-  <% end %>
-  </ul>
-</div>
-<% end %>
-<% if warnings.any? %>
-<div class="flash warning">
-  <ul>
-  <% warnings.each do |message| %>
-    <li><%= message.text %></li>
-  <% end %>
-  </ul>
-</div>
 <% end %>

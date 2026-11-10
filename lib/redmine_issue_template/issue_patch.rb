@@ -24,30 +24,39 @@ module RedmineIssueTemplate
       new_record? && issue_template.present?
     end
 
-    # { hidden: [...], required: [...] }: attribute names and custom field ids.
+    # { hidden: [...], required: [...], fixed: [...] }: attribute names and
+    # custom field ids. Fixed: the values the template sets, shown as text.
     def issue_template_visibility
-      return { hidden: [], required: [] } unless issue_template_active? && project
+      return { hidden: [], required: [], fixed: [] } unless issue_template_active? && project
 
       @issue_template_visibility ||= begin
         visibility = issue_template.options.visibility(project)
         visibility[:hidden] |= ['description'] if issue_template.form?
+        visibility[:fixed] = IssueTemplateDefaults.new(issue_template, project).fixed.keys - visibility[:hidden]
         visibility
       end
+    end
+
+    # The fields the form leaves out or shows as text.
+    def issue_template_locked
+      issue_template_visibility[:hidden] | issue_template_visibility[:fixed]
     end
 
     def safe_attribute_names(user = nil)
       names = super
       return names unless issue_template_active?
 
-      names - issue_template_visibility[:hidden]
+      # A form has its tracker and subject in its own box.
+      names -= %w[tracker_id subject] if issue_template.form?
+      names - issue_template_locked - ['project_id']
     end
 
     def editable_custom_field_values(user = nil)
       values = super
       return values unless issue_template_active?
 
-      hidden = issue_template_visibility[:hidden]
-      values.reject { |value| hidden.include?(value.custom_field_id.to_s) }
+      locked = issue_template_locked
+      values.reject { |value| locked.include?(value.custom_field_id.to_s) }
     end
 
     # Redmine marks these fields as required and checks them.
@@ -55,7 +64,7 @@ module RedmineIssueTemplate
       names = super
       return names unless issue_template_active?
 
-      (names | issue_template_visibility[:required]) - issue_template_visibility[:hidden]
+      (names | issue_template_visibility[:required]) - issue_template_locked
     end
 
     def issue_template_composer
@@ -65,13 +74,13 @@ module RedmineIssueTemplate
     private
 
     # On create, Redmine resets the custom fields the user can't edit to their
-    # defaults. Fields the template hides are not editable in the form, but
-    # keep the value the template gives them.
+    # defaults. Fields the template hides or sets are not editable in the
+    # form, but keep the value the template gives them.
     def force_default_value_on_noneditable_custom_fields
       return super unless issue_template_active?
 
-      hidden = issue_template_visibility[:hidden]
-      kept = custom_field_values.select { |value| hidden.include?(value.custom_field_id.to_s) }
+      locked = issue_template_locked
+      kept = custom_field_values.select { |value| locked.include?(value.custom_field_id.to_s) }
                                 .to_h { |value| [value, value.value] }
       super
       kept.each { |field_value, value| field_value.value = value }

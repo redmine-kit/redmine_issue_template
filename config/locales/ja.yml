@@ -4,11 +4,12 @@ ja:
   label_issue_template_plural: チケットテンプレート
   label_issue_template_blank: 空白のチケット
   label_issue_template_contact_links: その他の連絡先
-  label_issue_template_file_new: 新しいファイル
+  label_issue_template_file_new: 新しいテンプレート
   text_issue_template_path_info: ".md、.yml、config.yml"
   text_issue_template_upload: 「ファイル」欄で添付してください。
   warning_issue_template_text_formatting: "テキスト書式が %{name} ではありません。"
   warning_issue_template_nothing_to_import: インポートするチケットテンプレートがありません。
+  text_issue_template_files_with_errors: "エラーがあるため使用できないテンプレートがあります。テンプレートを開いて詳細を確認してください。"
   notice_issue_template_synced: インポートしました。
   error_issue_template_no_repository: リポジトリが見つかりません
   error_issue_template_managed_elsewhere: テンプレートはリポジトリで編集してください。

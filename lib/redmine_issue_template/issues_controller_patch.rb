@@ -16,7 +16,7 @@ module RedmineIssueTemplate
       template = current_issue_template
       if template
         issue_template_defaults_into_params(template) if request.get?
-        remove_issue_template_hidden_params(template)
+        restrict_issue_template_params(template)
       end
       super
       return if performed? || template.nil? || @issue.nil?
@@ -61,18 +61,25 @@ module RedmineIssueTemplate
       params[:issue] = ActionController::Parameters.new(merged)
     end
 
-    # Fields the template hides can't be given by the request: Redmine's
-    # defaults apply, then the template's values.
-    def remove_issue_template_hidden_params(template)
-      return unless params[:issue].respond_to?(:to_unsafe_h)
-
-      hidden = template.options.visibility(@project)[:hidden]
+    # What the request can't give while a template applies. Fields the
+    # template hides: Redmine's defaults apply, then the template's values.
+    # Values the template sets: the template's value, whatever the request
+    # says (before Redmine assigns them, so that the tracker comes first).
+    # The project: the issue stays in the project the template was chosen in.
+    def restrict_issue_template_params(template)
+      attrs = params[:issue].respond_to?(:to_unsafe_h) ? params[:issue].to_unsafe_h : {}
+      hidden = template.options.visibility(@project)[:hidden] | ['project_id']
       hidden |= ['description'] if template.form?
-      attrs = params[:issue].to_unsafe_h.except(*hidden)
-      if attrs['custom_field_values'].is_a?(Hash)
-        attrs['custom_field_values'] =
-          attrs['custom_field_values'].except(*hidden)
+      attrs = attrs.except(*hidden)
+      custom = attrs['custom_field_values'].is_a?(Hash) ? attrs['custom_field_values'].except(*hidden) : {}
+      IssueTemplateDefaults.new(template, @project).fixed.except(*hidden).each do |name, value|
+        if name.match?(/\A\d+\z/)
+          custom[name] = value
+        else
+          attrs[name] = value
+        end
       end
+      attrs['custom_field_values'] = custom if custom.any?
       params[:issue] = ActionController::Parameters.new(attrs)
     end
 
@@ -108,6 +115,15 @@ module RedmineIssueTemplate
       values
     end
 
+    # The values the form can't change: the template's attributes except the
+    # subject, the description and the assignee, which the form starts with.
+    # { "tracker_id" => "2", "3" => "x" }, custom fields by id.
+    def fixed
+      values = attributes
+      custom = values.delete('custom_field_values') || {}
+      values.except('subject', 'description', 'assigned_to_id').merge(custom)
+    end
+
     # Hidden fields are not in the form, so the template's values are set
     # directly, on every request.
     def apply_hidden(issue)
@@ -126,9 +142,10 @@ module RedmineIssueTemplate
     # preview in the project settings.
     def new_issue(user = User.current)
       issue = Issue.new(project: @project, author: user)
+      # Before the template applies, which takes its values out of the form.
+      issue.safe_attributes = attributes
       issue.issue_template = @template
       issue.issue_template_answers = {}
-      issue.safe_attributes = attributes
       issue.tracker ||= issue.allowed_target_trackers(user).first
       issue.status ||= issue.default_status
       apply_hidden(issue)

@@ -37,7 +37,8 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
 
       visit '/projects/ecookbook/issues/new?issue_template=bug_report'
       assert_selector 'textarea[name="issue_template_answers[what-happened]"]'
-      shoot 'issue-form', language, selector: '#issue-form'
+      # With the page's title, so that the form reads as Redmine's New issue.
+      shoot 'issue-form', language
     end
 
     import(github_files.merge('feature.md' => FEATURE, 'broken.yml' => "name: Broken form\nbody: []\n"))

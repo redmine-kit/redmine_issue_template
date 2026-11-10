@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # The issue form keeps the chosen template across its updates and shows an
-  # issue form's fields after the issue's attributes.
+  # Under the page's title, the template's text and an issue form's subject
+  # and fields; in the issue form, the chosen template, kept across updates.
   class Hooks < Redmine::Hook::ViewListener
+    render_on :view_issues_new_top, partial: 'issue_templates/intro'
     render_on :view_issues_form_details_top, partial: 'issue_templates/form_key'
-    render_on :view_issues_form_details_bottom, partial: 'issue_templates/form_fields'
   end
 end

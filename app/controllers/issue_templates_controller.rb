@@ -13,6 +13,7 @@ class IssueTemplatesController < ApplicationController
 
   # What Redmine's issue form needs, for the preview.
   helper :issues, :journals, :projects, :custom_fields, :issue_relations, :watchers, :attachments
+  helper IssueTemplateFormHelper
 
   def index
     @set = RedmineIssueTemplate::TemplateSet.for(@project)

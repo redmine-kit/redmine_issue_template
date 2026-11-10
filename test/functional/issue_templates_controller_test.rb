@@ -121,6 +121,15 @@ module RedmineIssueTemplate
       end
     end
 
+    test 'the page of a file shows its warnings' do
+      import(github_files)
+      file = IssueTemplateFile.find_by(project: @project, path: 'bug_report.yml')
+      get :show, params: { project_id: 'ecookbook', id: file.id }
+      assert_response :success
+      assert_select 'div.flash.warning li', text: /octo-org/
+      assert_select 'div.flash.warning li', text: /bug\.md/, count: 0
+    end
+
     test 'preview of a file with errors shows the errors' do
       post :create, params: { project_id: 'ecookbook', preview: 'Preview',
                               issue_template_file: { path: 'form.yml', content: "name: Form\n" } }

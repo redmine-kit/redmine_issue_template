@@ -4,11 +4,12 @@ en:
   label_issue_template_plural: Issue templates
   label_issue_template_blank: Blank issue
   label_issue_template_contact_links: Other contacts
-  label_issue_template_file_new: New file
+  label_issue_template_file_new: New template
   text_issue_template_path_info: ".md, .yml or config.yml"
   text_issue_template_upload: Attach files in the Files field.
   warning_issue_template_text_formatting: "Text formatting is not %{name}."
   warning_issue_template_nothing_to_import: No issue templates to import.
+  text_issue_template_files_with_errors: "Some templates cannot be used because they have errors. Open a template to see the details."
   notice_issue_template_synced: Successful import.
   error_issue_template_no_repository: Repository not found
   error_issue_template_managed_elsewhere: Edit the templates in the repository.

@@ -17,6 +17,7 @@
   <% if @issue %>
   <br />
   <h3><%= l(:label_issue_new) %></h3>
+  <%= render partial: 'issue_templates/intro', locals: { issue: @issue } %>
   <div id="all_attributes"><%= render partial: 'issues/form' %></div>
   <% end %>
 </fieldset>

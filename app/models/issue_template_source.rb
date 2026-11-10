@@ -12,6 +12,12 @@ class IssueTemplateSource < ApplicationRecord
     find_or_initialize_by(project_id: project.id)
   end
 
+  # The errors and warnings of the project's files: those of the last import
+  # when there is a source, else those of the stored files.
+  def self.messages_for(project, source)
+    source ? source.message_list : RedmineIssueTemplate::TemplateSet.for(project).messages
+  end
+
   # Files from the repository or GitHub are edited there, not in Redmine.
   def manual?
     kind == 'manual'

@@ -16,7 +16,7 @@ module RedmineIssueTemplate
       @request.session[:user_id] = 2
     end
 
-    test 'the tab lists the files with their errors and warnings' do
+    test 'the tab lists the files and says when some can\'t be used' do
       import(github_files.merge('broken.yml' => "name: x\n"))
       get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
       assert_response :success
@@ -24,9 +24,11 @@ module RedmineIssueTemplate
       assert_select 'table.list.issue-template-files tbody tr', 4
       assert_select 'table.list.issue-template-files td.name', text: 'broken.yml'
       assert_select 'table.list.issue-template-files td', text: 'Template chooser', count: 0
-      assert_select '#errorExplanation li', text: 'broken.yml: description cannot be blank'
-      assert_select 'div.warning li', text: /octo-org/
-      assert_select '#tab-content-issue_templates p a.icon-add', text: 'New file'
+      # The problems themselves are on the file's page.
+      assert_select '#errorExplanation', text: /Some templates cannot be used because they have errors/
+      assert_select '#errorExplanation li', 0
+      assert_select 'div.warning li', 0
+      assert_select '#tab-content-issue_templates p a.icon-add', text: 'New template'
       assert_select '#tab-content-issue_templates p a.icon-import', text: 'Import'
       assert_select '#tab-content-issue_templates p a.icon-help[href=?]', "#{RedmineIssueTemplate::DOCS_URL}format"
       assert_select 'table.issue-template-source', 0

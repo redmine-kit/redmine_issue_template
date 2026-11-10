@@ -27,6 +27,7 @@ module RedmineIssueTemplate
     Issue.prepend IssuePatch
     IssuesController.prepend IssuesControllerPatch
     IssuesController.helper IssueTemplatesHelper
+    IssuesController.helper IssueTemplateFormHelper
     ProjectsHelper.prepend ProjectsHelperPatch
     RepositoryPatch.install
   end

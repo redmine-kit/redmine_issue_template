@@ -1,0 +1,12 @@
+<%# Warnings in the form of Redmine's error box, in Redmine's warning colors. %>
+<% if warnings.any? %>
+<% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %><% end %>
+<div class="flash warning issue-template-warnings">
+  <%= notice_icon('warning') %>
+  <ul>
+  <% warnings.each do |message| %>
+    <li><%= message.text %></li>
+  <% end %>
+  </ul>
+</div>
+<% end %>
