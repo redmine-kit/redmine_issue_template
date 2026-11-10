@@ -13,6 +13,18 @@ module RedmineIssueTemplate
 
     private
 
+    # "Create and continue" opens the same template again: Redmine's URL for
+    # the next issue, with the template.
+    def redirect_after_create
+      super
+      return unless params[:continue] && @issue&.issue_template && response.location
+
+      location = URI.parse(response.location)
+      query = Rack::Utils.parse_nested_query(location.query).merge('issue_template' => @issue.issue_template.key)
+      location.query = query.to_query
+      response.location = location.to_s
+    end
+
     def build_new_issue_from_params
       template = current_issue_template
       if template

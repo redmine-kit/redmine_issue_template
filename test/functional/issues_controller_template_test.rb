@@ -345,6 +345,14 @@ module RedmineIssueTemplate
       assert_redirected_to '/projects/ecookbook/issues/templates'
     end
 
+    test 'create and continue opens the same template again' do
+      post :create, params: { project_id: 'ecookbook', issue_template: 'feature', continue: 'Create and continue',
+                              issue: { tracker_id: '2', subject: 'Next', description: 'Text', due_date: '2026-12-01' } }
+      location = URI.parse(response.location)
+      assert_equal '/projects/ecookbook/issues/new', location.path
+      assert_equal 'feature', Rack::Utils.parse_nested_query(location.query)['issue_template']
+    end
+
     test 'an unknown template opens the chooser' do
       get :new, params: { project_id: 'ecookbook', issue_template: 'nope' }
       assert_redirected_to '/projects/ecookbook/issues/templates'
