@@ -121,6 +121,12 @@ module RedmineIssueTemplate
       end
     end
 
+    test 'the project setting for issues without a template' do
+      patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '0' }
+      assert_redirected_to '/projects/ecookbook/settings/issue_templates'
+      assert_not IssueTemplateSource.find_by(project: @project).blank_issues_enabled
+    end
+
     test 'the preview works for a manager who cannot add issues' do
       import(github_files)
       Role.find(1).remove_permission!(:add_issues)

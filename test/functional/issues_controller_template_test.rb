@@ -315,6 +315,36 @@ module RedmineIssueTemplate
       assert_redirected_to '/projects/ecookbook/issues/templates'
     end
 
+    test 'issues without a template: refused in the browser when blank issues are off' do
+      # config.yml has blank_issues_enabled: false; developers don't manage templates.
+      @request.session[:user_id] = 3
+      Role.find(2).add_permission!(:add_issues)
+      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'No template' } }
+      assert_redirected_to '/projects/ecookbook/issues/templates'
+      assert_equal 'Choose a template to create an issue.', flash[:error]
+
+      # The REST API is left to Redmine.
+      with_settings(rest_api_enabled: '1') do
+        @request.session[:user_id] = nil
+        @request.env['HTTP_X_REDMINE_API_KEY'] = User.find(3).api_key
+        post :create, params: { project_id: 'ecookbook', format: 'json',
+                                issue: { tracker_id: '1', subject: 'Through the API' } }
+        assert_response :created
+      end
+    end
+
+    test 'issues without a template follow the project settings without config.yml' do
+      import('feature.md' => FEATURE)
+      @request.session[:user_id] = 3
+      Role.find(2).add_permission!(:add_issues)
+      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'Allowed' } }
+      assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
+
+      IssueTemplateSource.for(@project).update!(blank_issues_enabled: false)
+      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'Refused' } }
+      assert_redirected_to '/projects/ecookbook/issues/templates'
+    end
+
     test 'an unknown template opens the chooser' do
       get :new, params: { project_id: 'ecookbook', issue_template: 'nope' }
       assert_redirected_to '/projects/ecookbook/issues/templates'

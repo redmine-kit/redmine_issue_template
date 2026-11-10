@@ -4,6 +4,8 @@ ja:
   label_issue_template_plural: チケットテンプレート
   label_issue_template_blank: 空白のチケット
   label_issue_template_contact_links: その他の連絡先
+  label_issue_template_blank_issues_enabled: "空白のチケットを許可"
+  text_issue_template_blank_issues_in_config: "config.yml の blank_issues_enabled で設定されています。"
   label_issue_template_file_new: 新しいテンプレート
   text_issue_template_path_info: ".md、.yml、config.yml"
   text_issue_template_upload: 「ファイル」欄で添付してください。
@@ -11,6 +13,7 @@ ja:
   warning_issue_template_nothing_to_import: インポートするチケットテンプレートがありません。
   text_issue_template_files_with_errors: "エラーがあるため使用できないテンプレートがあります。テンプレートを開いて詳細を確認してください。"
   notice_issue_template_synced: インポートしました。
+  error_issue_template_required: "チケットを作成するには、テンプレートを選択してください。"
   error_issue_template_no_repository: リポジトリが見つかりません
   error_issue_template_managed_elsewhere: テンプレートはリポジトリで編集してください。
   issue_template_error_unchecked: にチェックを入れてください

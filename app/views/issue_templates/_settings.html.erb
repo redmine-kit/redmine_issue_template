@@ -16,6 +16,21 @@
 
 <%= render partial: 'issue_templates/source', locals: { source: source } unless manual %>
 
+<%# Issues without a template; config.yml's blank_issues_enabled wins when it is set. %>
+<% in_config = set.config.blank_issues_set? %>
+<%= form_tag project_issue_template_settings_path(@project), method: :patch do %>
+<div class="box tabular">
+  <p>
+    <%= label_tag 'blank_issues_enabled', l(:label_issue_template_blank_issues_enabled) %>
+    <%= hidden_field_tag 'blank_issues_enabled', '0', id: nil unless in_config %>
+    <%= check_box_tag 'blank_issues_enabled', '1', IssueTemplateSource.blank_issues_enabled?(@project, set.config),
+                      disabled: in_config %>
+    <% if in_config %><em class="info"><%= l(:text_issue_template_blank_issues_in_config) %></em><% end %>
+  </p>
+</div>
+<%= submit_tag l(:button_save) unless in_config %>
+<% end %>
+
 <%# The problems themselves are on each file's page. %>
 <% if messages.any?(&:error?) %>
 <div id="errorExplanation"><%= notice_icon('error') %><%= l(:text_issue_template_files_with_errors) %></div>

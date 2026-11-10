@@ -141,7 +141,7 @@ contact_links:
     about: Please ask and answer questions here.
 ```
 
-`blank_issues_enabled: false` にすると、選択画面に「空白のチケット」を出しません。ただし、「チケットテンプレートの管理」の権限を持つ利用者には出します。`contact_links` は、テンプレートの後に「その他の連絡先」として並びます。
+`blank_issues_enabled: false` にすると、選択画面に「空白のチケット」を出さず、画面からテンプレートを使わずに作成しようとすると選択画面に戻します。ただし、「チケットテンプレートの管理」の権限を持つ利用者は作成できます。REST API とメールからのチケットの作成は変わりません。このキーがなければ、プロジェクトの設定の「空白のチケットを許可」で決めます。`contact_links` は、テンプレートの後に「その他の連絡先」として並びます。
 
 <a id="redmine-keys"></a>
 

@@ -33,6 +33,11 @@ module RedmineIssueTemplate
       @blank_issues_enabled
     end
 
+    # Whether config.yml sets blank_issues_enabled; else the project settings do.
+    def blank_issues_set?
+      @blank_issues_set == true
+    end
+
     def read(content)
       data = Parser.load_yaml(path, content, @messages)
       return if data.nil?
@@ -51,6 +56,7 @@ module RedmineIssueTemplate
       value = data['blank_issues_enabled']
       if [true, false].include?(value)
         @blank_issues_enabled = value
+        @blank_issues_set = true
       else
         @messages << Message.error(path, :invalid_value, key: 'blank_issues_enabled')
       end

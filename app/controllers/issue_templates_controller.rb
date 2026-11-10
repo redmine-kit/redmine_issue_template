@@ -18,7 +18,17 @@ class IssueTemplatesController < ApplicationController
   def index
     @set = RedmineIssueTemplate::TemplateSet.for(@project)
     @carried = request.query_parameters.except('issue_template')
-    @blank = @set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, @project)
+    @blank = IssueTemplateSource.blank_issues_enabled?(@project, @set.config) ||
+             User.current.allowed_to?(:manage_issue_templates, @project)
+  end
+
+  # Whether issues can be created without a template, when config.yml
+  # doesn't say.
+  def settings
+    source = IssueTemplateSource.for(@project)
+    source.update!(blank_issues_enabled: params[:blank_issues_enabled] == '1')
+    flash[:notice] = l(:notice_successful_update)
+    redirect_to_settings
   end
 
   # "Import": the template folder of the project's repository.
@@ -98,7 +108,8 @@ class IssueTemplatesController < ApplicationController
     return if @preview_errors.any?
 
     if RedmineIssueTemplate::Parser.kind(file.path) == :config
-      @preview = { templates: set.usable, config: set.config, blank: set.config.blank_issues_enabled? }
+      @preview = { templates: set.usable, config: set.config,
+                   blank: IssueTemplateSource.blank_issues_enabled?(@project, set.config) }
     else
       preview_template(set.templates.detect { |template| template.path == file.path })
     end

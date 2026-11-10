@@ -4,6 +4,8 @@ en:
   label_issue_template_plural: Issue templates
   label_issue_template_blank: Blank issue
   label_issue_template_contact_links: Other contacts
+  label_issue_template_blank_issues_enabled: "Allow blank issues"
+  text_issue_template_blank_issues_in_config: "Set by blank_issues_enabled in config.yml."
   label_issue_template_file_new: New template
   text_issue_template_path_info: ".md, .yml or config.yml"
   text_issue_template_upload: Attach files in the Files field.
@@ -11,6 +13,7 @@ en:
   warning_issue_template_nothing_to_import: No issue templates to import.
   text_issue_template_files_with_errors: "Some templates cannot be used because they have errors. Open a template to see the details."
   notice_issue_template_synced: Successful import.
+  error_issue_template_required: "Choose a template to create an issue."
   error_issue_template_no_repository: Repository not found
   error_issue_template_managed_elsewhere: Edit the templates in the repository.
   issue_template_error_unchecked: must be checked

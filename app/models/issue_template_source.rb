@@ -18,6 +18,14 @@ class IssueTemplateSource < ApplicationRecord
     source ? source.message_list : RedmineIssueTemplate::TemplateSet.for(project).messages
   end
 
+  # Whether issues can be created without a template: config.yml's
+  # blank_issues_enabled, or else the project settings.
+  def self.blank_issues_enabled?(project, config)
+    return config.blank_issues_enabled? if config.blank_issues_set?
+
+    find_by(project_id: project.id)&.blank_issues_enabled != false
+  end
+
   # Files from the repository or GitHub are edited there, not in Redmine.
   def manual?
     kind == 'manual'

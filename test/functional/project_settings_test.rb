@@ -32,6 +32,8 @@ module RedmineIssueTemplate
       assert_select '#tab-content-issue_templates p a.icon-import', text: 'Import'
       assert_select '#tab-content-issue_templates p a.icon-help[href=?]', "#{RedmineIssueTemplate::DOCS_URL}format"
       assert_select 'table.issue-template-source', 0
+      # config.yml sets blank_issues_enabled: the setting can't be changed here.
+      assert_select 'input[type=checkbox][name=blank_issues_enabled][disabled=disabled]'
     end
 
     test 'files from a repository are shown read-only' do

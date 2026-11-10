@@ -13,7 +13,7 @@ Redmine::Plugin.register :redmine_issue_template do
 
   project_module :issue_templates do
     permission :manage_issue_templates,
-               { issue_templates: %i[sync show new create edit update destroy] },
+               { issue_templates: %i[sync settings show new create edit update destroy] },
                require: :member
   end
 end

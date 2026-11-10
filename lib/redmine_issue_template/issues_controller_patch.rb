@@ -8,6 +8,7 @@ module RedmineIssueTemplate
       # After build_new_issue_from_params, so that Redmine's own checks
       # (trackers, permissions) come first.
       base.before_action :redirect_to_issue_template_chooser, only: :new
+      base.before_action :refuse_issue_without_template, only: :create
     end
 
     private
@@ -45,10 +46,25 @@ module RedmineIssueTemplate
 
       key = params[:issue_template].to_s
       return if current_issue_template
-      return if key == 'blank' && (issue_template_set.config.blank_issues_enabled? ||
-                                   User.current.allowed_to?(:manage_issue_templates, @project))
+      return if key == 'blank' && issue_without_template_allowed?
 
       redirect_to project_issue_template_chooser_path(@project, request.query_parameters.except('issue_template'))
+    end
+
+    # Creating an issue in the browser without a template, when blank issues
+    # are not allowed: back to the chooser. The REST API and email are left
+    # to Redmine; copies are not made from templates.
+    def refuse_issue_without_template
+      return if api_request? || @issue&.issue_template_active? || params[:copy_from].present?
+      return unless @project && issue_template_set&.any? && !issue_without_template_allowed?
+
+      flash[:error] = l(:error_issue_template_required)
+      redirect_to project_issue_template_chooser_path(@project)
+    end
+
+    def issue_without_template_allowed?
+      IssueTemplateSource.blank_issues_enabled?(@project, issue_template_set.config) ||
+        User.current.allowed_to?(:manage_issue_templates, @project)
     end
 
     # The template's values, for the fields the request doesn't give. Only
