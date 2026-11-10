@@ -4,7 +4,7 @@ Guidelines for people and coding agents working in this repository. See [README.
 
 ## What this project does
 
-Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin that brings GitHub's issue templates to Redmine: "New issue" opens a template chooser, and Markdown templates and YAML issue forms fill in and shape the issue form. The templates are read from `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/` of the project's repository, from GitHub through [redmine_github](https://github.com/redmine-kit/redmine_github), or edited in the project settings ([design.md](docs/design.md)). It is in early development.
+Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue templates: "New issue" opens a template chooser, and Markdown templates and YAML forms fill in and shape the issue form. The templates are read from `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/` of the project's repository, from GitHub through [redmine_github](https://github.com/redmine-kit/redmine_github), or edited in the project settings ([design.md](docs/design.md)). It is in early development.
 
 ## Rules
 

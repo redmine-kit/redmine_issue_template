@@ -4,15 +4,15 @@
 [![Coverage](https://img.shields.io/codecov/c/github/redmine-kit/redmine_issue_template?label=Coverage)](https://codecov.io/gh/redmine-kit/redmine_issue_template)
 [![License](https://img.shields.io/github/license/redmine-kit/redmine_issue_template?label=License)](LICENSE)
 
-Redmine Issue Template(`redmine_issue_template`)は、GitHub のチケット(Issue)のテンプレートを Redmine で使えるようにするプラグインです。「新しいチケット」を押すとテンプレートの選択画面が開き、選んだテンプレートがチケットの入力画面を埋めます。テンプレートはプロジェクトのリポジトリに置くファイルで、GitHub と同じ形式です。すでに `.github/ISSUE_TEMPLATE/` があるリポジトリは、そのまま使えます。
+Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレートの Redmine プラグインです。「新しいチケット」を押すとテンプレート選択画面が開き、選んだテンプレートがチケットの入力画面を埋めます。テンプレートファイルはプロジェクトのリポジトリの `.redmine/ISSUE_TEMPLATE/` に置き、リポジトリが変わると Redmine が取り込みます。`.github/ISSUE_TEMPLATE/` のファイルも、そのまま読めます。
 
 [English](README.md)
 
 > **状態:** 開発の初期です。
 
-- GitHub と同じ Markdown のテンプレート、YAML のフォーム、`config.yml` を使います。Redmine のトラッカー、優先度、カテゴリ、対象バージョン、カスタムフィールドは、`redmine` というキーの下に書きます。
+- Markdown テンプレート、YAML フォーム、選択画面の設定の `config.yml` を使います。トラッカー、優先度、カテゴリ、対象バージョン、カスタムフィールドも、同じファイルに書きます。
 - テンプレートごとに、チケットの入力欄を隠したり、必須にしたりできます。
-- リポジトリが変わると、Redmine がテンプレートを取り込みます。リポジトリのないプロジェクトは、プロジェクトの設定で編集します。[Redmine GitHub](https://github.com/redmine-kit/redmine_github) から GitHub のテンプレートを取り込むこともできます。
+- リポジトリが変わると、Redmine がテンプレートを取り込みます。リポジトリのないプロジェクトは、プロジェクトの設定で編集します。[Redmine GitHub](https://github.com/redmine-kit/redmine_github) で、GitHub のリポジトリから取り込むこともできます。
 
 ## ドキュメント
 

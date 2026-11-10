@@ -3,7 +3,7 @@
 ## Requirements
 
 - Redmine 7.0 or later.
-- CommonMark Markdown as Redmine's text formatting (Administration › Settings › General). Templates and the answers of issue forms are Markdown; with Textile the descriptions are not shown as intended.
+- CommonMark Markdown as Redmine's text formatting (Administration › Settings › General). Templates and the answers of YAML forms are Markdown; with Textile the descriptions are not shown as intended.
 - For templates in a repository: a project repository that Redmine can read (Git or any other SCM Redmine supports).
 
 ## Installation

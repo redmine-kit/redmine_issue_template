@@ -4,15 +4,15 @@
 [![Coverage](https://img.shields.io/codecov/c/github/redmine-kit/redmine_issue_template?label=Coverage)](https://codecov.io/gh/redmine-kit/redmine_issue_template)
 [![License](https://img.shields.io/github/license/redmine-kit/redmine_issue_template?label=License)](LICENSE)
 
-Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin that brings GitHub's issue templates to Redmine. "New issue" opens a template chooser, and the chosen template fills in the issue form. The templates are files in the project's repository, in the same format as GitHub's, so a repository that already has `.github/ISSUE_TEMPLATE/` works as it is.
+Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue templates. "New issue" opens a template chooser, and the chosen template fills in the issue form. The templates are files in `.redmine/ISSUE_TEMPLATE/` of the project's repository, and Redmine imports them when the repository changes. Files in `.github/ISSUE_TEMPLATE/` are read as they are.
 
 [日本語](README.ja.md)
 
 > **Status:** early development.
 
-- Markdown issue templates, YAML issue forms and `config.yml`, as GitHub defines them, with Redmine's tracker, priority, category, target version and custom fields under one `redmine` key.
+- Markdown templates, YAML forms and `config.yml` for the chooser, with the tracker, priority, category, target version and custom fields in the same files.
 - Each template can hide fields of the issue form or make them required.
-- Redmine imports the templates when the repository changes; projects without a repository edit them in the project settings. [Redmine GitHub](https://github.com/redmine-kit/redmine_github) can import them from GitHub.
+- Redmine imports the templates when the repository changes; projects without a repository edit them in the project settings. [Redmine GitHub](https://github.com/redmine-kit/redmine_github) can import them from a GitHub repository.
 
 ## Documentation
 

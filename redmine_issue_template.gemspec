@@ -6,7 +6,7 @@
 Gem::Specification.new do |spec|
   spec.name = 'redmine_issue_template'
   spec.version = File.read(File.join(__dir__, 'lib/redmine_issue_template.rb'))[/VERSION = '([^']+)'/, 1]
-  spec.summary = "Issue templates for Redmine like GitHub's, synced from the project's repository"
+  spec.summary = "Issue templates for Redmine, synced from the project's repository"
   spec.authors = ['Redmine Kit']
   spec.license = 'GPL-2.0-or-later'
   spec.homepage = 'https://github.com/redmine-kit/redmine_issue_template'

@@ -1,6 +1,6 @@
 # Template format
 
-The files are GitHub's issue templates. A folder that works on GitHub works here unchanged, and Redmine's settings go under one extra key, `redmine`, which GitHub ignores. The format follows GitHub's documentation, checked on 2026-11-10: "Configuring issue templates for your repository", "Syntax for issue forms", "Syntax for GitHub's form schema" and "Common validation errors when creating issue forms".
+The templates are Markdown templates, YAML forms and `config.yml`. The files of `.github/ISSUE_TEMPLATE/` are read as they are. Redmine's own keys, such as the tracker and the priority, are top-level keys next to the others ([Redmine keys](#redmine-keys)).
 
 ## Folder
 
@@ -9,9 +9,9 @@ Redmine reads the first of these folders that has template files, on the default
 1. `.redmine/ISSUE_TEMPLATE/`
 2. `.github/ISSUE_TEMPLATE/`
 
-The folders are not merged. A repository that wants other templates in Redmine than on GitHub puts them in `.redmine/`.
+The folders are not merged. To use templates in Redmine other than those in `.github/ISSUE_TEMPLATE/`, put them in `.redmine/ISSUE_TEMPLATE/`. A YAML form that uses Redmine's keys belongs in `.redmine/ISSUE_TEMPLATE/`: GitHub rejects issue forms with top-level keys it does not permit.
 
-The chooser lists the templates as GitHub does: issue forms (`.yml`, `.yaml`) first, then Markdown templates (`.md`), each sorted by file name. Prefix the file names with numbers to set the order (`1-bug.yml`, `2-feature.md`). The file name without its extension is the template's id in URLs (`?issue_template=1-bug`).
+The chooser lists YAML forms (`.yml`, `.yaml`) first, then Markdown templates (`.md`), each sorted by file name. Prefix the file names with numbers to set the order (`1-bug.yml`, `2-feature.md`). The file name without its extension is the template's id in URLs (`?issue_template=1-bug`).
 
 ## Markdown templates
 
@@ -32,9 +32,9 @@ assignees: ''
 ### Steps To Reproduce:
 ```
 
-## Issue forms
+## YAML forms
 
-An issue form is YAML with `name`, `description` and `body`, and optionally `title`, `labels`, `assignees`, `type` and `projects`. The form shows its fields in place of the description, and the answers become the description when the issue is created. This is GitHub's own example, which Redmine reads as it is:
+A YAML form has `name`, `description` and `body`, and optionally `title`, `labels`, `assignees`, `type` and `projects`. The form shows its fields in place of the description, and the answers become the description when the issue is created. This example is from GitHub's documentation:
 
 ```yaml
 name: Bug Report
@@ -76,7 +76,7 @@ body:
 
 ### Fields
 
-Every element type of GitHub's form schema works. Each one has `attributes` and, except `markdown`, an optional `id` (letters, digits, `-`, `_`) and `validations`.
+The body has these element types. Each one has `attributes` and, except `markdown`, an optional `id` (letters, digits, `-`, `_`) and `validations`.
 
 | Type | Attributes | Validations | In the form |
 | --- | --- | --- | --- |
@@ -87,11 +87,11 @@ Every element type of GitHub's form schema works. Each one has `attributes` and,
 | `checkboxes` | `label`, `description`, `options` (each with `label` and `required`) | `required` | A checkbox per option |
 | `upload` | `label`, `description` | `required`, `accept` | Redmine's Files field of the issue; the section lists the attached files |
 
-GitHub checks some validations only in public repositories; Redmine always checks them.
+`validations` are always checked when the issue is created.
 
 ### The description
 
-The answers are written as GitHub writes the issue body: a `### <label>` heading for each field, then the answer. An empty answer is `_No response_`. A dropdown's chosen options are separated by commas, and each checkbox option becomes `- [X] <label>` or `- [ ] <label>`.
+The answers are written in Markdown: a `### <label>` heading for each field, then the answer. An empty answer is `_No response_`. A dropdown's chosen options are separated by commas, and each checkbox option becomes `- [X] <label>` or `- [ ] <label>`.
 
 ```markdown
 ### What happened?
@@ -109,7 +109,9 @@ It crashed.
 
 ### Checks
 
-The files are checked with GitHub's rules: the required keys, the permitted keys and attributes, unique ids and labels, labels that stay different when made into parameters, at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), and a `name` longer than 3 characters. A file that breaks a rule is listed with its errors in the project settings and left out of the chooser; the other files still work.
+Each file is checked: the required keys, the permitted keys and attributes, unique ids and labels, labels that stay different when made into parameters, at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), and a `name` longer than 3 characters. A file that breaks a rule is listed with its errors in the project settings and left out of the chooser; the other files still work.
+
+Each problem is shown as the file, the key and Redmine's validation message, for example `bug.yml: body[2]: id is invalid` or `bug.yml: description cannot be blank`. The "Help" link of the project settings opens this page.
 
 ## config.yml
 
@@ -123,27 +125,26 @@ contact_links:
     about: Please ask and answer questions here.
 ```
 
-- `blank_issues_enabled: false` hides "Blank issue" from the chooser. Users with "Manage issue templates" still see it, marked "maintainers only", as GitHub shows it to users with write access.
-- `contact_links` are listed after the templates, as links to other places to ask.
+- `blank_issues_enabled: false` hides "Blank issue" from the chooser. Users with "Manage issue templates" still see it.
+- `contact_links` are listed after the templates, under "Other contacts".
 
 ## Redmine keys
 
-The `redmine` key is in a Markdown template's front matter, or at the top level of an issue form.
+Redmine's keys are top-level keys, in a Markdown template's front matter or in a YAML form, next to `name` and the other keys.
 
 ```yaml
-redmine:
-  tracker: Bug
-  priority: High
-  category: UI
-  fixed_version: "2.0"
-  is_private: false
-  custom_fields:
-    Severity: Major
-  fields:
-    assigned_to: hidden
-    estimated_hours: hidden
-    due_date: required
-    Severity: required
+tracker: Bug
+priority: High
+category: UI
+fixed_version: "2.0"
+is_private: false
+custom_fields:
+  Severity: Major
+fields:
+  assigned_to: hidden
+  estimated_hours: hidden
+  due_date: required
+  Severity: required
 ```
 
 | Key | Value |
@@ -160,22 +161,22 @@ Names are compared without case. A name that the project doesn't have is reporte
 
 ### Fields of the form
 
-`fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and keeps the value the template sets; a required field is marked and checked as Redmine marks and checks the fields its workflow requires. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; an issue form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
+`fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and keeps the value the template sets; a required field is marked and checked as Redmine marks and checks the fields its workflow requires. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; a YAML form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
 
 The tracker, the subject and the project are always shown, as Redmine requires them. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only.
 
-## GitHub's keys in Redmine
+## Other keys
 
-Some of GitHub's keys have no Redmine equivalent. They don't stop a template from working; the project settings list them as warnings.
+Some keys have no Redmine equivalent. They don't stop a template from working; the project settings list them as warnings.
 
-| GitHub key | In Redmine |
+| Key | In Redmine |
 | --- | --- |
 | `name` | The template's name in the chooser |
 | `about`, `description` | The template's description in the chooser |
 | `title` | The subject the form starts with |
-| `type` | The tracker of the same name, unless `redmine.tracker` is set |
-| `labels` | The first label that is a tracker's name sets the tracker, unless `redmine.tracker` or `type` does. Other labels are ignored, with a warning |
-| `assignees` | The first login that can be assigned in the project becomes the assignee; logins that can't be assigned are reported |
+| `type` | The tracker of the same name, unless `tracker` is set |
+| `labels` | Not used, with a warning |
+| `assignees` | The first entry that can be assigned in the project becomes the assignee: a user by login, or a group by name when Redmine allows assigning issues to groups. Entries that can't be assigned are reported as a warning |
 | `projects` | Ignored, with a warning |
 | Markdown template body | The description the form starts with |
-| Issue form `body` | The form's fields; the answers become the description |
+| YAML form `body` | The form's fields; the answers become the description |

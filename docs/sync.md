@@ -4,7 +4,7 @@ A project's templates are stored in Redmine. The pages read the stored files and
 
 | Source | How the files arrive | Where they are edited |
 | --- | --- | --- |
-| Repository | Redmine's main repository of the project, after each fetch, or with "Import now" | In the repository |
+| Repository | Redmine's main repository of the project, after each fetch, or with "Import" | In the repository |
 | GitHub | [Redmine GitHub](https://github.com/redmine-kit/redmine_github), on a push to the default branch | On GitHub |
 | Project settings | The file editor of the tab | In Redmine |
 
@@ -12,7 +12,7 @@ A project's templates are stored in Redmine. The pages read the stored files and
 
 When Redmine fetches the changesets of the project's main repository (when someone opens the repository and "Fetch commits automatically" is on, with `Repository.fetch_changesets` from cron, or through Redmine's repository web service), the plugin reads the template folder on the default branch and compares it with the stored files. When the files differ, it imports them and records the last revision that changed the folder. Reading uses Redmine's own repository adapters, so it works with every SCM Redmine supports.
 
-"Import now" in the project settings reads the folder at once, without waiting for a fetch.
+"Import" in the project settings reads the folder at once, without waiting for a fetch.
 
 When the repository no longer has a template folder, the templates that came from it are removed. Templates edited in the project settings are kept.
 
@@ -30,11 +30,11 @@ RedmineIssueTemplate::Importer.import(
 )
 ```
 
-The call replaces the project's files and returns the import's record with the errors and warnings. Templates that came from GitHub are not replaced by a fetch of a Redmine repository; "Import now" replaces them on purpose.
+The call replaces the project's files and returns the import's record with the errors and warnings. Templates that came from GitHub are not replaced by a fetch of a Redmine repository; "Import" replaces them on purpose.
 
 ## The project settings
 
-A project whose repository has no templates (or that has no repository) adds, edits and deletes the files in the tab. The files are the same as in a repository. When the repository gets templates, they replace the edited ones at the next fetch.
+A project whose repository has no templates (or that has no repository) adds, edits and deletes the files in the tab. The files are the same as in a repository, edited as text. Saving checks the file as an import does, and a file with errors is not saved. "Preview" shows the template's row in the chooser and the New issue form it makes, without saving. Files that came from a repository are shown read-only, with the same preview. When the repository gets templates, they replace the edited ones at the next fetch.
 
 ## Errors and warnings
 

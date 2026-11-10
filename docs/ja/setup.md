@@ -5,7 +5,7 @@
 ## 動作環境
 
 - Redmine 7.0 以降。
-- Redmine のテキスト書式が CommonMark Markdown であること(管理 › 設定 › 全般)。テンプレートとフォームの回答は Markdown なので、Textile では説明が意図どおりに表示されません。
+- Redmine のテキスト書式が CommonMark Markdown であること(管理 › 設定 › 全般)。テンプレートと YAML フォームの回答は Markdown なので、Textile では説明が意図どおりに表示されません。
 - テンプレートをリポジトリに置く場合は、Redmine が読めるプロジェクトのリポジトリ(Git、または Redmine が対応するほかの SCM)。
 
 <a id="installation"></a>
@@ -77,4 +77,4 @@ bin/screenshots                  # ドキュメントのスクリーンショッ
 ## 未確認の事項
 
 - Subversion、Mercurial など、Git 以外の SCM に置いたテンプレート(テストは Git で行っています)。
-- 大きなリポジトリでの所要時間。取り込みは、リポジトリを取得するたびにテンプレートのフォルダーを読みます。
+- 大きなリポジトリでの所要時間。取り込みは、リポジトリを取得するたびにテンプレートフォルダーを読みます。
