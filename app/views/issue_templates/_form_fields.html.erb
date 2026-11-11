@@ -76,9 +76,15 @@
     <%= issue_template_info(element) %>
   </p>
   <% when 'upload' %>
+  <%# Redmine's file field, as a file custom field has it: files dropped on
+      the field go to it, and the ones uploaded come back on each update. %>
   <p>
     <label><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %></label>
-    <em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) if element.attributes['description'].present? %> <%= l(:text_issue_template_upload) %></em>
+    <%= render partial: 'attachments/form',
+               locals: { attachment_param: "issue_template_uploads[#{element.ref}]",
+                         saved_attachments: issue.issue_template_uploads.fetch(element.ref, []),
+                         attachment_format_custom_field: true } %>
+    <%= issue_template_info(element) %>
   </p>
   <% end %>
 <% end %>

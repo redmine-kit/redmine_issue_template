@@ -65,7 +65,7 @@ fields:
 
 The element types are `markdown`, `textarea` (`label`, `description`, `placeholder`, `value`, `render`; `required`, `min_length`), `input` (`label`, `description`, `placeholder`, `value`; `required`, `min_length`), `dropdown` (`label`, `description`, `multiple`, `options`, `default`; `required`), `checkboxes` (`label`, `description`, options with `label` and `required`; `required`) and `upload` (`label`, `description`; `required`, `accept`). A field with `link` and no `type` sets an issue field ([Links](format.md#links)). Each file is checked as [Checks](format.md#checks) describes.
 
-When the issue is created, the answers become the description in Markdown: a `### <label>` heading per field, the answer below it, `_No response_` when it is empty, a fenced code block for a `textarea` with `render`, the chosen options separated by commas for a `dropdown`, `- [X] <label>` or `- [ ] <label>` per option for `checkboxes`. `upload` uses the issue's own files field; its section lists the attached files.
+When the issue is created, the answers become the description in Markdown: a `### <label>` heading per field, the answer below it, `_No response_` when it is empty, a fenced code block for a `textarea` with `render`, the chosen options separated by commas for a `dropdown`, `- [X] <label>` or `- [ ] <label>` per option for `checkboxes`. `upload` is a file field like Redmine's Files field; its files are attached to the issue, and its section lists them. Redmine's own Files field stays below for other files.
 
 Redmine shows descriptions with its text formatting setting. Templates are Markdown, so the setting should be CommonMark Markdown; the project settings tab warns when it is not.
 

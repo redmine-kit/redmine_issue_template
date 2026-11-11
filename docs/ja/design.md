@@ -76,7 +76,7 @@ fields:
 
 入力の種類は `markdown`、`textarea`(`label`、`description`、`placeholder`、`value`、`render`。検証は `required`、`min_length`)、`input`(`label`、`description`、`placeholder`、`value`。検証は `required`、`min_length`)、`dropdown`(`label`、`description`、`multiple`、`options`、`default`。検証は `required`)、`checkboxes`(`label`、`description`、`label` と `required` を持つ選択肢。検証は `required`)、`upload`(`label`、`description`。検証は `required`、`accept`)です。`type` を書かずに `link` を書いた入力欄は、チケットの項目に値を入れます([項目とのつなぎ込み](format.md#links))。ファイルごとの入力チェックは、[検証](format.md#checks)のとおりです。
 
-チケットを作るときに、回答を Markdown にして説明に書きます。入力欄ごとに `### <label>` の見出しを置き、その下に回答を書きます。空なら `_No response_`、`render` のある `textarea` はコードブロック、`dropdown` は選んだ選択肢をカンマで区切り、`checkboxes` は選択肢ごとに `- [X] <label>` か `- [ ] <label>` です。`upload` はチケットの「ファイル」の欄を使い、その節には添付したファイルを並べます。
+チケットを作るときに、回答を Markdown にして説明に書きます。入力欄ごとに `### <label>` の見出しを置き、その下に回答を書きます。空なら `_No response_`、`render` のある `textarea` はコードブロック、`dropdown` は選んだ選択肢をカンマで区切り、`checkboxes` は選択肢ごとに `- [X] <label>` か `- [ ] <label>` です。`upload` は Redmine の「ファイル」欄と同じファイルの欄で、そのファイルはチケットに添付され、その節に並びます。Redmine の「ファイル」欄は、ほかのファイルのために下に残ります。
 
 Redmine は、説明をテキスト書式の設定で表示します。テンプレートは Markdown なので、設定は CommonMark Markdown にします。そうでなければ、プロジェクトの設定のタブに警告を出します。
 

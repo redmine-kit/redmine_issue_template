@@ -10,7 +10,7 @@ module RedmineIssueTemplate
       RedmineIssueTemplate::Parser.parse('bug_report.yml' => github_fixture('bug_report.yml')).usable.first
     end
 
-    def composer(answers, files: [])
+    def composer(answers, files: {})
       RedmineIssueTemplate::BodyComposer.new(form, answers, files: files)
     end
 
@@ -52,7 +52,7 @@ module RedmineIssueTemplate
     end
 
     test 'empty answers, unchecked boxes and uploaded files' do
-      body = composer({ 'terms' => [''] }, files: ['screen shot.png']).compose
+      body = composer({ 'terms' => [''] }, files: { 'screenshots' => ['screen shot.png'] }).compose
       assert_includes body, "### Relevant log output\n\n_No response_"
       assert_includes body, "- [ ] I agree to follow this project's Code of Conduct"
       assert_includes body, "### Upload screenshots\n\nattachment:\"screen shot.png\""

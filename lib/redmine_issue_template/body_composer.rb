@@ -7,9 +7,9 @@ module RedmineIssueTemplate
     NO_RESPONSE = '_No response_'
 
     # answers: { ref => a string, or option indexes for multiple dropdowns and
-    # checkboxes }. files: attachment names for upload fields. linked: fields
+    # checkboxes }. files: { ref => file names } of upload fields. linked: fields
     # that set the issue's fields instead. dropped: fields the form leaves out.
-    def initialize(form, answers, files: [], linked: [], dropped: [])
+    def initialize(form, answers, files: {}, linked: [], dropped: [])
       @form = form
       @answers = (answers || {}).to_h.transform_keys(&:to_s)
       @files = files
@@ -58,7 +58,7 @@ module RedmineIssueTemplate
              when 'input' then raw(element).to_s.strip
              when 'dropdown' then chosen(element).join(', ')
              when 'checkboxes' then checkboxes(element)
-             when 'upload' then @files.map { |name| "attachment:\"#{name}\"" }.join("\n")
+             when 'upload' then files(element).map { |name| "attachment:\"#{name}\"" }.join("\n")
              when IssueForm::LINK then given(element).join(', ')
              end
       text.presence || NO_RESPONSE
@@ -102,9 +102,13 @@ module RedmineIssueTemplate
       when 'textarea', 'input' then text_problem(element)
       when 'dropdown' then blank_problem(element, chosen(element))
       when 'checkboxes' then checkbox_problem(element)
-      when 'upload' then blank_problem(element, @files)
+      when 'upload' then blank_problem(element, files(element))
       when IssueForm::LINK then blank_problem(element, given(element))
       end
+    end
+
+    def files(element)
+      @files.fetch(element.ref, [])
     end
 
     def blank_problem(element, values)

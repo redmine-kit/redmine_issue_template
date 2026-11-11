@@ -95,7 +95,7 @@ body には次の入力の種類を使えます。どれも `attributes` を持�
 | `input` | `label`、`description`、`placeholder`、`value` | `required`、`min_length` | 1 行の入力欄 |
 | `dropdown` | `label`、`description`、`multiple`、`options`、`default` | `required` | 選択欄。`default` は最初に選ぶ選択肢の番号 |
 | `checkboxes` | `label`、`description`、`options`(それぞれ `label` と `required`) | `required` | 選択肢ごとのチェックボックス |
-| `upload` | `label`、`description` | `required`、`accept`(読むが、まだ検証しない) | チケットの「ファイル」の欄を使う。説明には添付したファイルを並べる |
+| `upload` | `label`、`description` | `required`、`accept`(読むが、まだ検証しない) | Redmine の「ファイル」欄と同じファイルの欄。ファイルはチケットに添付され、説明のこの節にはこの欄で添付したファイルを並べる |
 
 `validations` は、チケットを作るときに常に検証します。
 

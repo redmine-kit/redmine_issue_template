@@ -6,16 +6,19 @@ module RedmineIssueTemplate
   # fields, and an issue form's answers become the description.
   module IssuePatch
     include RedmineRules
+    include IssueTemplateAnswers
 
     # The links apply before Redmine's own callbacks (default_assign takes the
     # linked category's assignee) and the description is composed after them.
     def self.prepended(base)
       base.attr_reader :issue_template
       base.attr_accessor :issue_template_answers
-      base.attr_writer :issue_template_defaults
+      base.attr_writer :issue_template_defaults, :issue_template_uploads
       base.before_validation :apply_issue_template_links, on: :create, prepend: true
       base.before_validation :compose_issue_template_description, on: :create
       base.validate :validate_issue_template_answers, on: :create
+      # After Redmine's attach_saved_attachments (after_save).
+      base.after_create :attach_issue_template_uploads
     end
 
     def issue_template=(template)
@@ -109,12 +112,6 @@ module RedmineIssueTemplate
       redmine_method(:editable_custom_field_values).call(author).each(&:validate_value)
     end
 
-    def issue_template_composer
-      BodyComposer.new(issue_template, issue_template_answers,
-                       files: saved_attachments.map(&:filename), linked: issue_template_links.map(&:element),
-                       dropped: issue_template_dropped)
-    end
-
     private
 
     # On create, Redmine resets the custom fields the user can't edit to their
@@ -133,25 +130,6 @@ module RedmineIssueTemplate
     def apply_issue_template_links
       answers = (issue_template_answers || {}).to_h.transform_keys(&:to_s)
       issue_template_links.each { |link| link.apply(self, answers[link.element.ref]) }
-    end
-
-    def compose_issue_template_description
-      return unless issue_template_active? && issue_template.form?
-
-      self.description = issue_template_composer.compose
-    end
-
-    def validate_issue_template_answers
-      return unless issue_template_active? && issue_template.form?
-
-      issue_template_composer.problems.each do |element, problem|
-        message = case problem
-                  when :too_short then ::I18n.t('activerecord.errors.messages.too_short', count: element.min_length)
-                  when :unchecked then ::I18n.t(:issue_template_error_unchecked)
-                  else ::I18n.t('activerecord.errors.messages.blank')
-                  end
-        errors.add(:base, "#{element.label}#{::I18n.t(:issue_template_error_separator)}#{message}")
-      end
     end
   end
 end

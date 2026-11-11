@@ -148,6 +148,59 @@ module RedmineIssueTemplate
       assert_select 'textarea[name=?]', 'issue_template_answers[what-happened]', text: ''
     end
 
+    test 'an upload field takes files, and its section lists them' do
+      set_tmp_attachments_directory
+      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+      assert_select '.issue-template-fields input.file_selector.custom-field-filedrop[name=?]',
+                    'issue_template_uploads[screenshots][dummy][file]'
+
+      mine = upload('screen.png', 2)
+      other = upload('other.png', 3)
+      files = upload('log.txt', 2)
+      post :create, params: {
+        project_id: 'ecookbook', issue_template: 'bug_report',
+        issue: { tracker_id: '1', subject: 'Uploads' },
+        issue_template_answers: { 'what-happened' => 'It crashed', 'version' => '0', 'terms' => ['0'] },
+        issue_template_uploads: { 'screenshots' => { '1' => { 'token' => mine.token, 'description' => 'Crash' },
+                                                     '2' => { 'token' => other.token } } },
+        attachments: { '1' => { 'token' => files.token } }
+      }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      # The user's own upload and the file of Redmine's Files field; not another user's upload.
+      assert_equal %w[log.txt screen.png], issue.attachments.map(&:filename).sort
+      assert_equal 'Crash', mine.reload.description
+      assert_nil other.reload.container
+      assert issue.description.gsub("\r\n", "\n").end_with?("### Upload screenshots\n\nattachment:\"screen.png\"")
+    end
+
+    test 'uploaded files come back when the form is updated or not saved' do
+      set_tmp_attachments_directory
+      token = upload('screen.png', 2).token
+      uploads = { 'screenshots' => { '1' => { 'token' => token } } }
+      post :new, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_uploads: uploads,
+                           form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '1' } }, xhr: true
+      assert_include 'issue_template_uploads[screenshots][p0][token]', response.body
+      assert_include token, response.body
+
+      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_uploads: uploads,
+                              issue: { tracker_id: '1', subject: 'Not saved' } }
+      assert_response :success
+      assert_select 'input[name=?][value=?]', 'issue_template_uploads[screenshots][p0][token]', token
+      # Only in the form's field, not again in Redmine's Files field.
+      assert_select 'input[value=?]', token, count: 1
+    end
+
+    test 'a required upload field needs a file' do
+      form = github_fixture('bug_report.yml').sub(/(type: upload.*?required:) false/m, '\\1 true')
+      import('bug_report.yml' => form)
+      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
+                              issue: { tracker_id: '1', subject: 'No file' },
+                              issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] } }
+      assert_response :success
+      assert_select '#errorExplanation li', text: /Upload screenshots/
+    end
+
     test 'updating the form keeps the template' do
       post :new, params: { project_id: 'ecookbook', issue_template: 'bug_report',
                            form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '3', subject: 'x' },
@@ -279,6 +332,7 @@ module RedmineIssueTemplate
       get :new, params: { project_id: 'ecookbook', issue_template: 'feature', issue: { custom_field_values: 'x' } }
       assert_response :success
       post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_answers: 'x',
+                              issue_template_uploads: { 'screenshots' => 'x', 'other' => { '1' => 'x' } },
                               issue: { tracker_id: '1', subject: 'Shapes', custom_fields: ['x'] } }
       assert_response :success
       assert_select '#errorExplanation'
@@ -502,6 +556,12 @@ module RedmineIssueTemplate
     test 'an unknown template opens the chooser' do
       get :new, params: { project_id: 'ecookbook', issue_template: 'nope' }
       assert_redirected_to '/projects/ecookbook/issues/templates'
+    end
+
+    private
+
+    def upload(name, user_id)
+      Attachment.create!(file: uploaded_test_file('testfile.txt', 'text/plain'), filename: name, author_id: user_id)
     end
   end
 end

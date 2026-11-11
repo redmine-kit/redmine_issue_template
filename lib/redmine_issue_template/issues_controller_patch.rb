@@ -40,6 +40,7 @@ module RedmineIssueTemplate
       @issue.issue_template = template
       @issue.issue_template_defaults = issue_template_defaults(template)
       @issue.issue_template_answers = issue_template_answers_param(template)
+      @issue.issue_template_uploads = issue_template_uploads_param(template)
       issue_template_defaults(template).apply_to_hidden_fields(@issue)
       restore_shown_hidden_input(@issue, template)
     end

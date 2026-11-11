@@ -9,7 +9,6 @@ en:
   label_issue_template_blank_issues_enabled: "Allow blank issues"
   label_issue_template_file_new: New template
   text_issue_template_path_info: ".md, .yml, .yaml or config.yml"
-  text_issue_template_upload: Attach files in the Files field.
   warning_issue_template_text_formatting: "Text formatting is not %{name}."
   warning_issue_template_nothing_to_import: No issue templates to import.
   text_issue_template_files_with_errors: "Some templates cannot be used because they have errors. Open a template to see the details."

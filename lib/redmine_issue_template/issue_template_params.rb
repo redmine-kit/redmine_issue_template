@@ -33,6 +33,30 @@ module RedmineIssueTemplate
       answers.permit(refs.flat_map { |ref| [ref, { ref => [] }] }).to_h
     end
 
+    # The files of the form's upload fields: { ref => [Attachment] }, from
+    # the tokens of Redmine's uploads (at most 10 a field, as Redmine's Files
+    # field takes).
+    def issue_template_uploads_param(template)
+      given = hash_param(params[:issue_template_uploads])
+      uploads = template.form? ? template.fields.select { |element| element.type == 'upload' } : []
+      uploads.to_h do |element|
+        entries = hash_param(given[element.ref]).values.first(10)
+        [element.ref, entries.filter_map { |entry| uploaded_attachment(hash_param(entry)) }]
+      end
+    end
+
+    # A file the user uploaded and that is not attached yet, with the name
+    # and description from the form, as Redmine's save_attachments reads them.
+    def uploaded_attachment(entry)
+      attachment = Attachment.find_by_token(entry['token'].to_s)
+      return nil unless attachment && attachment.author_id == User.current.id
+
+      filename = entry['filename']
+      attachment.filename = filename if filename.is_a?(String) && filename.present?
+      attachment.description = entry['description'].to_s.strip
+      attachment
+    end
+
     # The answers as text, under the names they were posted with.
     def issue_template_answers_text
       issue_template_answers_param.filter_map do |name, value|
