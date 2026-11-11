@@ -78,7 +78,7 @@ body:
 
 ### Fields
 
-The body has these element types. Each one has `attributes` and, except `markdown`, an optional `id` (letters, digits, `-`, `_`) and `validations`.
+The body has these element types. Each one has `attributes` and, except `markdown`, an optional `id` (letters, digits, `-`, `_`) and `validations`. A field with `link` has no type ([Links](#links)).
 
 | Type | Attributes | Validations | In the form |
 | --- | --- | --- | --- |
@@ -111,7 +111,7 @@ It crashed.
 
 ### Checks
 
-Each file is checked: the required keys, the permitted keys and attributes, unique ids, labels and links, fields that post their answers under different names (an id, or a label made into one), at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), `required` as `true` or `false` and `min_length` as a number, a YAML form's `name` longer than 3 characters, unique template names, contact links with an `http` or `https` URL, at most 65,535 characters per file, and no two files with the same id (`bug.yml` and `bug.md`; the first in the chooser's order keeps it). A file that breaks a rule is marked in the project settings, with its errors on its page, and left out of the chooser; the other files still work.
+Each file is checked: the required keys, the permitted keys and attributes, unique ids, labels and links, fields that post their answers under different names (an id, or a label made into one), at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), `required` as `true` or `false` and `min_length` as a number, fields with `link` without `type` and with `link` as text, link `options` by the dropdown rules, a dropdown's `default` as an index of its options, `is_private` and `blank_issues_enabled` as `true` or `false`, `fields` values of `shown`, `hidden` or `required`, a YAML form's `name` longer than 3 characters, unique template names, contact links with an `http` or `https` URL, at most 65,535 characters per file, and no two files with the same id (`bug.yml` and `bug.md`; the first in the chooser's order keeps it). A file that breaks a rule is marked in the project settings, with its errors on its page, and left out of the chooser; the other files still work.
 
 Each problem is shown as the file, the key and Redmine's validation message, for example `bug.yml: body[2]: id is invalid` or `bug.yml: description cannot be blank`. The "Help" link of the project settings opens this page.
 
@@ -127,7 +127,7 @@ contact_links:
     about: Please ask and answer questions here.
 ```
 
-- `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser. Users with "Manage issue templates" can still create one. Issues from the REST API and from email are not affected. A template's `is_private: true` makes issues private only for users who may set them private, as in Redmine's form; issues from anonymous users stay public.
+- `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser. Users with "Manage issue templates" can still create one. Issues from the REST API and from email are not affected.
 - `contact_links` are listed after the templates, under "Other contacts". A link's `about` is Markdown, and can have several lines.
 
 The project settings show these settings under "Template chooser". When the templates are edited in Redmine, they can be changed there: saving makes `config.yml` again from the form, without its comments. Templates from a repository or GitHub keep `config.yml` there.
@@ -157,7 +157,7 @@ fields:
 | `priority` | The priority, by name or id |
 | `category` | A category of the project, by name or id |
 | `fixed_version` | An open version of the project, by name or id |
-| `is_private` | `true` or `false` |
+| `is_private` | `true` or `false`; it applies only for users with "Set issues public or private", as in Redmine's form |
 | `custom_fields` | Custom field names (or ids) and their values |
 | `fields` | The visibility of the form's fields |
 
@@ -167,26 +167,35 @@ The values these keys set can't be changed in the form: the form shows them as t
 
 ### Fields of the form
 
-`fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and gets the value the template sets, when Redmine lets the user set that field; a required field is marked and checked as Redmine marks and checks the fields its workflow requires. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; a YAML form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
+`fields` sets a field to `shown` (the default), `hidden` or `required`. A hidden field is left out of the form and gets the value the template sets, when Redmine lets the user set that field; a required field is marked and checked as Redmine marks and checks the fields its workflow requires, when the user can set it. `priority` and `is_private` can't be `required`. A hidden field that Redmine requires and the template doesn't fill is shown, so that it can be filled. The names are `assigned_to`, `category`, `fixed_version`, `parent_issue`, `start_date`, `due_date`, `estimated_hours`, `done_ratio`, `description` (Markdown templates; a YAML form always replaces it), `priority`, `is_private`, `watchers`, and custom fields by name or id.
 
-The tracker and the subject are always shown, as Redmine requires them: the tracker as text when the template sets it. The project can't be changed while a template applies, since the template's values belong to the project it was chosen in. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only.
+The tracker and the subject are always shown, as Redmine requires them: the tracker as text when the template sets it. The project can't be changed while a template applies, since the template's values belong to the project it was chosen in. Redmine's own rules still apply: a field the tracker disables is not shown even when the template shows it, and a field the workflow makes read-only stays read-only. The chooser leaves out templates whose tracker the user can't use.
 
 ### Links
 
-In a YAML form, a field with `link` and without `type` is linked to a field of the issue. The field it sets decides how it is shown: a select of the field's choices, a date, a text area (long text custom fields) or a line of text. The answer sets that field, the form leaves the issue's field out, and the answer is not written into the description. A linked field has `label`, `description`, `placeholder` and `options`, and `required`.
+In a YAML form, a field with `link` and without `type` is linked to a field of the issue. The field it sets decides how it is shown: a select of the field's choices, a date, a text area (long text custom fields) or a line of text. The answer sets that field, the form leaves the issue's field out, and the answer is not written into the description. A linked field has the attributes `label`, `description`, `placeholder` (text fields) and `options`, and the validation `required`.
 
 ```yaml
+name: Regression
+description: Report something that broke in a version.
+type: Bug
 body:
   - id: version
     link: fixed_version
     attributes:
-      label: Version
+      label: Broken in version
     validations:
       required: true
-  - id: due
-    link: due_date
+  - id: database
+    link: Database
     attributes:
-      label: When do you need it?
+      label: Database
+  - type: textarea
+    id: what
+    attributes:
+      label: What broke?
+    validations:
+      required: true
 ```
 
 ![The issue form of a template whose "Broken in version" and "Database" fields set the target version and the custom field: neither is in Redmine's box below](./images/issue-form-link.png)
@@ -198,15 +207,15 @@ body:
 | `estimated_hours` | Estimated time | A line of text |
 | A custom field's name or id | The custom field (not a file custom field) | By its format: a select for lists, users, versions and booleans, a date, a text area for long text, else a line of text |
 
-- A select offers the field's choices: the project's priorities, categories, open versions or assignable users, or the custom field's values. `options` keeps the choices of the same names, compared without case.
+- A select offers the field's choices: the project's priorities, categories, open versions or assignable users, the custom field's values, or % done in Redmine's steps (when the status doesn't set it). `options` keeps the choices of the same names (compared without case) or values; when none matches, all of them stay.
 - Links follow Redmine's rules for the user: a field the workflow makes read-only, a field the tracker disables or a custom field the user can't see is not linked, and a link that the project doesn't have is reported as a warning on the template's page. Such a field with `options` is a select of them, answered into the description; without `options` it is left out.
-- Redmine still checks the values, as in its own form: a value not in a list, a number that isn't one, a field the workflow requires.
+- An answer that is not one of the select's choices is ignored. Redmine still checks the other values, as in its own form: a number that isn't one, a field the workflow requires.
 - A blank answer leaves the field's default. Two fields can't have the same `link`; when a name and an id name the same field, the first sets it.
 - Like the [Redmine keys](#redmine-keys), `link` belongs in `.redmine/ISSUE_TEMPLATE/` or in the project settings. Keep the files of `.github/ISSUE_TEMPLATE/` without it.
 
 ## Other keys
 
-Some keys have no Redmine equivalent. They don't stop a template from working; the project settings list them as warnings.
+Some keys have no Redmine equivalent. They don't stop a template from working; the template's page shows them as warnings.
 
 | Key | In Redmine |
 | --- | --- |
