@@ -2,7 +2,7 @@
 
 Redmine Issue Template adds issue templates to Redmine. When a project has templates, "New issue" opens a template chooser. The chosen template fills in Redmine's issue form: the tracker (bug, feature…), the subject, the description, and the fields it sets. A YAML form shows its own fields and writes the answers into the description.
 
-The templates are files in the project's repository. Redmine reads `.redmine/ISSUE_TEMPLATE/`, or `.github/ISSUE_TEMPLATE/` when there is no `.redmine/` folder, and imports the files again when the repository changes. A project without a repository edits the same files in its settings.
+The templates are files in the project's repository. Redmine reads the first of `.redmine/ISSUE_TEMPLATE/` and `.github/ISSUE_TEMPLATE/` that has template files, and imports the files again when the repository changes. A project without a repository edits the same files in its settings.
 
 ## Pages
 
@@ -19,13 +19,13 @@ The templates are files in the project's repository. Redmine reads `.redmine/ISS
 
 ![The template chooser: three templates, the blank issue and two other contacts](./images/chooser.png)
 
-A YAML form shows its fields after the issue's attributes. When the issue is created, the answers become the description, each under the field's label.
+A YAML form shows its description, tracker, subject and fields in a box above Redmine's form. When the issue is created, the answers become the description, each under the field's label.
 
-![The issue form of the "Bug Report" template, with its fields after the issue's attributes](./images/issue-form.png)
+![The issue form of the "Bug Report" template: its description, tracker, subject and fields in a box above Redmine's form](./images/issue-form.png)
 
-The "Issue templates" tab of the project settings shows where the templates come from, the last import, and each file with its errors and warnings.
+The "Issue templates" tab of the project settings shows where the templates come from, the last import, the files (marked when they have errors; each file's page lists its errors and warnings), and the chooser's settings of config.yml.
 
-![The Issue templates tab of the project settings with an error and warnings](./images/settings.png)
+![The Issue templates tab of the project settings: the files, one with an error, and the chooser's settings](./images/settings.png)
 
 A file of the project settings is edited as text. "Preview" shows the template's row in the chooser and the New issue form it makes, without saving.
 

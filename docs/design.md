@@ -11,7 +11,7 @@ Redmine Issue Template adds issue templates to Redmine. "New issue" opens a temp
 
 ## Files
 
-Redmine reads the first of these folders that has at least one file, on the repository's default branch:
+Redmine reads the first of these folders that has template files (`.md`, `.yml`, `.yaml`), on the repository's default branch:
 
 1. `.redmine/ISSUE_TEMPLATE/`
 2. `.github/ISSUE_TEMPLATE/`
@@ -28,7 +28,7 @@ The chooser lists the templates alphanumerically by file name, YAML forms before
 
 ### Redmine keys
 
-Redmine's keys are top-level keys next to the others, in a Markdown template's front matter or in a YAML form. None of them is a name the other keys use. A YAML form with Redmine's keys goes in `.redmine/ISSUE_TEMPLATE/`, since GitHub rejects issue forms with top-level keys it does not permit.
+Redmine's keys are top-level keys next to the others, in a Markdown template's front matter or in a YAML form. None of them is a name the other keys use. A YAML form with Redmine's keys goes in `.redmine/ISSUE_TEMPLATE/`; the files of `.github/ISSUE_TEMPLATE/` keep to GitHub's format.
 
 ```yaml
 tracker: Bug
@@ -63,7 +63,7 @@ fields:
 
 ### YAML forms
 
-The element types are `markdown`, `textarea` (`label`, `description`, `placeholder`, `value`, `render`; `required`, `min_length`), `input` (`label`, `description`, `placeholder`, `value`; `required`, `min_length`), `dropdown` (`label`, `description`, `multiple`, `options`, `default`; `required`), `checkboxes` (`label`, `description`, options with `label` and `required`; `required`) and `upload` (`label`, `description`; `required`, `accept`). Each file is checked (required keys, permitted keys and attributes, unique ids and labels, ids of letters, digits, `-` and `_`, at least one field that is not `markdown`, distinct dropdown options, no reserved `None`, no booleans in options).
+The element types are `markdown`, `textarea` (`label`, `description`, `placeholder`, `value`, `render`; `required`, `min_length`), `input` (`label`, `description`, `placeholder`, `value`; `required`, `min_length`), `dropdown` (`label`, `description`, `multiple`, `options`, `default`; `required`), `checkboxes` (`label`, `description`, options with `label` and `required`; `required`) and `upload` (`label`, `description`; `required`, `accept`). Each file is checked as [Checks](format.md#checks) describes.
 
 When the issue is created, the answers become the description in Markdown: a `### <label>` heading per field, the answer below it, `_No response_` when it is empty, a fenced code block for a `textarea` with `render`, the chosen options separated by commas for a `dropdown`, `- [X] <label>` or `- [ ] <label>` per option for `checkboxes`. `upload` uses the issue's own files field; its section lists the attached files.
 
@@ -77,14 +77,14 @@ The project stores the files it uses (`issue_template_files`) and where they cam
 - **redmine_github.** [Redmine GitHub](https://github.com/redmine-kit/redmine_github) receives GitHub's push events. When a push to the default branch changes `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/`, it calls `RedmineIssueTemplate::Importer.import(project, files:, revision:, source: 'github')` with the folder's files.
 - **Project settings.** A project without templates in its repository creates, edits and deletes its files in the project settings, as text in an editor. Saving runs the same input check as an import, and a file with errors is not saved; the errors are shown as Redmine shows form errors. When the repository has templates, they are used, and the settings show them read-only: the file, its content and where it came from. The controller refuses edits to them too.
 
-A file with errors is listed with its errors in the settings and left out of the chooser; the other files still work.
+A file with errors is marked in the settings, with its errors on its page, and left out of the chooser; the other files still work.
 
 ## Screens
 
 The screens follow Redmine's own screens ([Redmine Design Guide](https://redmine-kit.github.io/design-guide/)).
 
 - **Template chooser** (`/projects/<id>/issues/templates`): "New issue" opens it when the project has templates. A list like Redmine's lists (`table.list`): the template's name (a link to the form), its description and its tracker. "Blank issue" is an action link, shown when `blank_issues_enabled` is not false, and always to users who can manage the templates. Contact links follow as a second list, "Other contacts". Parameters that came with "New issue" (for example a parent issue) are kept.
-- **Issue form**: Redmine's own form, with the template's values. A YAML form's fields are shown after the issue's attributes, in the form's tabular layout. Hidden fields are left out and required ones are marked as Redmine marks them.
+- **Issue form**: Redmine's own form, with the template's values. A YAML form's description, tracker, subject and fields are in a box above Redmine's form, in the form's tabular layout. Hidden fields are left out and required ones are marked as Redmine marks them.
 - **Project settings › Issue templates**: the action links "New template" (without templates in the repository), "Import" and "Help" (the format reference in these docs); where the templates come from, the revision and the time of the last import, as names and values like Administration › Information; the files with an ok or error icon, edited and deleted here when the repository has none; when some files have errors, a notice that they cannot be used; and the settings of config.yml under "Template chooser" (blank issues, other contacts), saved as config.yml when the templates are edited in Redmine and shown read-only otherwise. Each file's page shows its errors and warnings, each as the file, the key and Redmine's validation message.
 - **A template file**: the file name links to its page, with where it came from (as on Administration › Information) and its text in a box. "Edit" and "Delete" are there only for files of the project settings. The edit form is a plain text editor (`.box.tabular`, a textarea as on a wiki page) with "Save", "Preview" and "Cancel".
 - **Preview**: in a box with the legend "Preview" (as the issue edit page groups its fields), the template's row in the chooser and Redmine's New issue form as the template makes it (values, hidden and required fields, a YAML form's fields), shown but not usable (`inert`). "Preview" on the edit form shows it without saving, after the same input check; the page of a file from a repository always shows it. For `config.yml`, the preview is the chooser with all the templates. Core has no pattern for previewing a template, so this follows the issue form and the lists as they are.

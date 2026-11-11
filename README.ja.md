@@ -14,6 +14,8 @@ Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレ�
 - テンプレートごとに、チケットの入力欄を隠したり、必須にしたりできます。
 - リポジトリが変わると、Redmine がテンプレートを取り込みます。リポジトリのないプロジェクトは、プロジェクトの設定で編集します。[Redmine GitHub](https://github.com/redmine-kit/redmine_github) で、GitHub のリポジトリから取り込むこともできます。
 
+<a id="documentation"></a>
+
 ## ドキュメント
 
 - Web サイト: https://redmine-kit.github.io/redmine_issue_template/ja/ (English: https://redmine-kit.github.io/redmine_issue_template/)

@@ -38,4 +38,4 @@ A project whose repository has no templates (or that has no repository) adds, ed
 
 ## Errors and warnings
 
-Each import checks every file ([Checks](format.md#checks)) and lists the problems in the tab. An error leaves the file out of the chooser; a warning, such as a label without a Redmine equivalent or a tracker the project doesn't have, leaves the template in use.
+Each import checks every file ([Checks](format.md#checks)); the tab marks the files with errors, and each file's page lists its errors and warnings. An error leaves the file out of the chooser; a warning, such as a label without a Redmine equivalent or a tracker the project doesn't have, leaves the template in use.

@@ -11,7 +11,7 @@ Redmine は、プロジェクトのリポジトリのデフォルトブランチ
 1. `.redmine/ISSUE_TEMPLATE/`
 2. `.github/ISSUE_TEMPLATE/`
 
-2 つのフォルダーは混ぜません。`.github/ISSUE_TEMPLATE/` と別のテンプレートを Redmine で使うときは、`.redmine/ISSUE_TEMPLATE/` に置きます。Redmine のキーを使う YAML フォームは `.redmine/ISSUE_TEMPLATE/` に置きます。GitHub は、許可していないキーが一番上の階層にあるフォームを受け付けません。
+2 つのフォルダーは混ぜません。`.github/ISSUE_TEMPLATE/` と別のテンプレートを Redmine で使うときは、`.redmine/ISSUE_TEMPLATE/` に置きます。Redmine のキーを使う YAML フォームは `.redmine/ISSUE_TEMPLATE/` に置きます。`.github/ISSUE_TEMPLATE/` のファイルは、GitHub の書式のままにします。
 
 テンプレート選択画面には、YAML フォーム(`.yml`、`.yaml`)が先、Markdown テンプレート(`.md`)が後で、それぞれファイル名の順です。順番を決めるには、ファイル名の先頭に番号を付けます(`1-bug.yml`、`2-feature.md`)。拡張子を除いたファイル名が、URL でのテンプレートの ID になります(`?issue_template=1-bug`)。
 
@@ -95,7 +95,7 @@ body には次の入力の種類を使えます。どれも `attributes` を持�
 | `input` | `label`、`description`、`placeholder`、`value` | `required`、`min_length` | 1 行の入力欄 |
 | `dropdown` | `label`、`description`、`multiple`、`options`、`default` | `required` | 選択欄。`default` は最初に選ぶ選択肢の番号 |
 | `checkboxes` | `label`、`description`、`options`(それぞれ `label` と `required`) | `required` | 選択肢ごとのチェックボックス |
-| `upload` | `label`、`description` | `required`、`accept` | チケットの「ファイル」の欄を使う。説明には添付したファイルを並べる |
+| `upload` | `label`、`description` | `required`、`accept`(読むが、まだ検証しない) | チケットの「ファイル」の欄を使う。説明には添付したファイルを並べる |
 
 `validations` は、チケットを作るときに常に検証します。
 
@@ -123,7 +123,7 @@ It crashed.
 
 ### 検証
 
-ファイルごとに入力チェックを行います。必須のキー、使えるキーと属性、`id` と `label` の重複、パラメーターにしたときに同じになる `label`、`markdown` 以外の入力欄が 1 つ以上あること、選択欄の選択肢の重複と予約語 `None`、YAML で真偽値になる選択肢、YAML で真偽値になるキー(`yes`、`no`、`on`、`off` など)、4 文字以上の `name`、1 ファイル 65,535 文字まで、同じ id のファイルがないこと(`bug.yml` と `bug.md`。選択画面の順で先のものが使われます)です。規則に合わないファイルは、プロジェクトの設定で印を付け、エラーはそのファイルの画面に表示し、選択画面には出しません。ほかのファイルはそのまま使えます。
+ファイルごとに入力チェックを行います。必須のキー、使えるキーと属性、`id`、`label`、`link` の重複、回答を送る名前(`id`、またはパラメーターにした `label`)の重複、`markdown` 以外の入力欄が 1 つ以上あること、選択欄の選択肢の重複と予約語 `None`、YAML で真偽値になる選択肢、YAML で真偽値になるキー(`yes`、`no`、`on`、`off` など)、`true` か `false` の `required` と数値の `min_length`、YAML フォームの 4 文字以上の `name`、テンプレートの名前の重複、`http` か `https` の URL の連絡先、1 ファイル 65,535 文字まで、同じ id のファイルがないこと(`bug.yml` と `bug.md`。選択画面の順で先のものが使われます)です。規則に合わないファイルは、プロジェクトの設定で印を付け、エラーはそのファイルの画面に表示し、選択画面には出しません。ほかのファイルはそのまま使えます。
 
 問題は、ファイル、キー、Redmine の検証のメッセージで表示します。たとえば `bug.yml: body[2]: id は不正な値です`、`bug.yml: description を入力してください` です。プロジェクトの設定の「ヘルプ」から、このページを開けます。
 
@@ -131,7 +131,7 @@ It crashed.
 
 ## config.yml
 
-`config.yml` で選択画面を設定します。ファイルがなければ、空白のチケットを作れます。
+`config.yml`(または `config.yaml`)で選択画面を設定します。ファイルがなければ、空白のチケットを作れます。
 
 ```yaml
 blank_issues_enabled: false
@@ -141,7 +141,7 @@ contact_links:
     about: Please ask and answer questions here.
 ```
 
-`blank_issues_enabled: false` にすると、選択画面に「空白のチケット」を出さず、画面からテンプレートを使わずに作成しようとすると選択画面に戻します。ただし、「チケットテンプレートの管理」の権限を持つ利用者は作成できます。REST API とメールからのチケットの作成は変わりません。`contact_links` は、テンプレートの後に「その他の連絡先」として並びます。連絡先の `about` は Markdown で、複数行で書けます。
+`blank_issues_enabled: false` にすると、選択画面に「空白のチケット」を出さず、画面からテンプレートを使わずに作成しようとすると選択画面に戻します。ただし、「チケットテンプレートの管理」の権限を持つユーザーは作成できます。REST API とメールからのチケットの作成は変わりません。テンプレートの `is_private: true` でプライベートになるのは、Redmine の入力画面と同じく、プライベートにする権限を持つユーザーのチケットだけです。匿名ユーザーのチケットは公開のままです。`contact_links` は、テンプレートの後に「その他の連絡先」として並びます。連絡先の `about` は Markdown で、複数行で書けます。
 
 プロジェクトの設定の「テンプレートの選択画面」に、これらの設定を表示します。テンプレートを Redmine で編集しているときはそこで変更でき、保存すると画面の内容から `config.yml` を作り直します(コメントは残りません)。リポジトリや GitHub から取り込んだテンプレートでは、`config.yml` はそちらで編集します。
 
@@ -176,7 +176,7 @@ fields:
 | `custom_fields` | カスタムフィールドの名前(か ID)と値 |
 | `fields` | 入力欄の表示 |
 
-名前は大文字と小文字を区別せずに比べます。プロジェクトにない名前は、プロジェクトの設定に警告として出し、その項目は Redmine のデフォルトのままになります。
+名前は大文字と小文字を区別せずに比べます。プロジェクトにない名前は、テンプレートの画面に警告として出し、その項目は Redmine のデフォルトのままになります。
 
 これらのキーで決めた値は、画面では変更できません。Redmine が変更できない項目を表示するときと同じように文字で表示し、送られてきた値にかかわらず、テンプレートの値をチケットに入れます。`title`、Markdown テンプレートの本文、`assignees` は、画面に最初に入る値なので、変更できます。
 
@@ -184,7 +184,7 @@ fields:
 
 ### 入力欄の表示
 
-`fields` では、入力欄ごとに `shown`(デフォルト)、`hidden`、`required` を決めます。`hidden` の入力欄は画面に出さず、Redmine の規則でその利用者が設定できる項目なら、テンプレートで決めた値を入れます。`required` の入力欄は、Redmine のワークフローで必須にした項目と同じように、印を付けて検証します。指定できる名前は `assigned_to`(担当者)、`category`(カテゴリ)、`fixed_version`(対象バージョン)、`parent_issue`(親チケット)、`start_date`(開始日)、`due_date`(期日)、`estimated_hours`(予定工数)、`done_ratio`(進捗率)、`description`(説明。Markdown テンプレートだけで、YAML フォームでは常に入力欄に置き換わる)、`priority`(優先度)、`is_private`(プライベート)、`watchers`(ウォッチャー)と、カスタムフィールドの名前か ID です。
+`fields` では、入力欄ごとに `shown`(デフォルト)、`hidden`、`required` を決めます。`hidden` の入力欄は画面に出さず、Redmine の規則でそのユーザーが設定できる項目なら、テンプレートで決めた値を入れます。`required` の入力欄は、Redmine のワークフローで必須にした項目と同じように、印を付けて検証します。指定できる名前は `assigned_to`(担当者)、`category`(カテゴリ)、`fixed_version`(対象バージョン)、`parent_issue`(親チケット)、`start_date`(開始日)、`due_date`(期日)、`estimated_hours`(予定工数)、`done_ratio`(進捗率)、`description`(説明。Markdown テンプレートだけで、YAML フォームでは常に入力欄に置き換わる)、`priority`(優先度)、`is_private`(プライベート)、`watchers`(ウォッチャー)と、カスタムフィールドの名前か ID です。
 
 トラッカーと題名は、Redmine が必須にしているので、いつも表示します。トラッカーは、テンプレートで決めたときは文字で表示します。プロジェクトは、テンプレートを使っている間は変更できません。テンプレートの値は、テンプレートを選んだプロジェクトのものだからです。Redmine の規則もそのまま効きます。トラッカーで無効にした項目は、テンプレートで `shown` にしても出ず、ワークフローで読み取り専用にした項目は読み取り専用のままです。
 
@@ -192,19 +192,17 @@ fields:
 
 ### 項目とのつなぎ込み
 
-YAML フォームの `input`、`textarea`、`dropdown` の要素に `link` を書くと、その入力欄をチケットの項目につなげます。回答はその項目に入り、画面からはチケットの項目を外し、回答は説明に書きません。
+YAML フォームで、`type` を書かずに `link` を書いた入力欄は、チケットの項目につながります。表示はつなぎ先で決まり、項目の選択肢の選択欄、日付、テキストエリア(長いテキストのカスタムフィールド)、1 行の入力欄のどれかになります。回答はその項目に入り、画面からはチケットの項目を外し、回答は説明に書きません。書けるのは `label`、`description`、`placeholder`、`options` と、検証の `required` です。
 
 ```yaml
 body:
-  - type: dropdown
-    id: version
+  - id: version
     link: fixed_version
     attributes:
       label: Version
     validations:
       required: true
-  - type: input
-    id: due
+  - id: due
     link: due_date
     attributes:
       label: When do you need it?
@@ -212,16 +210,17 @@ body:
 
 ![「Broken in version」と「Database」の入力欄が、対象バージョンとカスタムフィールドにつながったテンプレートの入力画面。下の Redmine のボックスには、その 2 つの項目がない](./images/issue-form-link.png)
 
-| `link` | 入る項目 |
-| --- | --- |
-| `priority`、`category`、`fixed_version`、`assigned_to`、`done_ratio` | チケットの同じ名前の項目(優先度、カテゴリ、対象バージョン、担当者、進捗率)。`dropdown` で選ぶ |
-| `start_date`、`due_date`、`estimated_hours` | チケットの同じ名前の項目(開始日、期日、予定工数)。`input` に書く |
-| カスタムフィールドの名前か ID | そのカスタムフィールド |
+| `link` | 入る項目 | 表示 |
+| --- | --- | --- |
+| `priority`、`category`、`fixed_version`、`assigned_to`、`done_ratio` | チケットの同じ名前の項目(優先度、カテゴリ、対象バージョン、担当者、進捗率) | 選択欄 |
+| `start_date`、`due_date` | チケットの同じ名前の項目(開始日、期日) | 日付 |
+| `estimated_hours` | 予定工数 | 1 行の入力欄 |
+| カスタムフィールドの名前か ID | そのカスタムフィールド(ファイルの形式は除く) | 形式で決まる。リスト、ユーザー、バージョン、真偽値は選択欄、日付は日付、長いテキストはテキストエリア、それ以外は 1 行の入力欄 |
 
-- `options` のない `dropdown` は、その項目の選択肢を出します。プロジェクトの優先度、カテゴリ、未完了のバージョン、担当者にできるユーザー、カスタムフィールドの値です。`options` を書いたときは、各選択肢を、同じ名前の選択肢に、大文字と小文字を区別せずに対応させます。
-- プロジェクトにないつなぎ先は、テンプレートの画面に警告として出します。その入力欄の回答は説明に書きます。
-- つなぎ込みは、利用者に対する Redmine の規則に従います。ワークフローで読み取り専用にした項目、トラッカーで無効にした項目、利用者が見られないカスタムフィールドにはつなぎません。その回答は説明に書き、`options` のない `dropdown` は選ぶものがないので出しません。
-- 空の回答は、項目のデフォルトのままにします。同じ項目への 2 つのつなぎ込みは、最初のものが入ります。
+- 選択欄は、その項目の選択肢を出します。プロジェクトの優先度、カテゴリ、未完了のバージョン、担当者にできるユーザー、カスタムフィールドの値です。`options` を書くと、同じ名前の選択肢だけを、大文字と小文字を区別せずに残します。
+- つなぎ込みは、ユーザーに対する Redmine の規則に従います。ワークフローで読み取り専用にした項目、トラッカーで無効にした項目、ユーザーが見られないカスタムフィールドにはつなぎません。プロジェクトにないつなぎ先は、テンプレートの画面に警告として出します。そうした入力欄は、`options` があればその選択欄にして回答を説明に書き、なければ出しません。
+- 値は、Redmine の入力画面と同じく Redmine が検証します。リストにない値、数値でない値、ワークフローで必須の項目などです。
+- 空の回答は、項目のデフォルトのままにします。同じ `link` は 2 つの入力欄に書けません。名前と ID で同じ項目を指したときは、最初のものが入ります。
 - `link` は、[Redmine のキー](#redmine-keys)と同じく、`.redmine/ISSUE_TEMPLATE/` かプロジェクトの設定で使います。`.github/ISSUE_TEMPLATE/` のファイルには書きません。
 
 <a id="other-keys"></a>

@@ -9,7 +9,7 @@ Redmine reads the first of these folders that has template files, on the default
 1. `.redmine/ISSUE_TEMPLATE/`
 2. `.github/ISSUE_TEMPLATE/`
 
-The folders are not merged. To use templates in Redmine other than those in `.github/ISSUE_TEMPLATE/`, put them in `.redmine/ISSUE_TEMPLATE/`. A YAML form that uses Redmine's keys belongs in `.redmine/ISSUE_TEMPLATE/`: GitHub rejects issue forms with top-level keys it does not permit.
+The folders are not merged. To use templates in Redmine other than those in `.github/ISSUE_TEMPLATE/`, put them in `.redmine/ISSUE_TEMPLATE/`. A YAML form that uses Redmine's keys belongs in `.redmine/ISSUE_TEMPLATE/`; the files of `.github/ISSUE_TEMPLATE/` keep to GitHub's format.
 
 The chooser lists YAML forms (`.yml`, `.yaml`) first, then Markdown templates (`.md`), each sorted by file name. Prefix the file names with numbers to set the order (`1-bug.yml`, `2-feature.md`). The file name without its extension is the template's id in URLs (`?issue_template=1-bug`).
 
@@ -87,7 +87,7 @@ The body has these element types. Each one has `attributes` and, except `markdow
 | `input` | `label`, `description`, `placeholder`, `value` | `required`, `min_length` | A one-line text field |
 | `dropdown` | `label`, `description`, `multiple`, `options`, `default` | `required` | A select box; `default` is the index of the preselected option |
 | `checkboxes` | `label`, `description`, `options` (each with `label` and `required`) | `required` | A checkbox per option |
-| `upload` | `label`, `description` | `required`, `accept` | Redmine's Files field of the issue; the section lists the attached files |
+| `upload` | `label`, `description` | `required`, `accept` (read, not checked yet) | Redmine's Files field of the issue; the section lists the attached files |
 
 `validations` are always checked when the issue is created.
 
@@ -111,13 +111,13 @@ It crashed.
 
 ### Checks
 
-Each file is checked: the required keys, the permitted keys and attributes, unique ids and labels, labels that stay different when made into parameters, at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), a `name` longer than 3 characters, at most 65,535 characters per file, and no two files with the same id (`bug.yml` and `bug.md`; the first in the chooser's order keeps it). A file that breaks a rule is marked in the project settings, with its errors on its page, and left out of the chooser; the other files still work.
+Each file is checked: the required keys, the permitted keys and attributes, unique ids, labels and links, fields that post their answers under different names (an id, or a label made into one), at least one field that is not `markdown`, distinct dropdown options without the reserved word `None` and without values YAML reads as booleans, keys that YAML reads as booleans (`yes`, `no`, `on`, `off`…), `required` as `true` or `false` and `min_length` as a number, a YAML form's `name` longer than 3 characters, unique template names, contact links with an `http` or `https` URL, at most 65,535 characters per file, and no two files with the same id (`bug.yml` and `bug.md`; the first in the chooser's order keeps it). A file that breaks a rule is marked in the project settings, with its errors on its page, and left out of the chooser; the other files still work.
 
 Each problem is shown as the file, the key and Redmine's validation message, for example `bug.yml: body[2]: id is invalid` or `bug.yml: description cannot be blank`. The "Help" link of the project settings opens this page.
 
 ## config.yml
 
-`config.yml` sets the chooser. Without it, blank issues are allowed.
+`config.yml` (or `config.yaml`) sets the chooser. Without it, blank issues are allowed.
 
 ```yaml
 blank_issues_enabled: false
@@ -127,7 +127,7 @@ contact_links:
     about: Please ask and answer questions here.
 ```
 
-- `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser. Users with "Manage issue templates" can still create one. Issues from the REST API and from email are not affected.
+- `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser. Users with "Manage issue templates" can still create one. Issues from the REST API and from email are not affected. A template's `is_private: true` makes issues private only for users who may set them private, as in Redmine's form; issues from anonymous users stay public.
 - `contact_links` are listed after the templates, under "Other contacts". A link's `about` is Markdown, and can have several lines.
 
 The project settings show these settings under "Template chooser". When the templates are edited in Redmine, they can be changed there: saving makes `config.yml` again from the form, without its comments. Templates from a repository or GitHub keep `config.yml` there.
@@ -161,7 +161,7 @@ fields:
 | `custom_fields` | Custom field names (or ids) and their values |
 | `fields` | The visibility of the form's fields |
 
-Names are compared without case. A name that the project doesn't have is reported as a warning in the project settings, and the field keeps Redmine's default.
+Names are compared without case. A name that the project doesn't have is reported as a warning on the template's page, and the field keeps Redmine's default.
 
 The values these keys set can't be changed in the form: the form shows them as text, as Redmine shows a field the user can't change, and the issue gets the template's value whatever the request says. `title`, the body of a Markdown template and `assignees` are only what the form starts with, and can be changed.
 
@@ -173,19 +173,17 @@ The tracker and the subject are always shown, as Redmine requires them: the trac
 
 ### Links
 
-In a YAML form, `link` on an `input`, `textarea` or `dropdown` element links the field to a field of the issue. The answer sets that field, the form leaves the issue's field out, and the answer is not written into the description.
+In a YAML form, a field with `link` and without `type` is linked to a field of the issue. The field it sets decides how it is shown: a select of the field's choices, a date, a text area (long text custom fields) or a line of text. The answer sets that field, the form leaves the issue's field out, and the answer is not written into the description. A linked field has `label`, `description`, `placeholder` and `options`, and `required`.
 
 ```yaml
 body:
-  - type: dropdown
-    id: version
+  - id: version
     link: fixed_version
     attributes:
       label: Version
     validations:
       required: true
-  - type: input
-    id: due
+  - id: due
     link: due_date
     attributes:
       label: When do you need it?
@@ -193,16 +191,17 @@ body:
 
 ![The issue form of a template whose "Broken in version" and "Database" fields set the target version and the custom field: neither is in Redmine's box below](./images/issue-form-link.png)
 
-| `link` | The field it sets |
-| --- | --- |
-| `priority`, `category`, `fixed_version`, `assigned_to`, `done_ratio` | The issue's field of that name, from a dropdown |
-| `start_date`, `due_date`, `estimated_hours` | The issue's field of that name, from an input |
-| A custom field's name or id | The custom field |
+| `link` | The field it sets | Shown as |
+| --- | --- | --- |
+| `priority`, `category`, `fixed_version`, `assigned_to`, `done_ratio` | The issue's field of that name | A select |
+| `start_date`, `due_date` | The issue's field of that name | A date |
+| `estimated_hours` | Estimated time | A line of text |
+| A custom field's name or id | The custom field (not a file custom field) | By its format: a select for lists, users, versions and booleans, a date, a text area for long text, else a line of text |
 
-- A linked dropdown without `options` offers the field's choices: the project's priorities, categories, open versions or assignable users, or the custom field's values. With `options`, each option sets the choice of the same name, compared without case.
-- A link that the project doesn't have is reported as a warning on the template's page; the field's answer then goes into the description.
-- Links follow Redmine's rules for the user: a field the workflow makes read-only, a field the tracker disables or a custom field the user can't see is not linked. Its answer goes into the description, and a dropdown without `options` is left out, having nothing to choose.
-- A blank answer leaves the field's default. Of two links to the same field, the first sets it.
+- A select offers the field's choices: the project's priorities, categories, open versions or assignable users, or the custom field's values. `options` keeps the choices of the same names, compared without case.
+- Links follow Redmine's rules for the user: a field the workflow makes read-only, a field the tracker disables or a custom field the user can't see is not linked, and a link that the project doesn't have is reported as a warning on the template's page. Such a field with `options` is a select of them, answered into the description; without `options` it is left out.
+- Redmine still checks the values, as in its own form: a value not in a list, a number that isn't one, a field the workflow requires.
+- A blank answer leaves the field's default. Two fields can't have the same `link`; when a name and an id name the same field, the first sets it.
 - Like the [Redmine keys](#redmine-keys), `link` belongs in `.redmine/ISSUE_TEMPLATE/` or in the project settings. Keep the files of `.github/ISSUE_TEMPLATE/` without it.
 
 ## Other keys
