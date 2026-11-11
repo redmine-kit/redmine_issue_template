@@ -1,10 +1,9 @@
-<%# A form's text, tracker, subject and fields, in a box above Redmine's
-    form. The fields join the form by their form attribute, so they are
-    submitted with it and Redmine's updates of the form leave them alone. %>
-<% if issue.issue_template_active? && issue.issue_template.form? %>
+<%# A form's part of Redmine's form, at its top: the form's text, tracker,
+    the values it sets, subject and fields, then a line before Redmine's
+    attributes. Redmine renders it again on each update of the form; the
+    answers come back from the request (BodyComposer#value). %>
 <% composer = issue.issue_template_composer %>
-<% form = 'issue-form' %>
-<div class="box tabular issue-template-fields">
+<div class="issue-template-fields">
 <%# In div.wiki, as the markdown elements, so that the text starts at the
     box's edge rather than at the fields. %>
 <% if issue.issue_template.about.present? %><div class="wiki"><%= issue_template_markdown(issue.issue_template.about) %></div><% end %>
@@ -14,18 +13,18 @@
 <% if issue.issue_template_visibility[:preset].include?('tracker_id') %>
 <p><label><%= l(:field_tracker) %></label> <span class="issue-template-value"><%= issue.tracker %></span></p>
 <% else %>
-<%# Not Redmine's id: Redmine's form, rendered again on each update, resets
-    #issue_tracker_id to the tracker it was rendered with. %>
+<%# Redmine's tracker field, with Redmine's update of the form. %>
 <p>
-  <%= label_tag 'issue_template_tracker_id' do %><%= l(:field_tracker) %><span class="required"> *</span><% end %>
+  <%= label_tag 'issue_tracker_id' do %><%= l(:field_tracker) %><span class="required"> *</span><% end %>
   <%= select_tag 'issue[tracker_id]', options_for_select(trackers_options_for_select(issue), issue.tracker_id),
-                 id: 'issue_template_tracker_id', form: form,
+                 id: 'issue_tracker_id',
                  onchange: "updateIssueFrom('#{escape_javascript update_issue_form_path(issue.project, issue)}', this)" %>
 </p>
 <% end %>
+<%= render partial: 'issue_templates/preset_values', locals: { issue: issue, except: ['tracker_id'] } %>
 <p>
   <%= label_tag 'issue_subject' do %><%= l(:field_subject) %><span class="required"> *</span><% end %>
-  <%= text_field_tag 'issue[subject]', issue.subject, id: 'issue_subject', size: 80, maxlength: 255, form: form %>
+  <%= text_field_tag 'issue[subject]', issue.subject, id: 'issue_subject', size: 80, maxlength: 255 %>
 </p>
 <% (issue.issue_template.elements.drop_while { |element| element.type == 'markdown' } - issue.issue_template_dropped).each do |element| %>
   <% name = "issue_template_answers[#{element.ref}]" %>
@@ -39,14 +38,14 @@
   <% when 'input' %>
   <p>
     <%= issue_template_label(element, field_id) %>
-    <%= text_field_tag name, value, id: field_id, size: 60, placeholder: element.attributes['placeholder'], form: form %>
+    <%= text_field_tag name, value, id: field_id, size: 60, placeholder: element.attributes['placeholder'] %>
     <%= issue_template_info(element) %>
   </p>
   <% when 'textarea' %>
   <p>
     <%= issue_template_label(element, field_id) %>
     <%= text_area_tag name, value, id: field_id, cols: 60, rows: 6, placeholder: element.attributes['placeholder'],
-                      class: (element.attributes['render'].present? ? nil : 'wiki-edit'), form: form %>
+                      class: (element.attributes['render'].present? ? nil : 'wiki-edit') %>
     <%= issue_template_info(element) %>
   </p>
   <% when 'dropdown' %>
@@ -54,26 +53,26 @@
     <%= issue_template_label(element, field_id) %>
     <% options = element.options.each_with_index.map { |option, index| [option.to_s, index.to_s] } %>
     <% if element.multiple? %>
-    <%= select_tag "#{name}[]", options_for_select(options, Array(value)), id: field_id, multiple: true, form: form %>
+    <%= select_tag "#{name}[]", options_for_select(options, Array(value)), id: field_id, multiple: true %>
     <% else %>
-    <%= select_tag name, options_for_select(options, value), id: field_id, include_blank: !element.attributes.key?('default'), form: form %>
+    <%= select_tag name, options_for_select(options, value), id: field_id, include_blank: !element.attributes.key?('default') %>
     <% end %>
     <%= issue_template_info(element) %>
   </p>
   <% when 'link' %>
   <%= render partial: 'issue_templates/linked_field',
-             locals: { issue: issue, element: element, name: name, field_id: field_id, value: value, form: form } %>
+             locals: { issue: issue, element: element, name: name, field_id: field_id, value: value } %>
   <% when 'checkboxes' %>
   <p>
     <label><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %></label>
     <% element.checkbox_options.each_with_index do |option, index| %>
     <label class="block">
-      <%= check_box_tag "#{name}[]", index.to_s, Array(value).map(&:to_s).include?(index.to_s), id: "#{field_id}_#{index}", form: form %>
+      <%= check_box_tag "#{name}[]", index.to_s, Array(value).map(&:to_s).include?(index.to_s), id: "#{field_id}_#{index}" %>
       <%= issue_template_markdown(option[:label], inline: true) %><%= content_tag(:span, ' *', class: 'required') if option[:required] %>
     </label>
     <% end %>
     <%# Posts the answer when nothing is checked, so that the field doesn't go back to its default. %>
-    <%= hidden_field_tag "#{name}[]", '', id: nil, form: form %>
+    <%= hidden_field_tag "#{name}[]", '', id: nil %>
     <%= issue_template_info(element) %>
   </p>
   <% when 'upload' %>
@@ -83,5 +82,5 @@
   </p>
   <% end %>
 <% end %>
+<hr />
 </div>
-<% end %>

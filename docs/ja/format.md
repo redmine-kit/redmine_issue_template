@@ -42,7 +42,7 @@ assignees: ''
 
 YAML フォームは、`name`、`description`、`body` を持ちます。`title`、`labels`、`assignees`、`type`、`projects` も書けます。YAML フォームは説明の代わりに自分の入力欄を出し、チケットを作るときに、その回答を説明に書きます。
 
-「新しいチケット」の画面では、Redmine のフォームの上のボックスに、YAML フォームの `description`、先頭の `markdown` 要素、トラッカー、題名、入力欄が入ります。下の Redmine のボックスには、チケットのほかの属性、ファイル、ウォッチャーが入ります。次の例は GitHub のドキュメントからの引用です。
+「新しいチケット」の画面では、Redmine のフォームの一番上に、YAML フォームの `description`、先頭の `markdown` 要素、トラッカー、テンプレートで決めた値、題名、入力欄が入ります。線の下に、チケットのほかの属性、ファイル、ウォッチャーが続きます。トラッカーを変えるなどしてフォームが更新されると、Redmine はこの部分も、入力済みの回答と一緒に描き直します。次の例は GitHub のドキュメントからの引用です。
 
 ```yaml
 name: Bug Report
@@ -218,7 +218,7 @@ body:
       required: true
 ```
 
-![「Broken in version」と「Database」の入力欄が、対象バージョンとカスタムフィールドにつながったテンプレートの入力画面。下の Redmine のボックスには、その 2 つの項目がない](./images/issue-form-link.png)
+![「Broken in version」と「Database」の入力欄が、対象バージョンとカスタムフィールドにつながったテンプレートの入力画面。線の下のチケットの属性には、その 2 つの項目がない](./images/issue-form-link.png)
 
 | `link` | 入る項目 | 表示 |
 | --- | --- | --- |

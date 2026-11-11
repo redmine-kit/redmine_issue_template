@@ -1,19 +1,12 @@
-<%# The chosen template, kept when Redmine updates the form, and the values
-    the template sets, as text, as Redmine shows a status the user can't
-    change. %>
+<%# At the top of Redmine's form, rendered again with it on each update: the
+    chosen template, and what the template shows (a form's part, or the
+    values a Markdown template sets). %>
 <% if issue.issue_template_active? %>
+<% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %><% end %>
 <%= hidden_field_tag 'issue_template', issue.issue_template.key, id: nil %>
-<% labels = { 'tracker_id' => :field_tracker, 'priority_id' => :field_priority, 'category_id' => :field_category,
-              'fixed_version_id' => :field_fixed_version, 'is_private' => :field_is_private } %>
-<%# A form shows its tracker in its own box (_form_fields). %>
-<% preset = issue.issue_template_visibility[:preset] %>
-<% preset -= ['tracker_id'] if issue.issue_template.form? %>
-<% labels.each do |name, label| %>
-<% next unless preset.include?(name) %>
-<p><label><%= l(label) %></label> <span class="issue-template-value"><%= format_object(issue.public_send(name.delete_suffix('_id'))) %></span></p>
-<% end %>
-<% issue.custom_field_values.each do |value| %>
-<% next unless preset.include?(value.custom_field_id.to_s) && value.custom_field.visible_by?(issue.project) %>
-<p><label><%= value.custom_field.name %></label> <span class="issue-template-value"><%= show_value(value) %></span></p>
+<% if issue.issue_template.form? %>
+<%= render partial: 'issue_templates/form_fields', locals: { issue: issue } %>
+<% else %>
+<%= render partial: 'issue_templates/preset_values', locals: { issue: issue } %>
 <% end %>
 <% end %>

@@ -100,13 +100,13 @@ module RedmineIssueTemplate
     test 'an issue form shows its fields instead of the description' do
       get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
       assert_response :success
-      assert_select '.issue-template-fields p', text: /Tracker\s+Bug/
-      assert_select '#issue-form p', text: /Tracker/, count: 0
-      # The subject and the fields are in a box above Redmine's form, and
-      # belong to the form.
-      assert_select '#issue-form input#issue_subject', 0
-      assert_select '.issue-template-fields input#issue_subject[form=issue-form][value=?]', '[Bug]: '
-      assert_select '.issue-template-fields textarea[form=issue-form][name=?]', 'issue_template_answers[what-happened]'
+      # The form's part, at the top of Redmine's form: the tracker as text, the
+      # subject and the fields, once each.
+      assert_select '#issue-form .issue-template-fields p', text: /Tracker\s+Bug/
+      assert_select '#issue-form p', text: /Tracker\s+Bug/, count: 1
+      assert_select '#issue-form .issue-template-fields input#issue_subject[value=?]', '[Bug]: '
+      assert_select '#issue-form input#issue_subject', 1
+      assert_select '#issue-form .issue-template-fields textarea[name=?]', 'issue_template_answers[what-happened]'
       assert_select 'head link[rel=stylesheet][href^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-'
       assert_select 'textarea#issue_description', 0
       assert_select 'input[name=?]', 'issue_template_answers[contact]'
@@ -153,9 +153,9 @@ module RedmineIssueTemplate
                            form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '3', subject: 'x' },
                            issue_template_answers: { 'contact' => 'me@example.com' } }, xhr: true
       assert_response :success
-      # The form's fields are outside the part Redmine updates.
-      assert_not_include 'issue_template_answers[contact]', response.body
-      assert_not_include 'issue[subject]', response.body
+      # The form's part is rendered again with what was typed.
+      assert_include 'issue_template_answers[contact]', response.body
+      assert_include 'me@example.com', response.body
     end
 
     test 'the project stays the one the template was chosen in' do
@@ -185,12 +185,11 @@ module RedmineIssueTemplate
       import('question.yml' => QUESTION)
       get :new, params: { project_id: 'ecookbook', issue_template: 'question' }
       assert_response :success
-      tracker = '.issue-template-fields select#issue_template_tracker_id[form=issue-form][onchange*=updateIssueFrom]'
-      assert_select tracker do
+      assert_select '.issue-template-fields select#issue_tracker_id[onchange*=updateIssueFrom]' do
         assert_select 'option', Issue.new(project: @project).allowed_target_trackers(User.find(2)).count
         assert_select 'option[selected=selected][value="1"]'
       end
-      assert_select '#issue-form select#issue_tracker_id', 0
+      assert_select '#issue-form select#issue_tracker_id', 1
 
       post :create, params: { project_id: 'ecookbook', issue_template: 'question',
                               issue: { tracker_id: '3', subject: 'How?' }, issue_template_answers: { 'what' => 'x' } }
@@ -298,7 +297,7 @@ module RedmineIssueTemplate
       import('question.yml' => QUESTION)
       Tracker.find(3).update!(private_by_default: true)
       post :new, params: { project_id: 'ecookbook', issue_template: 'question',
-                           form_update_triggered_by: 'issue_template_tracker_id',
+                           form_update_triggered_by: 'issue_tracker_id',
                            issue: { tracker_id: '3', is_private: '0', subject: 'x' } }, xhr: true
       assert_response :success
       assert @controller.instance_variable_get(:@issue).is_private?

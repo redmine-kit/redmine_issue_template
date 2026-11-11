@@ -36,7 +36,7 @@ assignees: ''
 
 A YAML form has `name`, `description` and `body`, and optionally `title`, `labels`, `assignees`, `type` and `projects`. The form shows its fields in place of the description, and the answers become the description when the issue is created.
 
-On the "New issue" page, a box above Redmine's form holds the form: its `description`, the `markdown` elements it starts with, the tracker, the subject and the fields. Redmine's box below holds the issue's other attributes, the files and the watchers. This example is from GitHub's documentation:
+On the "New issue" page, the form's part comes first in Redmine's form: its `description`, the `markdown` elements it starts with, the tracker, the values the template sets, the subject and the fields. Below a line come the issue's other attributes, the files and the watchers. Redmine renders the part again when the form changes (another tracker), with the answers typed so far. This example is from GitHub's documentation:
 
 ```yaml
 name: Bug Report
@@ -198,7 +198,7 @@ body:
       required: true
 ```
 
-![The issue form of a template whose "Broken in version" and "Database" fields set the target version and the custom field: neither is in Redmine's box below](./images/issue-form-link.png)
+![The issue form of a template whose "Broken in version" and "Database" fields set the target version and the custom field: neither is among the issue's attributes below the line](./images/issue-form-link.png)
 
 | `link` | The field it sets | Shown as |
 | --- | --- | --- |

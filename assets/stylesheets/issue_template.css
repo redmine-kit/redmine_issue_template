@@ -1,5 +1,5 @@
-/* A form's subject is in the box above, so the attributes start below
-   Redmine's Private checkbox, floated at the top of the form. */
+/* A form's subject is in its part above Redmine's attributes, so the
+   attributes start below Redmine's Private checkbox, floated next to them. */
 #all_attributes #attributes {
   clear: both;
 }

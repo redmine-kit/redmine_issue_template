@@ -29,11 +29,6 @@ module RedmineIssueTemplate
     end
 
     def build_new_issue_from_params
-      # The box's tracker field is Redmine's tracker field (the private
-      # default of the chosen tracker applies).
-      if params[:form_update_triggered_by] == 'issue_template_tracker_id'
-        params[:form_update_triggered_by] = 'issue_tracker_id'
-      end
       template = current_issue_template
       if template
         issue_template_defaults_into_params(template) if request.get?

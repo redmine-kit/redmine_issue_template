@@ -19,9 +19,9 @@ The templates are files in the project's repository. Redmine reads the first of 
 
 ![The template chooser: three templates, the blank issue and two other contacts](./images/chooser.png)
 
-A YAML form shows its description, tracker, subject and fields in a box above Redmine's form. When the issue is created, the answers become the description, each under the field's label.
+A YAML form shows its description, tracker, subject and fields at the top of Redmine's form, above a line and the issue's other attributes. When the issue is created, the answers become the description, each under the field's label.
 
-![The issue form of the "Bug Report" template: its description, tracker, subject and fields in a box above Redmine's form](./images/issue-form.png)
+![The issue form of the "Bug Report" template: its description, tracker, subject and fields at the top of Redmine's form](./images/issue-form.png)
 
 The "Issue templates" tab of the project settings shows where the templates come from, the last import, the files (marked when they have errors; each file's page lists its errors and warnings), and the chooser's settings of config.yml.
 

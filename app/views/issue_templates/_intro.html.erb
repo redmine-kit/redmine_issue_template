@@ -1,11 +1,5 @@
-<%# Under the page's title: a form's box (_form_fields), or a Markdown
-    template's description. %>
-<% if issue.issue_template_active? %>
-<% template = issue.issue_template %>
-<% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %><% end %>
-<% if template.form? %>
-<%= render partial: 'issue_templates/form_fields', locals: { issue: issue } %>
-<% elsif template.about.present? %>
-<div class="wiki issue-template-intro"><%= issue_template_markdown(template.about) %></div>
-<% end %>
+<%# Under the page's title: a Markdown template's description. A form's is
+    in its part of the form (_form_fields). %>
+<% if issue.issue_template_active? && !issue.issue_template.form? && issue.issue_template.about.present? %>
+<div class="wiki issue-template-intro"><%= issue_template_markdown(issue.issue_template.about) %></div>
 <% end %>
