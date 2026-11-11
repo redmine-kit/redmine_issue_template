@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.authors = ['Redmine Kit']
   spec.license = 'GPL-2.0-or-later'
   spec.homepage = 'https://github.com/redmine-kit/redmine_issue_template'
-  spec.required_ruby_version = '>= 4.0'
+  spec.required_ruby_version = '>= 3.2'
   spec.files = Dir['{init.rb,LICENSE}', '{app,assets,config,db,lib}/**/*']
   # RubyGems needs a require path: lib (the default), as in the other plugins.
   # Bundler may then require lib/redmine_issue_template.rb before Redmine
@@ -18,4 +18,6 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
   spec.metadata['github_repo'] = 'ssh://github.com/redmine-kit/redmine_issue_template'
   spec.metadata['rubygems_mfa_required'] = 'true'
+  spec.metadata['source_code_uri'] = spec.homepage
+  spec.metadata['documentation_uri'] = 'https://redmine-kit.github.io/redmine_issue_template/'
 end
