@@ -16,8 +16,8 @@ module RedmineIssueTemplate
     def import(project, files:, revision: nil, source: 'repository', folder: nil)
       raise ArgumentError, "unknown source: #{source}" unless SOURCES.include?(source)
 
-      files = files.to_h { |path, content| [File.basename(path.to_s), content.to_s] }
-                   .select { |path, _| Parser.kind(path) }
+      files = files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
+                   .select { |path, _| storable?(project, path) }
       record = IssueTemplateSource.for(project)
       IssueTemplateFile.transaction do
         IssueTemplateFile.where(project_id: project.id).delete_all
@@ -48,8 +48,24 @@ module RedmineIssueTemplate
       record
     end
 
+    # Text in UTF-8, as Redmine reads the repository's files.
+    def utf8(content)
+      Redmine::CodesetUtil.to_utf8_by_setting(content.to_s)
+    end
+
+    # A template file with a name the project can store; others are left
+    # out, so that one odd name doesn't stop the import.
+    def storable?(project, path)
+      return false unless Parser.kind(path)
+      return true if IssueTemplateFile::PATH.match?(path)
+
+      Rails.logger.warn("redmine_issue_template: #{project.identifier}: file name not used: #{path.inspect}")
+      false
+    end
+
+    # The same for the repository's raw files and the stored ones.
     def digest(files)
-      Digest::SHA256.hexdigest(files.sort.to_s)
+      Digest::SHA256.hexdigest(files.to_h { |path, content| [path, utf8(content)] }.sort.to_s)
     end
 
     def messages(project, files)

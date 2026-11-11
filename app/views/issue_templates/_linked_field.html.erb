@@ -1,0 +1,26 @@
+<%# A field with a link: shown as the issue's field it sets (LinkedField),
+    a select posting the field's own values. A link that can't apply, with
+    options of its own, is a select of those options, answered into the
+    description. %>
+<% link = issue.issue_template_links.find { |linked| linked.element.equal?(element) } %>
+<% kind = link ? link.kind(issue) : :select %>
+<p>
+  <%= label_tag field_id do %><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %><% end %>
+  <% case kind %>
+  <% when :select %>
+  <% choices = link ? link.choices(issue) : element.options.map { |option| [option.to_s, option.to_s] } %>
+  <% if link&.multiple?(issue) %>
+  <%= select_tag "#{name}[]", options_for_select(choices, Array(value)), id: field_id, multiple: true, form: form %>
+  <% else %>
+  <%= select_tag name, options_for_select(choices, value), id: field_id, include_blank: true, form: form %>
+  <% end %>
+  <% when :date %>
+  <%= date_field_tag name, value, id: field_id, size: 10, form: form %>
+  <% when :textarea %>
+  <%= text_area_tag name, value, id: field_id, cols: 60, rows: 6, placeholder: element.attributes['placeholder'],
+                    class: 'wiki-edit', form: form %>
+  <% else %>
+  <%= text_field_tag name, value, id: field_id, size: 60, placeholder: element.attributes['placeholder'], form: form %>
+  <% end %>
+  <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
+</p>

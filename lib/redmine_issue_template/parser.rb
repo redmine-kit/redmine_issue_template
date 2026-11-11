@@ -11,6 +11,9 @@ module RedmineIssueTemplate
 
     # The longest file, as IssueTemplateFile stores it.
     MAX_LENGTH = 65_535
+    # Stands for a file the repository has but that is not read, being longer
+    # in bytes than MAX_LENGTH characters can be.
+    TOO_LONG = (' ' * (MAX_LENGTH + 1)).freeze
 
     # files: { "bug.yml" => "...", "config.yml" => "..." } (paths in the folder)
     def parse(files)
@@ -132,7 +135,7 @@ module RedmineIssueTemplate
     'label_not_string' => [:invalid, 'label'],
     'invalid_default' => [:invalid, 'default'],
     'invalid_id' => [:invalid, 'id'],
-    'link_type' => [:invalid, 'link'],
+    'not_with_link' => [:not_with_link, '%{key}'],
     'invalid_contact_url' => [:invalid, 'url'],
     'no_front_matter' => [:blank, 'front matter'],
     'missing_key' => [:blank, '%{key}'],

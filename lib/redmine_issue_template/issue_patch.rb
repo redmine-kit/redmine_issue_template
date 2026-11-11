@@ -5,12 +5,14 @@ module RedmineIssueTemplate
   # out of the form, the ones it requires are required as Redmine requires
   # fields, and an issue form's answers become the description.
   module IssuePatch
-    # The callbacks run after Redmine's own (force_default_value_on_noneditable_custom_fields,
-    # clear_disabled_fields), and the links before the description is composed.
+    include RedmineRules
+
+    # The links apply before Redmine's own callbacks (default_assign takes the
+    # linked category's assignee) and the description is composed after them.
     def self.prepended(base)
       base.attr_reader :issue_template
       base.attr_accessor :issue_template_answers
-      base.before_validation :apply_issue_template_links, on: :create
+      base.before_validation :apply_issue_template_links, on: :create, prepend: true
       base.before_validation :compose_issue_template_description, on: :create
       base.validate :validate_issue_template_answers, on: :create
     end
@@ -55,24 +57,6 @@ module RedmineIssueTemplate
       issue_template_active? ? LinkedField.dropped(issue_template, issue_template_links) : []
     end
 
-    # Whether Redmine lets the user set the field on this issue by its own
-    # rules, without the template's: the workflow's read-only fields, the
-    # fields the tracker disables, custom fields the user can't see.
-    def issue_template_settable?(attribute, user = User.current)
-      if attribute.match?(/\A\d+\z/)
-        values = redmine_method(:editable_custom_field_values).call(user)
-        values.any? { |value| value.custom_field_id.to_s == attribute }
-      else
-        redmine_method(:safe_attribute_names).call(user).include?(attribute)
-      end
-    end
-
-    # The method as it is after this module: Redmine's, or another plugin's
-    # that comes later, whatever the order the plugins were loaded in.
-    def redmine_method(name)
-      IssuePatch.instance_method(name).bind(self).super_method
-    end
-
     # The fields the form leaves out or shows as text.
     def issue_template_locked
       issue_template_visibility.values_at(:hidden, :fixed, :linked).inject(:|)
@@ -96,11 +80,22 @@ module RedmineIssueTemplate
     end
 
     # Redmine marks these fields as required and checks them.
+    # The template's required fields that the user can set. The fields it
+    # hides, sets or links are still checked by Redmine's own rules.
     def required_attribute_names(user = nil)
       names = super
       return names unless issue_template_active?
 
-      (names | issue_template_visibility[:required]) - issue_template_locked
+      required = issue_template_visibility[:required]
+      names | required.select { |name| issue_template_settable?(name, user || User.current) }
+    end
+
+    # Redmine checks the custom fields the form shows; those the template
+    # hides, sets or links are checked as well.
+    def validate_custom_field_values
+      return super unless issue_template_active?
+
+      redmine_method(:editable_custom_field_values).call(author).each(&:validate_value)
     end
 
     def issue_template_composer

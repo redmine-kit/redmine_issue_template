@@ -15,6 +15,7 @@ module RedmineIssueTemplate
       'priority' => 'priority_id', 'is_private' => 'is_private', 'watchers' => 'watcher_user_ids'
     }.freeze
     VISIBILITY = %w[shown hidden required].freeze
+    NEVER_REQUIRED = %w[is_private priority].freeze
 
     attr_reader :tracker, :priority, :category, :fixed_version, :is_private, :custom_fields, :fields
 
@@ -49,10 +50,10 @@ module RedmineIssueTemplate
                                 key: 'fields')
       end
       fields.each do |name, value|
-        unless VISIBILITY.include?(value)
-          errors << Message.error(path, :redmine_invalid_visibility, field: name,
-                                                                     value: value)
-        end
+        # Always set, as in Redmine's workflow, which can't require them either.
+        next if VISIBILITY.include?(value) && !(value == 'required' && NEVER_REQUIRED.include?(name))
+
+        errors << Message.error(path, :redmine_invalid_visibility, field: name, value: value)
       end
     end
 

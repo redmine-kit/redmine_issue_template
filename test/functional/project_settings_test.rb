@@ -23,7 +23,7 @@ module RedmineIssueTemplate
       assert_select '#tab-issue_templates'
       assert_select 'table.list.issue-template-files tbody tr', 4
       assert_select 'table.list.issue-template-files td.name', text: 'broken.yml'
-      assert_select 'table.list.issue-template-files td', text: 'Template chooser', count: 0
+      assert_select 'fieldset.issue-template-chooser-settings legend', text: 'Template chooser'
       # The problems themselves are on the file's page.
       assert_select '#errorExplanation', text: /Some templates cannot be used because they have errors/
       assert_select '#errorExplanation li', 0

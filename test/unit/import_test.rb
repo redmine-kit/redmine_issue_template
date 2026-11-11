@@ -35,6 +35,14 @@ module RedmineIssueTemplate
       assert_equal %w[b.md c.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
     end
 
+    test 'import reads files in UTF-8 and leaves out names it can\'t store' do
+      latin1 = "---\nname: Caf\xE9\nabout: a\n---\n".b
+      import('cafe.md' => latin1, '.md' => 'x', 'feature.md' => "---\nname: Feature\nabout: f\n---\n")
+      files = IssueTemplateFile.where(project: @project).order(:path)
+      assert_equal %w[cafe.md feature.md], files.pluck(:path)
+      assert files.first.content.valid_encoding?
+    end
+
     test 'redmine options resolve against the project' do
       content = <<~MARKDOWN
         ---

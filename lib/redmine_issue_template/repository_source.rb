@@ -27,15 +27,27 @@ module RedmineIssueTemplate
     # The first folder with template files: [folder, { name => content }].
     def read(repository)
       FOLDERS.each do |folder|
-        entries = Array(repository.entries(folder, nil)).select(&:is_file?)
-        files = entries.select { |entry| Parser.kind(entry.name) }
-                       .to_h { |entry| [entry.name, repository.cat(entry.path, nil).to_s] }
+        files = read_folder(repository, folder)
         return [folder, files] if files.any?
       end
       [nil, {}]
+    end
+
+    # Some adapters fail on a folder that doesn't exist: then it has no files.
+    def read_folder(repository, folder)
+      entries = Array(repository.entries(folder, nil)).select(&:is_file?).select { |entry| Parser.kind(entry.name) }
+      entries.to_h { |entry| [entry.name, content(repository, entry)] }
     rescue Redmine::Scm::Adapters::CommandFailed => e
-      Rails.logger.warn("redmine_issue_template: #{repository.project.identifier}: #{e.message}")
-      [nil, {}]
+      Rails.logger.warn("redmine_issue_template: #{repository.project.identifier}: #{folder}: #{e.message}")
+      {}
+    end
+
+    # A file too large to be a template is not read: it is reported as too
+    # long (Parser::TOO_LONG).
+    def content(repository, entry)
+      return Parser::TOO_LONG if entry.size.to_i > Parser::MAX_LENGTH * 4
+
+      repository.cat(entry.path, nil).to_s
     end
 
     # The last revision that changed the folder, when the adapter can tell.

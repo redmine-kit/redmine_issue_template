@@ -5,25 +5,26 @@ ja:
   label_issue_template_blank: 空白のチケット
   label_issue_template_contact_links: その他の連絡先
   label_issue_template_chooser: "テンプレートの選択画面"
-  text_issue_template_chooser_elsewhere: "テンプレートの取得元の config.yml の設定です。"
+  text_issue_template_chooser_elsewhere: "これらの設定は、テンプレートの取得元の config.yml で変更します。"
   label_issue_template_blank_issues_enabled: "空白のチケットを許可"
   label_issue_template_file_new: 新しいテンプレート
-  text_issue_template_path_info: ".md、.yml、config.yml"
+  text_issue_template_path_info: ".md、.yml、.yaml、config.yml"
   text_issue_template_upload: 「ファイル」欄で添付してください。
   warning_issue_template_text_formatting: "テキスト書式が %{name} ではありません。"
   warning_issue_template_nothing_to_import: インポートするチケットテンプレートがありません。
   text_issue_template_files_with_errors: "エラーがあるため使用できないテンプレートがあります。テンプレートを開いて詳細を確認してください。"
   notice_issue_template_synced: インポートしました。
-  error_issue_template_unavailable: "このテンプレートは使えなくなりました。テンプレートを選び直してください。"
+  error_issue_template_unavailable: "このテンプレートは使用できなくなりました。テンプレートを選択し直してください。"
   error_issue_template_required: "チケットを作成するには、テンプレートを選択してください。"
   error_issue_template_no_repository: リポジトリが見つかりません
   error_issue_template_managed_elsewhere: テンプレートはリポジトリで編集してください。
   issue_template_error_unchecked: にチェックを入れてください
-  issue_template_error_separator: ""
+  issue_template_error_separator: " "
   issue_template_error_not_yaml: は正しい YAML ではありません
   issue_template_error_quoted: は引用符で囲んでください
   issue_template_error_unknown_key: は不明なキーです
   issue_template_error_not_found: が見つかりません
-  issue_template_error_no_field: には markdown 以外の入力の種類が必要です
-  issue_template_error_too_similar: が似すぎています
+  issue_template_error_no_field: には markdown 以外の入力欄が 1 つ以上必要です
+  issue_template_error_not_with_link: "は link と一緒に書けません"
+  issue_template_error_too_similar: はほかのラベルと似すぎています
   issue_template_error_ignored: は無視されます

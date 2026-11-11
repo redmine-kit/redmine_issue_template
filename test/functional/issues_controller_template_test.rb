@@ -213,19 +213,16 @@ module RedmineIssueTemplate
       description: Fields that set the issue's fields
       type: Bug
       body:
-        - type: dropdown
-          id: version
+        - id: version
           link: fixed_version
           attributes:
             label: Version
-        - type: dropdown
-          id: database
+        - id: database
           link: Database
           attributes:
             label: Database
             options: [PostgreSQL, MySQL]
-        - type: input
-          id: due
+        - id: due
           link: due_date
           attributes:
             label: Due
@@ -240,7 +237,7 @@ module RedmineIssueTemplate
       get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
       assert_response :success
       versions = Issue.new(project: @project, tracker_id: 1).assignable_versions
-      own = versions.index { |version| version.project == @project && version.name == '2.0' }
+      own = versions.find { |version| version.project == @project && version.name == '2.0' }
       assert_select 'select[name=?] option', 'issue_template_answers[version]', text: '2.0'
       # Shared versions of other projects have the project's name, as in Redmine.
       shared = versions.find { |version| version.project != @project }
@@ -250,7 +247,7 @@ module RedmineIssueTemplate
 
       post :create, params: {
         project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Linked', fixed_version_id: '' },
-        issue_template_answers: { 'version' => own.to_s, 'database' => '0', 'due' => '2026-12-31',
+        issue_template_answers: { 'version' => own.id.to_s, 'database' => 'PostgreSQL', 'due' => '2026-12-31',
                                   'what' => 'x' }
       }
       issue = Issue.order(:id).last
@@ -272,7 +269,7 @@ module RedmineIssueTemplate
       assert_select 'select[name=?]', 'issue_template_answers[database]'
 
       post :create, params: { project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Blank' },
-                              issue_template_answers: { 'version' => '0', 'database' => '', 'what' => 'x' } }
+                              issue_template_answers: { 'version' => '3', 'database' => '', 'what' => 'x' } }
       issue = Issue.order(:id).last
       assert_redirected_to "/issues/#{issue.id}"
       assert_nil issue.fixed_version
@@ -305,6 +302,79 @@ module RedmineIssueTemplate
                            issue: { tracker_id: '3', is_private: '0', subject: 'x' } }, xhr: true
       assert_response :success
       assert @controller.instance_variable_get(:@issue).is_private?
+    end
+
+    test 'fields without an id and with Japanese labels keep their answers' do
+      import('ja.yml' => <<~YAML)
+        name: Japanese
+        description: d
+        body:
+          - type: input
+            attributes:
+              label: 何が起きましたか？
+          - type: input
+            attributes:
+              label: 環境
+      YAML
+      post :create, params: { project_id: 'ecookbook', issue_template: 'ja',
+                              issue: { tracker_id: '1', subject: 'J' },
+                              issue_template_answers: { 'field-0' => '落ちた', 'field-1' => 'Linux' } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_equal "### 何が起きましたか？\n\n落ちた\n\n### 環境\n\nLinux", issue.description.gsub("\r\n", "\n")
+    end
+
+    test 'Redmine\'s rules still check linked fields, and the template only requires what the user can set' do
+      import('checks.yml' => <<~YAML)
+        name: Checks
+        description: d
+        fields:
+          watchers: required
+        body:
+          - id: amount
+            link: Float field
+            attributes:
+              label: Amount
+      YAML
+      # Developers can't add watchers: the template can't require them.
+      @request.session[:user_id] = 3
+      Role.find(2).add_permission!(:add_issues)
+      post :create, params: { project_id: 'ecookbook', issue_template: 'checks',
+                              issue: { tracker_id: '1', subject: 'C' }, issue_template_answers: { 'amount' => 'abc' } }
+      assert_response :success
+      assert_select '#errorExplanation li', text: /Float field/
+      assert_select '#errorExplanation li', text: /Watchers/, count: 0
+
+      post :create, params: { project_id: 'ecookbook', issue_template: 'checks',
+                              issue: { tracker_id: '1', subject: 'C' }, issue_template_answers: { 'amount' => '1.5' } }
+      assert_equal '1.5', Issue.order(:id).last.custom_field_value(6)
+    end
+
+    test 'an answer beyond the options is ignored' do
+      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
+                              issue: { tracker_id: '1', subject: 'X' },
+                              issue_template_answers: { 'what-happened' => 'x', 'version' => '9' * 20,
+                                                        'terms' => ['', '0'] } }
+      assert_response :success
+      assert_select '#errorExplanation li', text: /Version/
+    end
+
+    test 'a template whose tracker the user can\'t use is not offered' do
+      @request.session[:user_id] = 3
+      role = Role.find(2)
+      role.add_permission!(:add_issues)
+      role.set_permission_trackers(:add_issues, [1])
+      role.save!
+      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+      assert_redirected_to '/projects/ecookbook/issues/templates'
+    end
+
+    test 'images from other sites in a description become links' do
+      import('pic.md' => "---\nname: Picture\nabout: \"![pixel](https://tracker.example/p.gif)\"\n---\nText\n")
+      get :new, params: { project_id: 'ecookbook', issue_template: 'pic' }
+      assert_response :success
+      assert_select '.issue-template-intro img', 0
+      assert_select '.issue-template-intro a[href=?]', 'https://tracker.example/p.gif', text: 'pixel'
     end
 
     test 'a hidden value needs the permission to set the field' do
@@ -371,6 +441,14 @@ module RedmineIssueTemplate
       assert_response :success
       assert_select '#errorExplanation', text: /The template can no longer be used/
       assert_select 'input#issue_subject[value=Typed]'
+    end
+
+    test 'a template that can no longer be used keeps what was typed when blank issues are allowed' do
+      import('feature.md' => FEATURE)
+      post :create, params: { project_id: 'ecookbook', issue_template: 'gone',
+                              issue: { tracker_id: '1', subject: 'Typed' } }
+      assert_response :success
+      assert_select '#errorExplanation', text: /The template can no longer be used/
     end
 
     test 'issues without a template are allowed without config.yml' do

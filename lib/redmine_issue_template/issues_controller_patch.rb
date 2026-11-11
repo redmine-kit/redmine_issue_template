@@ -54,7 +54,7 @@ module RedmineIssueTemplate
       key = params[:issue_template].to_s
       return nil if key.blank? || key == 'blank'
 
-      issue_template_set&.find(key)
+      issue_template_set&.usable_for(@project)&.detect { |template| template.key == key }
     end
 
     def redirect_to_issue_template_chooser
@@ -74,14 +74,15 @@ module RedmineIssueTemplate
     def refuse_issue_without_template
       return if api_request? || @issue&.issue_template_active? || params[:copy_from].present?
 
-      project = @issue&.project || @project
-      return if project.nil? || issue_without_template_allowed?(project)
-
-      # A template that could no longer be used: the form again, with what was typed.
+      # A template that could no longer be used: the form again, with what
+      # was typed, rather than an issue without the answers.
       if params[:issue_template].present? && params[:issue_template] != 'blank'
         @issue.errors.add(:base, l(:error_issue_template_unavailable))
         return render(:new)
       end
+
+      project = @issue&.project || @project
+      return if project.nil? || issue_without_template_allowed?(project)
 
       flash[:error] = l(:error_issue_template_required)
       redirect_to project_issue_template_chooser_path(project)

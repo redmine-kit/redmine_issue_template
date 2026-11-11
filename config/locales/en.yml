@@ -5,10 +5,10 @@ en:
   label_issue_template_blank: Blank issue
   label_issue_template_contact_links: Other contacts
   label_issue_template_chooser: "Template chooser"
-  text_issue_template_chooser_elsewhere: "These settings come from config.yml where the templates are kept."
+  text_issue_template_chooser_elsewhere: "Change these settings in config.yml where the templates are kept."
   label_issue_template_blank_issues_enabled: "Allow blank issues"
   label_issue_template_file_new: New template
-  text_issue_template_path_info: ".md, .yml or config.yml"
+  text_issue_template_path_info: ".md, .yml, .yaml or config.yml"
   text_issue_template_upload: Attach files in the Files field.
   warning_issue_template_text_formatting: "Text formatting is not %{name}."
   warning_issue_template_nothing_to_import: No issue templates to import.
@@ -25,5 +25,6 @@ en:
   issue_template_error_unknown_key: is an unknown key
   issue_template_error_not_found: was not found
   issue_template_error_no_field: must contain at least one non-markdown field
+  issue_template_error_not_with_link: "can't be used with link"
   issue_template_error_too_similar: is too similar to another label
   issue_template_error_ignored: will be ignored

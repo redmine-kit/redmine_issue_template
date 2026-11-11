@@ -29,15 +29,13 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
     description: Report something that broke in a version.
     type: Bug
     body:
-      - type: dropdown
-        id: version
+      - id: version
         link: fixed_version
         attributes:
           label: Broken in version
         validations:
           required: true
-      - type: dropdown
-        id: database
+      - id: database
         link: Database
         attributes:
           label: Database

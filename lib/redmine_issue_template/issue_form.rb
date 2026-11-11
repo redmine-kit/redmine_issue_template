@@ -4,10 +4,16 @@ module RedmineIssueTemplate
   # A YAML issue form (docs/format.md), checked with the plugin's
   # rules for its keys and fields.
   class IssueForm < Template
+    include IssueFormOptions
+
     TOP_LEVEL_KEYS = (%w[name description title labels assignees projects type body] + RedmineOptions::ATTRIBUTES).freeze
     ELEMENT_KEYS = %w[type id attributes validations link].freeze
     TYPES = %w[markdown textarea input dropdown checkboxes upload].freeze
+    # A field with a `link` has no type: the field it sets decides
+    # (LinkedField), and the element is of this kind.
+    LINK = 'link'
     ATTRIBUTES = {
+      LINK => %w[label description placeholder options],
       'markdown' => %w[value],
       'textarea' => %w[label description placeholder value render],
       'input' => %w[label description placeholder value],
@@ -16,6 +22,7 @@ module RedmineIssueTemplate
       'upload' => %w[label description]
     }.freeze
     VALIDATIONS = {
+      LINK => %w[required],
       'markdown' => [],
       'textarea' => %w[required min_length],
       'input' => %w[required min_length],
@@ -36,9 +43,14 @@ module RedmineIssueTemplate
       end
 
       # The name of the answer in the form's parameters: the id, or else the
-      # label made into a parameter.
+      # label made into a parameter, or else (a label without Latin letters
+      # or digits) the field's place in the body.
       def ref
-        id.presence || label.parameterize
+        id.presence || label.parameterize.presence || "field-#{index}"
+      end
+
+      def linked?
+        type == LINK
       end
 
       def required?
@@ -134,16 +146,16 @@ module RedmineIssueTemplate
       return element_error(index, :missing_attributes) unless attributes.is_a?(Hash)
 
       validations = item['validations'].is_a?(Hash) ? item['validations'] : {}
-      link = check_link(index, type, item['link'])
-      check_attributes(index, type, attributes, linked: !link.nil?)
+      check_attributes(index, type, attributes)
       check_validations(index, type, validations)
       @elements << Element.new(index: index, type: type, id: item['id']&.to_s, attributes: attributes,
-                               validations: validations, link: link)
+                               validations: validations, link: type == LINK ? item['link'].strip : nil)
     end
 
     # The element's type, or nil after reporting why it has none.
     def element_type(item, index)
       return element_error(index, :element_not_map) unless item.is_a?(Hash)
+      return link_type(item, index) if item.key?('link')
 
       type = item['type']
       return element_error(index, :missing_type) if type.nil?
@@ -160,16 +172,17 @@ module RedmineIssueTemplate
       element_error(index, :invalid_id) if item['id'] && !ID.match?(item['id'].to_s)
     end
 
-    # The element's link (docs/format.md#links), or nil.
-    def check_link(index, type, link)
-      return nil if link.nil?
-      return element_error(index, :link_type, type: type) unless LinkedField::TYPES.include?(type)
+    # A field with a link (docs/format.md#links): without a type.
+    def link_type(item, index)
+      return element_error(index, :not_with_link, key: 'type') if item.key?('type')
+
+      link = item['link']
       return element_error(index, :not_string, key: 'link') unless link.is_a?(String) && link.strip.present?
 
-      link.strip
+      LINK
     end
 
-    def check_attributes(index, type, attributes, linked: false)
+    def check_attributes(index, type, attributes)
       (attributes.keys.map(&:to_s) - ATTRIBUTES[type]).each { |key| element_error(index, :attribute_key, key: key) }
       if type == 'markdown'
         element_error(index, :missing_attribute, key: 'value') unless attributes['value'].is_a?(String)
@@ -177,51 +190,7 @@ module RedmineIssueTemplate
       end
       element_error(index, :missing_attribute, key: 'label') unless attributes.key?('label')
       element_error(index, :label_not_string) if attributes.key?('label') && !attributes['label'].is_a?(String)
-      check_dropdown(index, attributes, linked) if type == 'dropdown'
-      check_checkboxes(index, attributes) if type == 'checkboxes'
-    end
-
-    # A linked dropdown can leave out its options: it offers the issue's.
-    def check_dropdown(index, attributes, linked)
-      options = attributes['options']
-      return if linked && options.nil? && attributes['default'].nil?
-      return element_error(index, :missing_attribute, key: 'options') unless options.is_a?(Array) && options.any?
-
-      problem, value = dropdown_options_problem(index, options)
-      return element_error(index, problem, value: value) if problem
-
-      default = attributes['default']
-      return if default.nil? || (default.is_a?(Integer) && default.between?(0, options.size - 1))
-
-      element_error(index, :invalid_default)
-    end
-
-    # [problem, the option it is about], or nil.
-    def dropdown_options_problem(index, options)
-      if options.intersect?([true, false])
-        [:options_boolean, boolean_option(index) || options.find { |option| [true, false].include?(option) }]
-      elsif (duplicate = Parser.duplicate(options.map(&:to_s)))
-        [:options_not_unique, duplicate]
-      elsif (none = options.find { |option| option.to_s.strip.casecmp?('none') })
-        [:options_none, none]
-      end
-    end
-
-    # A boolean option as it is written in the file (yes, on, true...).
-    def boolean_option(index)
-      node = YamlNodes.yaml_node(@content, 'body', index, 'attributes', 'options')
-      node&.children&.find { |child| YamlNodes.boolean_word?(child) }&.value
-    end
-
-    def check_checkboxes(index, attributes)
-      options = attributes['options']
-      return element_error(index, :missing_attribute, key: 'options') unless options.is_a?(Array) && options.any?
-      unless options.all? { |option| option.is_a?(Hash) && option['label'].is_a?(String) }
-        return element_error(index, :checkbox_label)
-      end
-
-      duplicate = Parser.duplicate(options.map { |option| option['label'] })
-      element_error(index, :checkboxes_not_unique, value: duplicate) if duplicate
+      check_options(index, type, attributes)
     end
 
     def check_validations(index, type, validations)
@@ -242,14 +211,15 @@ module RedmineIssueTemplate
       errors << Message.error(path, :links_not_unique, value: duplicate) if duplicate
     end
 
-    # Labels of the fields must be unique, and fields without an id must not
-    # have labels that become the same parameter.
+    # Labels of the fields must be unique, and no two fields may post their
+    # answers under the same name (an id, or a label made into one).
     def check_unique_labels
       duplicate = Parser.duplicate(fields.map(&:label))
       return errors << Message.error(path, :labels_not_unique, value: duplicate) if duplicate
 
-      refs = fields.reject(&:id).map { |element| element.label.parameterize }
-      errors << Message.error(path, :labels_too_similar) if Parser.duplicate(refs)
+      return if Parser.duplicate(elements.filter_map(&:id))
+
+      errors << Message.error(path, :labels_too_similar) if Parser.duplicate(fields.map(&:ref))
     end
 
     def element_error(index, key, **params)

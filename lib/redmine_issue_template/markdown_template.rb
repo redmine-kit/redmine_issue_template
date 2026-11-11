@@ -34,7 +34,7 @@ module RedmineIssueTemplate
       errors + warnings
     end
 
-    # The tracker for the project: `redmine.tracker`, then `type`.
+    # The tracker for the project: `tracker`, then `type`.
     def tracker(project)
       options.tracker_record(project) || find_tracker(project, type)
     end

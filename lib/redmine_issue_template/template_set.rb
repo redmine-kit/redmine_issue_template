@@ -6,16 +6,17 @@ module RedmineIssueTemplate
   class TemplateSet
     attr_reader :templates, :config, :messages
 
-    # The parsed files of a project, kept while the stored files are the same.
+    # The parsed files of a project, kept while the stored files are the same
+    # (their number, last change and last id, without reading the contents).
     def self.for(project)
-      files = IssueTemplateFile.where(project_id: project.id).pluck(:path, :content).to_h
-      digest = Digest::SHA256.hexdigest(files.sort.to_s)
+      scope = IssueTemplateFile.where(project_id: project.id)
+      key = scope.pick(Arel.sql('COUNT(*)'), Arel.sql('MAX(updated_at)'), Arel.sql('MAX(id)'))
       @cache ||= {}
       cached = @cache[project.id]
-      return cached[1] if cached && cached[0] == digest
+      return cached[1] if cached && cached[0] == key
 
-      set = Parser.parse(files)
-      @cache[project.id] = [digest, set]
+      set = Parser.parse(scope.pluck(:path, :content).to_h)
+      @cache[project.id] = [key, set]
       set
     end
 
@@ -36,6 +37,13 @@ module RedmineIssueTemplate
 
     def find(key)
       usable.detect { |template| template.key == key.to_s }
+    end
+
+    # The templates the user can create issues with in the project: those
+    # whose tracker the user may use, and those that set none.
+    def usable_for(project, user = User.current)
+      trackers = Issue.new(project: project).allowed_target_trackers(user)
+      usable.select { |template| (tracker = template.tracker(project)).nil? || trackers.include?(tracker) }
     end
 
     def any?

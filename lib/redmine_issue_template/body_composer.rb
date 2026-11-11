@@ -59,6 +59,7 @@ module RedmineIssueTemplate
              when 'dropdown' then chosen(element).join(', ')
              when 'checkboxes' then checkboxes(element)
              when 'upload' then @files.map { |name| "attachment:\"#{name}\"" }.join("\n")
+             when IssueForm::LINK then given(element).join(', ')
              end
       text.presence || NO_RESPONSE
     end
@@ -74,15 +75,16 @@ module RedmineIssueTemplate
       "```#{element.attributes['render']}\n#{text}\n```"
     end
 
-    # The chosen options' labels. A linked dropdown without options has the
-    # issue's choices: its indexes are enough for the required check.
+    # The chosen options' labels. Indexes beyond any list are ignored.
     def chosen(element)
       Array(raw(element)).filter_map do |index|
-        next if index.to_s.empty?
-        next index.to_s if element.link && element.options.empty?
-
-        element.options[index.to_i]&.to_s if index.to_s.match?(/\A\d+\z/)
+        element.options[index.to_i]&.to_s if index.to_s.match?(/\A\d{1,6}\z/)
       end
+    end
+
+    # The answer's non-blank values: a linked field's value or values.
+    def given(element)
+      Array(raw(element)).map { |value| value.to_s.strip }.reject(&:empty?)
     end
 
     def checked(element)
@@ -98,10 +100,15 @@ module RedmineIssueTemplate
     def problem(element)
       case element.type
       when 'textarea', 'input' then text_problem(element)
-      when 'dropdown' then :blank if element.required? && chosen(element).empty?
+      when 'dropdown' then blank_problem(element, chosen(element))
       when 'checkboxes' then checkbox_problem(element)
-      when 'upload' then :blank if element.required? && @files.empty?
+      when 'upload' then blank_problem(element, @files)
+      when IssueForm::LINK then blank_problem(element, given(element))
       end
+    end
+
+    def blank_problem(element, values)
+      :blank if element.required? && values.empty?
     end
 
     def text_problem(element)
