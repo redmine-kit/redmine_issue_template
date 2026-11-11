@@ -14,10 +14,10 @@ ja:
   warning_issue_template_nothing_to_import: インポートするチケットテンプレートがありません。
   text_issue_template_files_with_errors: "エラーがあるため使用できないテンプレートがあります。テンプレートを開いて詳細を確認してください。"
   notice_issue_template_synced: インポートしました。
-  error_issue_template_unavailable: "このテンプレートは使用できなくなりました。テンプレートを選択し直してください。"
+  error_issue_template_unavailable: "このテンプレートは使用できなくなりました。回答は説明に入れています。テンプレートを選択し直してください。"
   error_issue_template_required: "チケットを作成するには、テンプレートを選択してください。"
   error_issue_template_no_repository: リポジトリが見つかりません
-  error_issue_template_managed_elsewhere: テンプレートはリポジトリで編集してください。
+  error_issue_template_managed_elsewhere: テンプレートは取得元で編集してください。
   issue_template_error_unchecked: にチェックを入れてください
   issue_template_error_separator: " "
   issue_template_error_not_yaml: は正しい YAML ではありません

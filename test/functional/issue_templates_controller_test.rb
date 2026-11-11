@@ -151,7 +151,7 @@ module RedmineIssueTemplate
       import(github_files, @project, source: 'repository')
       patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '1' }
       assert_redirected_to '/projects/ecookbook/settings/issue_templates'
-      assert_equal 'Edit the templates in the repository.', flash[:error]
+      assert_equal 'Edit the templates where they are kept.', flash[:error]
     end
 
     test 'the preview works for a manager who cannot add issues' do
@@ -218,7 +218,7 @@ module RedmineIssueTemplate
       assert_redirected_to '/projects/ecookbook/settings/issue_templates'
       patch :update,
             params: { project_id: 'ecookbook', id: file.id, issue_template_file: { path: 'x.md', content: 'x' } }
-      assert_equal 'Edit the templates in the repository.', flash[:error]
+      assert_equal 'Edit the templates where they are kept.', flash[:error]
       delete :destroy, params: { project_id: 'ecookbook', id: file.id }
       assert_equal ['bug.md', content], file.reload.slice(:path, :content).values
     end

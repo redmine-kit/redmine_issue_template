@@ -370,11 +370,34 @@ module RedmineIssueTemplate
     end
 
     test 'images from other sites in a description become links' do
-      import('pic.md' => "---\nname: Picture\nabout: \"![pixel](https://tracker.example/p.gif)\"\n---\nText\n")
+      about = '![pixel](https://tracker.example/p.gif) <img src="/\\\\other.example/q.gif"> ![logo](/images/logo.png)'
+      import('pic.md' => "---\nname: Picture\nabout: '#{about}'\n---\nText\n")
       get :new, params: { project_id: 'ecookbook', issue_template: 'pic' }
       assert_response :success
-      assert_select '.issue-template-intro img', 0
       assert_select '.issue-template-intro a[href=?]', 'https://tracker.example/p.gif', text: 'pixel'
+      assert_select '.issue-template-intro img', 1
+      assert_select '.issue-template-intro img[src=?]', '/images/logo.png'
+    end
+
+    test 'a hidden field that Redmine requires and the template leaves empty is shown' do
+      import('hidden.md' => "---\nname: Hidden date\nabout: h\ntracker: Bug\nfields:\n  due_date: hidden\n---\nText\n")
+      WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'due_date', rule: 'required')
+      get :new, params: { project_id: 'ecookbook', issue_template: 'hidden' }
+      assert_response :success
+      assert_select '#issue-form input#issue_due_date'
+    end
+
+    test 'without a template the user can use, Redmine\'s form opens' do
+      @request.session[:user_id] = 3
+      role = Role.find(2)
+      role.add_permission!(:add_issues)
+      role.set_permission_trackers(:add_issues, [3])
+      role.save!
+      # The templates are for Bug and Feature request; blank issues are off.
+      get :new, params: { project_id: 'ecookbook' }
+      assert_response :success
+      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '3', subject: 'Support' } }
+      assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
     end
 
     test 'a hidden value needs the permission to set the field' do
@@ -437,10 +460,12 @@ module RedmineIssueTemplate
       @request.session[:user_id] = 3
       Role.find(2).add_permission!(:add_issues)
       post :create, params: { project_id: 'ecookbook', issue_template: 'removed',
-                              issue: { tracker_id: '1', subject: 'Typed' } }
+                              issue: { tracker_id: '1', subject: 'Typed' },
+                              issue_template_answers: { 'what' => 'It broke' } }
       assert_response :success
       assert_select '#errorExplanation', text: /The template can no longer be used/
       assert_select 'input#issue_subject[value=Typed]'
+      assert_select 'textarea#issue_description', text: /### what\s+It broke/
     end
 
     test 'a template that can no longer be used keeps what was typed when blank issues are allowed' do

@@ -4,10 +4,13 @@ module RedmineIssueTemplate
   # "New issue" opens the template chooser when the project has templates;
   # the chosen template (params[:issue_template]) fills in the form.
   module IssuesControllerPatch
+    include IssueTemplateParams
+
     def self.prepended(base)
       # After build_new_issue_from_params, so that Redmine's own checks
       # (trackers, permissions) come first.
       base.before_action :redirect_to_issue_template_chooser, only: :new
+      base.before_action :refuse_unavailable_issue_template, only: :create
       base.before_action :refuse_issue_without_template, only: :create
     end
 
@@ -58,7 +61,7 @@ module RedmineIssueTemplate
     end
 
     def redirect_to_issue_template_chooser
-      return unless request.get? && !request.xhr? && @project && issue_template_set&.any?
+      return unless request.get? && !request.xhr? && @project && issue_template_set&.usable_for(@project)&.any?
       return if params[:copy_from].present?
 
       key = params[:issue_template].to_s
@@ -68,18 +71,23 @@ module RedmineIssueTemplate
       redirect_to project_issue_template_chooser_path(@project, request.query_parameters.except('issue_template'))
     end
 
+    # A template that could no longer be used: the form again, with what
+    # was typed (the answers in the description), rather than an issue
+    # without the answers.
+    def refuse_unavailable_issue_template
+      key = params[:issue_template].to_s
+      return if api_request? || key.blank? || key == 'blank' || @issue.nil? || @issue.issue_template_active?
+
+      @issue.description = issue_template_answers_text if @issue.description.blank?
+      @issue.errors.add(:base, l(:error_issue_template_unavailable))
+      render(:new)
+    end
+
     # Creating an issue in the browser without a template, when the project
     # it goes to doesn't allow blank issues. The REST API and email are left
     # to Redmine; copies are not made from templates.
     def refuse_issue_without_template
       return if api_request? || @issue&.issue_template_active? || params[:copy_from].present?
-
-      # A template that could no longer be used: the form again, with what
-      # was typed, rather than an issue without the answers.
-      if params[:issue_template].present? && params[:issue_template] != 'blank'
-        @issue.errors.add(:base, l(:error_issue_template_unavailable))
-        return render(:new)
-      end
 
       project = @issue&.project || @project
       return if project.nil? || issue_without_template_allowed?(project)
@@ -92,7 +100,8 @@ module RedmineIssueTemplate
       return true unless project.module_enabled?(:issue_templates)
 
       set = TemplateSet.for(project)
-      set.none? || set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, project)
+      set.usable_for(project).none? || set.config.blank_issues_enabled? ||
+        User.current.allowed_to?(:manage_issue_templates, project)
     end
 
     # The template's values, for the fields the request doesn't give. Only
@@ -126,26 +135,6 @@ module RedmineIssueTemplate
       end
       attrs['custom_field_values'] = custom if custom.any?
       params[:issue] = ActionController::Parameters.new(attrs)
-    end
-
-    # The REST API's form of custom field values, without the given ids.
-    def api_custom_fields(fields, ids)
-      Array(fields).select { |field| field.is_a?(Hash) && !ids.include?(field['id'].to_s) }
-    end
-
-    def issue_params_hash
-      hash_param(params[:issue])
-    end
-
-    # A parameter that should be a hash, or an empty hash.
-    def hash_param(value)
-      return value.to_unsafe_h if value.respond_to?(:to_unsafe_h)
-
-      value.is_a?(Hash) ? value : {}
-    end
-
-    def issue_template_answers_param
-      hash_param(params[:issue_template_answers])
     end
   end
 

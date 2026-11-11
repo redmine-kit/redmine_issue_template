@@ -16,6 +16,18 @@ module RedmineIssueTemplate
       end
     end
 
+    # Hidden fields that Redmine requires (the workflow, required custom
+    # fields without a default) and the template doesn't fill: shown again,
+    # or nothing could fill them.
+    def issue_template_unfilled(hidden)
+      values = IssueTemplateDefaults.new(issue_template, project).attributes
+      filled = values.keys | (values['custom_field_values'] || {}).keys
+      required = redmine_method(:required_attribute_names).call(User.current) |
+                 available_custom_fields.select { |field| field.is_required? && field.default_value.blank? }
+                                        .map { |field| field.id.to_s }
+      hidden & (required - filled)
+    end
+
     private
 
     # The method as it is after IssuePatch: Redmine's, or another plugin's

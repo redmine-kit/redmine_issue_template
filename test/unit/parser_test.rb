@@ -145,8 +145,8 @@ module RedmineIssueTemplate
       form = lambda do |elements|
         "name: Form\ndescription: d\nbody:\n#{elements}"
       end
-      dropdown = "- link: fixed_version\n  attributes:\n    label: Version\n"
-      set = parse('a.yml' => form.call(dropdown))
+      linked = "- link: fixed_version\n  attributes:\n    label: Version\n"
+      set = parse('a.yml' => form.call(linked))
       assert_equal [], errors_of(set, 'a.yml')
       assert_equal 'fixed_version', set.usable.first.fields.first.link
 
@@ -154,7 +154,7 @@ module RedmineIssueTemplate
       typed = "- type: dropdown\n  link: category\n  attributes:\n    label: C\n"
       assert_equal %w[not_with_link], errors_of(parse('a.yml' => form.call(typed)), 'a.yml')
       assert_equal %w[links_not_unique],
-                   errors_of(parse('a.yml' => form.call(dropdown + dropdown.sub('Version', 'Again'))), 'a.yml')
+                   errors_of(parse('a.yml' => form.call(linked + linked.sub('Version', 'Again'))), 'a.yml')
       # Fields without an id and with labels without Latin letters get their place as their name.
       japanese = "- type: input\n  attributes:\n    label: 何が起きましたか？\n- type: input\n  attributes:\n    label: 環境\n"
       fields = parse('a.yml' => form.call(japanese)).usable.first.fields

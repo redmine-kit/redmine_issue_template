@@ -94,7 +94,9 @@ module RedmineIssueTemplate
     # Links that the project doesn't have, as warnings.
     def project_warnings(project)
       unknown = fields.select { |element| element.link && LinkedField.resolve(project, element.link).nil? }
-      super + unknown.map { |element| Message.warning(path, :unknown_link, field: element.label, link: element.link) }
+      super + unknown.map do |element|
+        Message.warning(path, :unknown_link, index: element.index, field: element.label, link: element.link)
+      end
     end
 
     def read(content)

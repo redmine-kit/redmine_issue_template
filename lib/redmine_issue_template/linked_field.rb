@@ -56,9 +56,11 @@ module RedmineIssueTemplate
     end
 
     # 'fixed_version_id', a custom field's id ("3"), or nil. File custom
-    # fields can't be set from a form's field.
+    # fields can't be set from a form's field, nor % done when the issue's
+    # status sets it.
     def self.resolve(project, name)
       return nil if name.blank?
+      return nil if name.to_s == 'done_ratio' && !Issue.use_field_for_done_ratio?
       return ATTRIBUTES[name.to_s] if ATTRIBUTES.key?(name.to_s)
 
       field = RedmineOptions.find_custom_field(project, name)
@@ -92,14 +94,14 @@ module RedmineIssueTemplate
     end
 
     # The select's choices for the issue: [[label, value], ...], values as
-    # strings. The template's options keep the choices of the same names.
+    # strings. The template's options keep the choices of the same names or
+    # values; when none matches (labels in another language), all choices.
     def choices(issue)
       available = issue_choices(issue).map { |label, value| [label.to_s, value.to_s] }
-      return available if element.options.empty?
-
-      element.options.filter_map do |option|
-        available.find { |label, _| label.casecmp?(option.to_s) }
+      kept = element.options.filter_map do |option|
+        available.find { |label, value| label.casecmp?(option.to_s) || value == option.to_s }
       end
+      kept.empty? ? available : kept
     end
 
     # Sets the issue's field from the posted answer. A blank answer, or a
@@ -135,7 +137,7 @@ module RedmineIssueTemplate
       when 'category_id' then issue.project.issue_categories.map { |category| [category.name, category.id] }
       when 'fixed_version_id' then version_choices(issue)
       when 'assigned_to_id' then issue.assignable_users.map { |principal| [principal.name, principal.id] }
-      when 'done_ratio' then (0..10).map { |step| ["#{step * 10} %", step * 10] }
+      when 'done_ratio' then (0..100).step(Setting.issue_done_ratio_interval.to_i).map { |ratio| ["#{ratio} %", ratio] }
       else custom_field_choices(issue)
       end
     end

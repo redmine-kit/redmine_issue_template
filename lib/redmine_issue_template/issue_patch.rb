@@ -39,6 +39,7 @@ module RedmineIssueTemplate
 
       @issue_template_visibility ||= begin
         visibility = issue_template.options.visibility(project)
+        visibility[:hidden] -= issue_template_unfilled(visibility[:hidden])
         visibility[:hidden] |= ['description'] if issue_template.form?
         visibility[:linked] = issue_template_links.map(&:attribute)
         visibility[:fixed] = IssueTemplateDefaults.new(issue_template, project).fixed.keys -
