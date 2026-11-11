@@ -20,17 +20,25 @@ class IssueTemplateFile < ApplicationRecord
     attribute.to_s == 'path' ? ::I18n.t(:field_filename) : super
   end
 
+  # The project's files with this one as it is now, saved or not, parsed
+  # together (template names and ids must be unique).
+  def parse_with_others
+    files = IssueTemplateFile.where(project_id: project_id).where.not(id: id).pluck(:path, :content).to_h
+    files[path] = content.to_s
+    RedmineIssueTemplate::Parser.parse(files)
+  end
+
+  # This file's errors in a parsed set of files.
+  def errors_in(set)
+    set.messages.select { |message| message.path == path && message.error? }
+  end
+
   private
 
-  # The errors the import would report for this file, with the project's
-  # other files (template names must be unique).
+  # The errors the import would report for this file.
   def check_template
     return unless errors.empty?
 
-    files = IssueTemplateFile.where(project_id: project_id).where.not(id: id).pluck(:path, :content).to_h
-    files[path] = content.to_s
-    RedmineIssueTemplate::Parser.parse(files).messages.each do |message|
-      errors.add(:base, message.text) if message.path == path && message.error?
-    end
+    errors_in(parse_with_others).each { |message| errors.add(:base, message.text) }
   end
 end

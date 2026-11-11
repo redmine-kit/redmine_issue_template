@@ -12,18 +12,8 @@ module RedmineIssueTemplate
     # { "tracker_id" => "2", ..., "custom_field_values" => { "3" => "x" } }
     def attributes
       @attributes ||= begin
-        options = @template.options
-        values = {
-          'tracker_id' => @template.tracker(@project)&.id,
-          'subject' => @template.title,
-          'description' => @template.form? ? nil : @template.body,
-          'priority_id' => options.priority_record&.id,
-          'category_id' => options.category_record(@project)&.id,
-          'fixed_version_id' => options.fixed_version_record(@project)&.id,
-          'assigned_to_id' => @template.assignee(@project)&.id,
-          'is_private' => private_value(options.is_private)
-        }.compact.transform_values { |value| value.is_a?(Integer) ? value.to_s : value }
-        custom = options.custom_field_values(@project)
+        values = core_values.compact.transform_values { |value| value.is_a?(Integer) ? value.to_s : value }
+        custom = @template.options.custom_field_values(@project)
         values['custom_field_values'] = custom if custom.any?
         values.freeze
       end
@@ -75,6 +65,17 @@ module RedmineIssueTemplate
     end
 
     private
+
+    def core_values
+      options = @template.options
+      {
+        'tracker_id' => @template.tracker(@project)&.id, 'subject' => @template.title,
+        'description' => (@template.body unless @template.form?),
+        'priority_id' => options.priority_record&.id, 'category_id' => options.category_record(@project)&.id,
+        'fixed_version_id' => options.fixed_version_record(@project)&.id,
+        'assigned_to_id' => @template.assignee(@project)&.id, 'is_private' => private_value(options.is_private)
+      }
+    end
 
     def private_value(value)
       return nil if value.nil?

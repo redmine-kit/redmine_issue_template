@@ -18,31 +18,31 @@ module RedmineIssueTemplate
     # files: { "bug.yml" => "...", "config.yml" => "..." } (paths in the folder)
     def parse(files)
       templates = []
-      config = nil
+      configs = []
       messages = []
       files.sort_by { |path, _| sort_key(path) }.each do |path, content|
-        if content.to_s.length > MAX_LENGTH
-          messages << Message.error(path, :file_too_long, count: MAX_LENGTH)
-          next
-        end
-
-        case kind(path)
-        when :config
-          config = ChooserConfig.parse(path, content)
-          messages.concat(config.messages)
-        when :form
-          template = IssueForm.parse(path, content)
-          templates << template
-          messages.concat(template.messages)
-        when :markdown
-          template = MarkdownTemplate.parse(path, content)
-          templates << template
-          messages.concat(template.messages)
-        end
+        file = parse_file(path, content, messages)
+        (file.is_a?(ChooserConfig) ? configs : templates) << file if file
       end
       check_unique_names(templates, messages)
       check_unique_keys(templates, messages)
-      TemplateSet.new(templates: templates, config: config || ChooserConfig.default, messages: messages)
+      TemplateSet.new(templates: templates, config: configs.last || ChooserConfig.default, messages: messages)
+    end
+
+    # The file read by its kind, with its messages added to messages; nil
+    # for a file too long or of no kind.
+    def parse_file(path, content, messages)
+      if content.to_s.length > MAX_LENGTH
+        messages << Message.error(path, :file_too_long, count: MAX_LENGTH)
+        return nil
+      end
+
+      reader = { config: ChooserConfig, form: IssueForm, markdown: MarkdownTemplate }[kind(path)]
+      return nil unless reader
+
+      file = reader.parse(path, content)
+      messages.concat(file.messages)
+      file
     end
 
     def kind(path)

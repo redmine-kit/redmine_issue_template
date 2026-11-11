@@ -12,23 +12,24 @@ AllCops:
 Style/Documentation:
   Enabled: false
 
+# Limits a little above RuboCop's defaults: the checks of the template files
+# go through their rules one by one, which makes a few methods longer without
+# making them hard to read. Disable a cop inline, with the reason, where a
+# method really needs more.
 Metrics/MethodLength:
+  Max: 15
+
+Metrics/AbcSize:
   Max: 25
 
-# The checks of the template files go through the rules one by one
-# (lib/redmine_issue_template/issue_form.rb and its neighbours), which makes
-# a few methods branchy without making them hard to read.
-Metrics/AbcSize:
-  Max: 40
-
 Metrics/CyclomaticComplexity:
-  Max: 11
+  Max: 9
 
 Metrics/PerceivedComplexity:
-  Max: 12
+  Max: 10
 
 Metrics/ClassLength:
-  Max: 200
+  Max: 150
   Exclude:
     - 'test/**/*'
 

@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
 module RedmineIssueTemplate
-  # The checks of the options of an issue form's fields: part of IssueForm.
-  module IssueFormOptions
+  # The checks of an issue form's keys, fields and options: part of
+  # IssueForm.
+  module IssueFormChecks
     private
 
     def check_options(index, type, attributes)
@@ -60,6 +61,50 @@ module RedmineIssueTemplate
 
       duplicate = Parser.duplicate(options.map { |option| option['label'] })
       element_error(index, :checkboxes_not_unique, value: duplicate) if duplicate
+    end
+
+    def check_top_level(data)
+      keys = data.keys.map(&:to_s)
+      (keys - IssueForm::TOP_LEVEL_KEYS).each { |key| errors << Message.error(path, :not_permitted_key, key: key) }
+      (%w[name description body] - keys).each { |key| errors << Message.error(path, :missing_key, key: key) }
+      check_strings(data)
+    end
+
+    def check_strings(data)
+      %w[name description title type].reject { |key| data[key].nil? || data[key].is_a?(String) }.each do |key|
+        errors << Message.error(path, :not_string, key: key)
+      end
+      name = data['name']
+      errors << Message.error(path, :name_too_short, count: 4) if name.is_a?(String) && name.strip.length <= 3
+    end
+
+    def check_validations(index, type, validations)
+      (validations.keys.map(&:to_s) - IssueForm::VALIDATIONS[type]).each { |key| element_error(index, :validation_key, key: key) }
+      if validations.key?('required') && ![true, false].include?(validations['required'])
+        element_error(index, :invalid_validation, key: 'required')
+      end
+      return unless validations.key?('min_length')
+      return if validations['min_length'].is_a?(Integer) && validations['min_length'] >= 0
+
+      element_error(index, :invalid_validation, key: 'min_length')
+    end
+
+    def check_unique_ids
+      duplicate = Parser.duplicate(elements.filter_map(&:id))
+      errors << Message.error(path, :ids_not_unique, value: duplicate) if duplicate
+      duplicate = Parser.duplicate(elements.filter_map(&:link))
+      errors << Message.error(path, :links_not_unique, value: duplicate) if duplicate
+    end
+
+    # Labels of the fields must be unique, and no two fields may post their
+    # answers under the same name (an id, or a label made into one).
+    def check_unique_labels
+      duplicate = Parser.duplicate(fields.map(&:label))
+      return errors << Message.error(path, :labels_not_unique, value: duplicate) if duplicate
+
+      return if Parser.duplicate(elements.filter_map(&:id))
+
+      errors << Message.error(path, :labels_too_similar) if Parser.duplicate(fields.map(&:ref))
     end
   end
 end

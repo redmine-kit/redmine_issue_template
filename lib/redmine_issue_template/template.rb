@@ -55,14 +55,15 @@ module RedmineIssueTemplate
     private
 
     def key_warnings(project)
-      warnings = []
-      warnings << Message.warning(path, :unknown_type, type: type) if type.present? && find_tracker(project, type).nil?
-      warnings << Message.warning(path, :labels_ignored, labels: labels.join(', ')) if labels.any?
-      warnings << Message.warning(path, :projects_ignored, projects: projects.join(', ')) if projects.any?
       assignable = project.assignable_users.to_a
-      unknown = assignees.reject { |entry| find_assignable(assignable, entry) }
-      warnings << Message.warning(path, :assignees_ignored, assignees: unknown.join(', ')) if unknown.any?
-      warnings
+      ignored = { labels_ignored: [:labels, labels], projects_ignored: [:projects, projects],
+                  assignees_ignored: [:assignees, assignees.reject { |entry| find_assignable(assignable, entry) }] }
+      warnings = ignored.filter_map do |key, (param, values)|
+        Message.warning(path, key, param => values.join(', ')) if values.any?
+      end
+      return warnings if type.blank? || find_tracker(project, type)
+
+      [Message.warning(path, :unknown_type, type: type), *warnings]
     end
 
     def find_assignable(assignable, entry)
@@ -78,13 +79,9 @@ module RedmineIssueTemplate
     end
 
     def read_common(data, about_key)
-      @name = data['name'].to_s.strip.presence
-      @about = data[about_key].to_s.strip.presence
+      @name, @about, @type = [data['name'], data[about_key], data['type']].map { |value| value.to_s.strip.presence }
       @title = data['title'].to_s.presence
-      @labels = Parser.list(data['labels'])
-      @assignees = Parser.list(data['assignees'])
-      @projects = Parser.list(data['projects'])
-      @type = data['type'].to_s.strip.presence
+      @labels, @assignees, @projects = data.values_at('labels', 'assignees', 'projects').map { Parser.list(_1) }
       @options = RedmineOptions.parse(path, data, errors)
     end
   end

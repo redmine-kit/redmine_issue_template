@@ -18,6 +18,16 @@ module RedmineIssueTemplate
     SELECT_FORMATS = %w[list enumeration user version bool].freeze
     TEXT_FORMATS = %w[text].freeze
 
+    # The choices of the issue's fields, as Redmine's form offers them.
+    ISSUE_CHOICES = {
+      'priority_id' => ->(_issue) { IssuePriority.active.map { |priority| [priority.name, priority.id] } },
+      'category_id' => ->(issue) { issue.project.issue_categories.map { |category| [category.name, category.id] } },
+      'assigned_to_id' => ->(issue) { issue.assignable_users.map { |principal| [principal.name, principal.id] } },
+      'done_ratio' => lambda do |_issue|
+        (0..100).step(Setting.issue_done_ratio_interval.to_i).map { |ratio| ["#{ratio} %", ratio] }
+      end
+    }.freeze
+
     attr_reader :element, :attribute
 
     # The links that apply to the new issue: the field exists in the project
@@ -27,16 +37,20 @@ module RedmineIssueTemplate
       form = issue.issue_template
       return [] unless form&.form? && issue.project
 
-      linked = []
-      form.fields.select(&:linked?).each do |element|
-        attribute = resolve(issue.project, element.link)
-        next if attribute.nil? || linked.any? { |link| link.attribute == attribute }
-        next unless issue.issue_template_settable?(attribute)
-
-        linked << new(element, attribute)
+      form.fields.select(&:linked?).each_with_object([]) do |element, linked|
+        attribute = applicable(issue, element, linked)
+        linked << new(element, attribute) if attribute
       end
-      linked
     end
+
+    # The field the element links to, when it applies and isn't linked yet.
+    def self.applicable(issue, element, linked)
+      attribute = resolve(issue.project, element.link)
+      return nil if attribute.nil? || linked.any? { |link| link.attribute == attribute }
+
+      attribute if issue.issue_template_settable?(attribute)
+    end
+    private_class_method :applicable
 
     # Linked fields that can't apply and have no options of their own: the
     # form leaves them out, since it couldn't show them.
@@ -132,14 +146,9 @@ module RedmineIssueTemplate
     end
 
     def issue_choices(issue)
-      case attribute
-      when 'priority_id' then IssuePriority.active.map { |priority| [priority.name, priority.id] }
-      when 'category_id' then issue.project.issue_categories.map { |category| [category.name, category.id] }
-      when 'fixed_version_id' then version_choices(issue)
-      when 'assigned_to_id' then issue.assignable_users.map { |principal| [principal.name, principal.id] }
-      when 'done_ratio' then (0..100).step(Setting.issue_done_ratio_interval.to_i).map { |ratio| ["#{ratio} %", ratio] }
-      else custom_field_choices(issue)
-      end
+      return version_choices(issue) if attribute == 'fixed_version_id'
+
+      ISSUE_CHOICES.fetch(attribute) { ->(target) { custom_field_choices(target) } }.call(issue)
     end
 
     # As Redmine names versions: shared versions of other projects with the

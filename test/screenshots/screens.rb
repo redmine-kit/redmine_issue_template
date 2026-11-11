@@ -54,6 +54,15 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
   end
 
   def test_screens
+    shoot_chooser_and_form
+    shoot_links
+    shoot_settings
+    shoot_preview
+  end
+
+  private
+
+  def shoot_chooser_and_form
     import(github_files.merge('feature.md' => FEATURE))
     each_language do |language|
       visit '/projects/ecookbook/issues/new'
@@ -65,16 +74,19 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
       # With the page's title, so that the form reads as Redmine's New issue.
       shoot 'issue-form', language
     end
+  end
 
-    shoot_links
-
+  # The settings tab with a form that has errors.
+  def shoot_settings
     import(github_files.merge('feature.md' => FEATURE, 'broken.yml' => "name: Broken form\nbody: []\n"))
     each_language do |language|
       visit '/projects/ecookbook/settings/issue_templates'
       assert_selector 'table.list.issue-template-files'
       shoot 'settings', language, selector: '#tab-content-issue_templates'
     end
+  end
 
+  def shoot_preview
     file = IssueTemplateFile.find_by(path: 'feature.md')
     each_language do |language|
       visit "/projects/ecookbook/issue_templates/#{file.id}/edit"
@@ -83,8 +95,6 @@ class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
       shoot 'preview', language, selector: '#content'
     end
   end
-
-  private
 
   # A form whose fields set the issue's fields, with values chosen, so that
   # the fields show the choices they take from Redmine.

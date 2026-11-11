@@ -10,7 +10,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 
 | Path | What |
 | --- | --- |
-| `lib/redmine_issue_template/parser.rb`, `template.rb`, `issue_form.rb`, `issue_form_options.rb`, `markdown_template.rb`, `chooser_config.rb`, `redmine_options.rb`, `yaml_nodes.rb` | Reading template files and checking them |
+| `lib/redmine_issue_template/parser.rb`, `template.rb`, `issue_form.rb`, `issue_form_checks.rb`, `markdown_template.rb`, `chooser_config.rb`, `redmine_options.rb`, `yaml_nodes.rb` | Reading template files and checking them |
 | `lib/redmine_issue_template/message.rb` | Errors and warnings of the files, in Redmine's validation sentences |
 | `lib/redmine_issue_template/template_set.rb` | A project's parsed templates, cached per process by a database key |
 | `lib/redmine_issue_template/importer.rb`, `repository_source.rb`, `repository_patch.rb` | Importing and storing files (the entry point for redmine_github) |

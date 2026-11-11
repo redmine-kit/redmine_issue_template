@@ -27,27 +27,22 @@ module RedmineIssueTemplate
     end
 
     def initialize(data)
-      @tracker = data['tracker']&.to_s
-      @priority = data['priority']&.to_s
-      @category = data['category']&.to_s
-      @fixed_version = data['fixed_version']&.to_s
+      @tracker, @priority, @category, @fixed_version =
+        data.values_at('tracker', 'priority', 'category', 'fixed_version').map { |value| value&.to_s }
       @is_private = data['is_private']
-      @custom_fields = data['custom_fields'].is_a?(Hash) ? data['custom_fields'].transform_keys(&:to_s) : {}
-      @fields = data['fields'].is_a?(Hash) ? data['fields'].transform_keys(&:to_s).transform_values(&:to_s) : {}
+      @custom_fields = string_keys(data['custom_fields'])
+      @fields = string_keys(data['fields']).transform_values(&:to_s)
       @raw = data
     end
 
+    # The keys whose values must be of a kind: [key, what it must be].
+    KINDS = [['is_private', ->(value) { [true, false].include?(value) }],
+             ['custom_fields', ->(value) { value.is_a?(Hash) }],
+             ['fields', ->(value) { value.is_a?(Hash) }]].freeze
+
     def check(path, errors)
-      if @raw.key?('is_private') && ![true, false].include?(is_private)
-        errors << Message.error(path, :redmine_invalid_value, key: 'is_private')
-      end
-      if @raw.key?('custom_fields') && !@raw['custom_fields'].is_a?(Hash)
-        errors << Message.error(path, :redmine_invalid_value,
-                                key: 'custom_fields')
-      end
-      if @raw.key?('fields') && !@raw['fields'].is_a?(Hash)
-        errors << Message.error(path, :redmine_invalid_value,
-                                key: 'fields')
+      KINDS.each do |key, valid|
+        errors << Message.error(path, :redmine_invalid_value, key: key) if @raw.key?(key) && !valid.call(@raw[key])
       end
       fields.each do |name, value|
         # Always set, as in Redmine's workflow, which can't require them either.
@@ -124,6 +119,10 @@ module RedmineIssueTemplate
     end
 
     private
+
+    def string_keys(value)
+      value.is_a?(Hash) ? value.transform_keys(&:to_s) : {}
+    end
 
     def custom_field(project, name)
       self.class.find_custom_field(project, name)

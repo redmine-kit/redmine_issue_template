@@ -61,23 +61,29 @@ module RedmineIssueTemplate
     def restrict_issue_template_params(template)
       preset = issue_template_defaults(template).preset
       hidden = template.options.visibility(@project)[:hidden]
-      out = ['project_id'] | hidden
-      out |= ['description'] if template.form?
-      out |= LinkedField.attributes(template, @project)
+      out = issue_template_params_out(template, hidden)
       given = issue_params_hash
       @issue_template_held = hidden_input(given, hidden)
       attrs = given.except(*out)
-      custom = hash_param(attrs['custom_field_values']).except(*out)
       attrs['custom_fields'] = api_custom_fields(attrs['custom_fields'], out | preset.keys) if attrs['custom_fields']
-      preset.except(*out).each do |name, value|
-        if RedmineIssueTemplate.custom_field_id?(name)
-          custom[name] = value
-        else
-          attrs[name] = value
-        end
+      params[:issue] = ActionController::Parameters.new(with_preset(attrs, preset.except(*out), out))
+    end
+
+    # The attributes and custom field ids the request can't set.
+    def issue_template_params_out(template, hidden)
+      out = ['project_id'] | hidden
+      out |= ['description'] if template.form?
+      out | LinkedField.attributes(template, @project)
+    end
+
+    # The attributes with the preset values in place of the request's.
+    def with_preset(attrs, preset, out)
+      custom = hash_param(attrs['custom_field_values']).except(*out)
+      preset.each do |name, value|
+        RedmineIssueTemplate.custom_field_id?(name) ? custom[name] = value : attrs[name] = value
       end
       attrs['custom_field_values'] = custom if custom.any?
-      params[:issue] = ActionController::Parameters.new(attrs)
+      attrs
     end
 
     # What the request gave for hidden fields, kept for those the form shows

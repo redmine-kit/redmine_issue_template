@@ -25,13 +25,10 @@ class IssueTemplatesController < ApplicationController
   # chooser reads, made again from the form and checked as an edited file.
   def settings
     path = RedmineIssueTemplate::TemplateSet.for(@project).config.path || 'config.yml'
-    content = RedmineIssueTemplate::ChooserConfig.dump(
-      blank_issues_enabled: params[:blank_issues_enabled] == '1', contact_links: contact_links_param
-    )
     file = nil
     saved = save_files do
       file = IssueTemplateFile.find_or_initialize_by(project_id: @project.id, path: path)
-      file.content = content
+      file.content = chooser_config_content
       file.save(context: :settings)
     end
     if saved
@@ -108,10 +105,8 @@ class IssueTemplatesController < ApplicationController
   # The chooser and the New issue form as they would be with the file:
   # @preview (the chooser's locals) and @issue, or @preview_errors.
   def build_preview(file)
-    files = IssueTemplateFile.where(project_id: @project.id).where.not(id: file.id).pluck(:path, :content).to_h
-    files[file.path] = file.content.to_s
-    set = RedmineIssueTemplate::Parser.parse(files)
-    @preview_errors = set.messages.select { |message| message.path == file.path && message.error? }
+    set = file.parse_with_others
+    @preview_errors = file.errors_in(set)
     return if @preview_errors.any?
 
     if RedmineIssueTemplate::Parser.kind(file.path) == :config
@@ -146,6 +141,12 @@ class IssueTemplatesController < ApplicationController
       source.update!(kind: 'manual') if source.new_record?
       true
     end
+  end
+
+  # config.yml as the settings form gives it.
+  def chooser_config_content
+    RedmineIssueTemplate::ChooserConfig.dump(blank_issues_enabled: params[:blank_issues_enabled] == '1',
+                                             contact_links: contact_links_param)
   end
 
   def file_params
