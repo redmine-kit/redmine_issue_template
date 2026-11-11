@@ -10,15 +10,16 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 
 | Path | What |
 | --- | --- |
-| `lib/redmine_issue_template/parser.rb`, `issue_form.rb`, `issue_form_options.rb`, `markdown_template.rb`, `chooser_config.rb`, `redmine_options.rb`, `yaml_nodes.rb` | Reading template files and checking them; `Message` (errors and warnings in Redmine's sentences) |
+| `lib/redmine_issue_template/parser.rb`, `template.rb`, `issue_form.rb`, `issue_form_options.rb`, `markdown_template.rb`, `chooser_config.rb`, `redmine_options.rb`, `yaml_nodes.rb` | Reading template files and checking them |
+| `lib/redmine_issue_template/message.rb` | Errors and warnings of the files, in Redmine's validation sentences |
 | `lib/redmine_issue_template/template_set.rb` | A project's parsed templates, cached per process by a database key |
 | `lib/redmine_issue_template/importer.rb`, `repository_source.rb`, `repository_patch.rb` | Importing and storing files (the entry point for redmine_github) |
-| `lib/redmine_issue_template/issue_patch.rb`, `redmine_rules.rb`, `linked_field.rb`, `body_composer.rb` | What a template does to a new issue: hidden, preset, linked and required fields, the description from the answers |
-| `lib/redmine_issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, the request's parameters, refusing issues without a template; `IssueTemplateDefaults` (the template's values) |
+| `lib/redmine_issue_template/issue_patch.rb` (`issue_template_visibility`, the one place), `redmine_rules.rb`, `issue_template_defaults.rb`, `linked_field.rb`, `body_composer.rb` | What a template does to a new issue: hidden, preset, linked and required fields, the template's values, the description from the answers |
+| `lib/redmine_issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, refusing issues without a template; the request's parameters (permitted answers, preset values, what the request can't set) |
 | `app/controllers/issue_templates_controller.rb`, `app/views/issue_templates/` | The chooser, the settings tab, the file pages, the form box above Redmine's form |
-| `app/helpers/issue_templates_helper.rb` | The one Markdown helper |
+| `app/helpers/issue_templates_helper.rb`, `issue_template_form_helper.rb` | The one Markdown helper and the fields' labels; the change to Redmine's `projects_for_select` |
 | `assets/stylesheets/issue_template.css` | The plugin's CSS, each rule with its reason |
-| `test/` | Unit and functional tests, `test/screenshots/` for the docs' images, `test/fixtures/github/` example templates |
+| `test/` | Unit (`unit/`, `helpers/`) and functional tests, `test/screenshots/` for the docs' images, `test/fixtures/github/` example templates |
 
 ## Rules
 
@@ -49,7 +50,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 
 ### Tests
 
-- **Commands.** `bin/test` runs the plugin's tests and Redmine's tests of the issue form in Docker with PostgreSQL ([setup.md](docs/setup.md#tests)); `bin/lint` runs RuboCop; `bin/screenshots` makes the docs' images. Run all three before pushing.
+- **Commands.** `bin/test` runs the plugin's tests and Redmine's tests of the issue form in Docker with PostgreSQL ([setup.md](docs/setup.md#tests)); `bin/lint` runs RuboCop and Brakeman; `bin/screenshots` makes the docs' images. Run all three before pushing.
 - The example templates in `test/fixtures/github/` are tested as they are.
 - A change to what a template does to an issue has a functional test that creates the issue and checks the saved values.
 

@@ -66,7 +66,7 @@ bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # Redmine の master ブランチで実行
 bin/services --down              # PostgreSQL を止める
-bin/lint                         # RuboCop
+bin/lint                         # RuboCop and Brakeman
 bin/screenshots                  # ドキュメントのスクリーンショット(docs/images/、docs/ja/images/)
 ```
 

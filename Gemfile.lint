@@ -3,4 +3,5 @@
 # Static checks only (bin/lint). Redmine loads Gemfile, not this file.
 source 'https://rubygems.org'
 
+gem 'brakeman', require: false
 gem 'rubocop', require: false

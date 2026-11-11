@@ -54,7 +54,7 @@ bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # on Redmine's master branch
 bin/services --down              # stops PostgreSQL
-bin/lint                         # RuboCop
+bin/lint                         # RuboCop and Brakeman
 bin/screenshots                  # the screenshots of the docs (docs/images/, docs/ja/images/)
 ```
 
