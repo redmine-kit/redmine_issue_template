@@ -135,15 +135,15 @@ class IssueTemplatesController < ApplicationController
     deny_access unless User.current.allowed_to?(:add_issues, @project)
   end
 
-  # Changes the project's files and their errors and warnings together, one
-  # change at a time per project. The block returns whether it succeeded.
+  # Changes the project's files one change at a time per project. The block
+  # returns whether it succeeded. Files first made here are "manual" ones.
   def save_files
     IssueTemplateFile.transaction do
       @project.lock!
-      saved = yield
-      raise ActiveRecord::Rollback unless saved
+      raise ActiveRecord::Rollback unless yield
 
-      RedmineIssueTemplate::Importer.refresh(@project)
+      source = IssueTemplateSource.for(@project)
+      source.update!(kind: 'manual') if source.new_record?
       true
     end
   end

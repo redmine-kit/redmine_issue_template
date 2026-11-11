@@ -30,7 +30,7 @@ RedmineIssueTemplate::Importer.import(
 )
 ```
 
-The call replaces the project's files and returns the import's record with the errors and warnings. Templates that came from GitHub are not replaced by a fetch of a Redmine repository; "Import" replaces them on purpose.
+The call replaces the project's files and returns the import's record (where the files came from, the revision and the time). Templates that came from GitHub are not replaced by a fetch of a Redmine repository; "Import" replaces them on purpose.
 
 ## The project settings
 
@@ -38,4 +38,4 @@ A project whose repository has no templates (or that has no repository) adds, ed
 
 ## Errors and warnings
 
-Each import checks every file ([Checks](format.md#checks)); the tab marks the files with errors, and each file's page lists its errors and warnings. An error leaves the file out of the chooser; a warning, such as a label without a Redmine equivalent or a tracker the project doesn't have, leaves the template in use.
+Every file is checked ([Checks](format.md#checks)) each time it is shown, so that a warning follows the project's current trackers, categories and versions; the tab marks the files with errors, and each file's page lists its errors and warnings. An error leaves the file out of the chooser; a warning, such as a label without a Redmine equivalent or a tracker the project doesn't have, leaves the template in use.

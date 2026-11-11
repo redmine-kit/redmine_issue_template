@@ -3,7 +3,7 @@
 <% source = IssueTemplateSource.find_by(project_id: @project.id) %>
 <% manual = source.nil? || source.manual? %>
 <% set = RedmineIssueTemplate::TemplateSet.for(@project) %>
-<% messages = IssueTemplateSource.messages_for(@project, source) %>
+<% messages = IssueTemplateSource.messages_for(@project) %>
 <% files = IssueTemplateFile.where(project_id: @project.id).sort_by { |file| RedmineIssueTemplate::Parser.sort_key(file.path) } %>
 
 <p>

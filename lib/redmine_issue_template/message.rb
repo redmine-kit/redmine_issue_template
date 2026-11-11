@@ -17,14 +17,6 @@ module RedmineIssueTemplate
       level == 'error'
     end
 
-    def to_h
-      { 'path' => path, 'level' => level, 'key' => key, 'params' => params }
-    end
-
-    def self.from_h(hash)
-      new(path: hash['path'], level: hash['level'], key: hash['key'], params: hash['params'] || {})
-    end
-
     # The text in the user's language, with the file:
     # "bug.yml: body[2]: id is invalid", "config.yml is invalid".
     def text

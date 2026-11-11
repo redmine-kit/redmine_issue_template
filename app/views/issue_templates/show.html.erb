@@ -13,7 +13,7 @@
 <%= render partial: 'issue_templates/source', locals: { source: @source } unless manual %>
 
 <%# The file's errors are in the preview, in place of the preview. %>
-<% warnings = IssueTemplateSource.messages_for(@project, @source).select { |m| m.path == @file.path && !m.error? } %>
+<% warnings = IssueTemplateSource.messages_for(@project).select { |m| m.path == @file.path && !m.error? } %>
 <%= render partial: 'issue_templates/warnings', locals: { warnings: warnings } %>
 
 <div class="box autoscroll">

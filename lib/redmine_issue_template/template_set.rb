@@ -15,7 +15,10 @@ module RedmineIssueTemplate
       cached = @cache[project.id]
       return cached[1] if cached && cached[0] == key
 
-      set = Parser.parse(scope.pluck(:path, :content).to_h)
+      files = scope.pluck(:path, :content, :too_long).to_h do |path, content, too_long|
+        [path, too_long ? Parser::TOO_LONG : content]
+      end
+      set = Parser.parse(files)
       @cache[project.id] = [key, set]
       set
     end

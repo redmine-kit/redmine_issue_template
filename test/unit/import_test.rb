@@ -22,7 +22,7 @@ module RedmineIssueTemplate
       source = import(github_files, @project, source: 'github')
       assert_equal %w[bug.md bug_report.yml config.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
       assert_equal 'github', source.kind
-      keys = source.message_list.map(&:key)
+      keys = IssueTemplateSource.messages_for(@project).map(&:key)
       assert_includes keys, 'projects_ignored'
       assert_includes keys, 'labels_ignored'
       assert_includes keys, 'assignees_ignored'
@@ -41,6 +41,21 @@ module RedmineIssueTemplate
       files = IssueTemplateFile.where(project: @project).order(:path)
       assert_equal %w[cafe.md feature.md], files.pluck(:path)
       assert files.first.content.valid_encoding?
+    end
+
+    test 'errors and warnings come from the stored files and the project as it is now' do
+      long = "---\nname: Long\nabout: a\n---\n#{'x' * RedmineIssueTemplate::Parser::MAX_LENGTH}"
+      import('long.md' => long, 'feature.md' => "---\nname: Feature\nabout: f\ntracker: Bug\n---\n")
+      file = IssueTemplateFile.find_by(project: @project, path: 'long.md')
+      assert file.too_long
+      assert_equal '', file.content
+      # The project as a new request loads it.
+      keys = -> { IssueTemplateSource.messages_for(Project.find(@project.id)).map(&:key) }
+      assert_includes keys.call, 'file_too_long'
+      assert_not_includes keys.call, 'unknown_value'
+
+      Tracker.find(1).update!(name: 'Defect')
+      assert_includes keys.call, 'unknown_value'
     end
 
     test 'redmine options resolve against the project' do
@@ -62,7 +77,7 @@ module RedmineIssueTemplate
         ---
         Text
       MARKDOWN
-      source = import('feature.md' => content)
+      import('feature.md' => content)
       template = RedmineIssueTemplate::TemplateSet.for(@project).find('feature')
       assert_equal 'Feature request', template.tracker(@project).name
       defaults = RedmineIssueTemplate::IssueTemplateDefaults.new(template, @project).attributes
@@ -71,7 +86,7 @@ module RedmineIssueTemplate
       assert_equal expected, defaults.except('subject')
       visibility = template.options.visibility(@project)
       assert_equal({ hidden: %w[assigned_to_id 1], required: %w[due_date] }, visibility)
-      assert_equal %w[unknown_field], source.message_list.map(&:key).sort
+      assert_equal %w[unknown_field], IssueTemplateSource.messages_for(@project).map(&:key).sort
     end
 
     test 'the tracker comes from type; labels are not used' do
@@ -105,8 +120,9 @@ module RedmineIssueTemplate
 
     test 'invalid redmine options are errors' do
       content = "---\nname: Bad\nabout: a\nis_private: maybe\nfields:\n  assigned_to: invisible\n---\n"
-      source = import('bad.md' => content)
-      assert_equal %w[redmine_invalid_value redmine_invalid_visibility], source.message_list.select(&:error?).map(&:key)
+      import('bad.md' => content)
+      errors = IssueTemplateSource.messages_for(@project).select(&:error?)
+      assert_equal %w[redmine_invalid_value redmine_invalid_visibility], errors.map(&:key)
       assert_not RedmineIssueTemplate::TemplateSet.for(@project).any?
     end
 

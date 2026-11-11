@@ -71,7 +71,7 @@ Redmine shows descriptions with its text formatting setting. Templates are Markd
 
 ## Import and sync
 
-The project stores the files it uses (`issue_template_files`) and where they came from (`issue_template_sources`: repository, GitHub, or the project settings; the revision; the time; the errors and warnings of each file). Pages read the stored files; they never read the repository.
+The project stores the files it uses (`issue_template_files`) and where they came from (`issue_template_sources`: repository, GitHub, or the project settings; the revision; the time; the digest of the files). The errors and warnings are worked out from the stored files when they are shown. Pages read the stored files; they never read the repository.
 
 - **Redmine's repository.** After Redmine fetches the changesets of the project's main repository, the plugin compares the template folder's files with the stored ones, imports them again when they differ, and records the last revision that changed the folder. Any SCM Redmine supports works, through Redmine's own repository adapters. The project settings tab has a button that imports at once.
 - **redmine_github.** [Redmine GitHub](https://github.com/redmine-kit/redmine_github) receives GitHub's push events. When a push to the default branch changes `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/`, it calls `RedmineIssueTemplate::Importer.import(project, files:, revision:, source: 'github')` with the folder's files.

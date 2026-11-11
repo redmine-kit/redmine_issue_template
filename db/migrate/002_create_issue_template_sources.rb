@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
-# Where a project's template files come from, and the last import.
+# Where a project's template files come from, and the last import. The
+# errors and warnings are worked out from the stored files when shown.
 class CreateIssueTemplateSources < ActiveRecord::Migration[8.1]
   def change
     create_table :issue_template_sources do |t|
@@ -10,7 +11,6 @@ class CreateIssueTemplateSources < ActiveRecord::Migration[8.1]
       t.string :revision
       t.string :digest
       t.datetime :synced_at
-      t.text :messages
       t.timestamps
     end
   end

@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 # Where a project's template files come from (repository, github or manual),
-# the revision and time of the last import, and the errors and warnings of
-# the files.
+# and the revision, time and digest of the last import.
 class IssueTemplateSource < ApplicationRecord
   belongs_to :project
 
@@ -12,24 +11,16 @@ class IssueTemplateSource < ApplicationRecord
     find_or_initialize_by(project_id: project.id)
   end
 
-  # The errors and warnings of the project's files: those of the last import
-  # when there is a source, else those of the stored files.
-  def self.messages_for(project, source)
-    source ? source.message_list : RedmineIssueTemplate::TemplateSet.for(project).messages
+  # The errors and warnings of the project's files, from the stored files:
+  # the files' own, and those that depend on the project (names it doesn't
+  # have).
+  def self.messages_for(project)
+    set = RedmineIssueTemplate::TemplateSet.for(project)
+    set.messages + set.usable.flat_map { |template| template.project_warnings(project) }
   end
 
   # Files from the repository or GitHub are edited there, not in Redmine.
   def manual?
     kind == 'manual'
-  end
-
-  def message_list
-    JSON.parse(messages.presence || '[]').map { |hash| RedmineIssueTemplate::Message.from_h(hash) }
-  rescue JSON::ParserError
-    []
-  end
-
-  def message_list=(list)
-    self.messages = list.map(&:to_h).to_json
   end
 end
