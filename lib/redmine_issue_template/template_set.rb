@@ -41,5 +41,9 @@ module RedmineIssueTemplate
     def any?
       usable.any?
     end
+
+    def none?
+      !any?
+    end
   end
 end

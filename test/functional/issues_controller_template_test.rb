@@ -182,16 +182,7 @@ module RedmineIssueTemplate
     end
 
     test 'a form without a tracker offers Redmine\'s trackers in its box' do
-      question = <<~YAML
-        name: Question
-        description: Ask
-        body:
-          - type: input
-            id: what
-            attributes:
-              label: What
-      YAML
-      import('question.yml' => question)
+      import('question.yml' => QUESTION)
       get :new, params: { project_id: 'ecookbook', issue_template: 'question' }
       assert_response :success
       tracker = '.issue-template-fields select#issue_template_tracker_id[form=issue-form][onchange*=updateIssueFrom]'
@@ -205,6 +196,17 @@ module RedmineIssueTemplate
                               issue: { tracker_id: '3', subject: 'How?' }, issue_template_answers: { 'what' => 'x' } }
       assert_equal 3, Issue.order(:id).last.tracker_id
     end
+
+    # A form without a tracker.
+    QUESTION = <<~YAML
+      name: Question
+      description: Ask
+      body:
+        - type: input
+          id: what
+          attributes:
+            label: What
+    YAML
 
     LINKED = <<~YAML
       name: Linked form
@@ -260,6 +262,7 @@ module RedmineIssueTemplate
 
     test 'links follow Redmine\'s rules for the user, and a blank answer keeps the default' do
       import('linked.yml' => LINKED)
+      CustomField.find(1).update!(default_value: 'MySQL')
       WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'fixed_version_id',
                                  rule: 'readonly')
       get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
@@ -273,7 +276,7 @@ module RedmineIssueTemplate
       issue = Issue.order(:id).last
       assert_redirected_to "/issues/#{issue.id}"
       assert_nil issue.fixed_version
-      assert_equal CustomField.find(1).default_value.to_s, issue.custom_field_value(1).to_s
+      assert_equal 'MySQL', issue.custom_field_value(1)
     end
 
     test 'parameters of unexpected shapes are ignored' do
@@ -283,6 +286,25 @@ module RedmineIssueTemplate
                               issue: { tracker_id: '1', subject: 'Shapes', custom_fields: ['x'] } }
       assert_response :success
       assert_select '#errorExplanation'
+    end
+
+    test 'the REST API\'s form of custom fields cannot change a hidden value' do
+      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                              issue: { tracker_id: '2', subject: 'API form', description: 'Text',
+                                       due_date: '2026-12-01', custom_fields: [{ id: '8', value: '2000-01-01' }] } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_equal '2026-12-24', issue.custom_field_value(8)
+    end
+
+    test 'the tracker field of a form\'s box applies the tracker\'s private default' do
+      import('question.yml' => QUESTION)
+      Tracker.find(3).update!(private_by_default: true)
+      post :new, params: { project_id: 'ecookbook', issue_template: 'question',
+                           form_update_triggered_by: 'issue_template_tracker_id',
+                           issue: { tracker_id: '3', is_private: '0', subject: 'x' } }, xhr: true
+      assert_response :success
+      assert @controller.instance_variable_get(:@issue).is_private?
     end
 
     test 'a hidden value needs the permission to set the field' do
@@ -331,6 +353,24 @@ module RedmineIssueTemplate
                                 issue: { tracker_id: '1', subject: 'Through the API' } }
         assert_response :created
       end
+    end
+
+    test 'issues without a template: the project they go to decides' do
+      @request.session[:user_id] = 3
+      Role.find(2).add_permission!(:add_issues)
+      # Redmine's New issue without a project, for the project of the templates.
+      post :create, params: { issue: { project_id: '1', tracker_id: '1', subject: 'Elsewhere' } }
+      assert_redirected_to '/projects/ecookbook/issues/templates'
+    end
+
+    test 'a template that can no longer be used keeps what was typed' do
+      @request.session[:user_id] = 3
+      Role.find(2).add_permission!(:add_issues)
+      post :create, params: { project_id: 'ecookbook', issue_template: 'removed',
+                              issue: { tracker_id: '1', subject: 'Typed' } }
+      assert_response :success
+      assert_select '#errorExplanation', text: /The template can no longer be used/
+      assert_select 'input#issue_subject[value=Typed]'
     end
 
     test 'issues without a template are allowed without config.yml' do

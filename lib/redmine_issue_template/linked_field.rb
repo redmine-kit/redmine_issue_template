@@ -33,6 +33,15 @@ module RedmineIssueTemplate
       linked
     end
 
+    # Linked fields that can't apply and have no options of their own: the
+    # form leaves them out, since they would have nothing to choose.
+    def self.dropped(form, links)
+      return [] unless form.form?
+
+      linked = links.map(&:element)
+      form.fields.select { |element| element.link && element.options.empty? && !linked.include?(element) }
+    end
+
     # The attributes the form's links name in the project, whether they apply
     # or not: the request can't set them.
     def self.attributes(form, project)

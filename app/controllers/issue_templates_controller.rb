@@ -21,11 +21,11 @@ class IssueTemplatesController < ApplicationController
     @blank = @set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, @project)
   end
 
-  # The chooser's settings from the project settings: config.yml, made
-  # again from the form and checked as an edited file.
+  # The chooser's settings from the project settings: the config file the
+  # chooser reads, made again from the form and checked as an edited file.
   def settings
-    file = IssueTemplateFile.where(project_id: @project.id, path: %w[config.yml config.yaml]).first ||
-           IssueTemplateFile.new(project: @project, path: 'config.yml')
+    path = RedmineIssueTemplate::TemplateSet.for(@project).config.path || 'config.yml'
+    file = IssueTemplateFile.find_or_initialize_by(project_id: @project.id, path: path)
     file.content = RedmineIssueTemplate::ChooserConfig.dump(
       blank_issues_enabled: params[:blank_issues_enabled] == '1', contact_links: contact_links_param
     )
@@ -144,7 +144,7 @@ class IssueTemplatesController < ApplicationController
     rows.filter_map do |row|
       next unless row.respond_to?(:permit)
 
-      link = %w[name url about].to_h { |key| [key, row.permit(:name, :url, :about)[key].to_s.strip] }
+      link = %w[name url about].to_h { |key| [key, row.permit(:name, :url, :about)[key].to_s.gsub("\r\n", "\n").strip] }
       link if link.values.any?(&:present?)
     end
   end

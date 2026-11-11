@@ -51,13 +51,8 @@ module RedmineIssueTemplate
       @issue_template_links ||= LinkedField.for(self)
     end
 
-    # Linked fields that can't apply and have no options of their own: the
-    # form leaves them out, since they would have nothing to choose.
     def issue_template_dropped
-      return [] unless issue_template_active? && issue_template.form?
-
-      linked = issue_template_links.map(&:element)
-      issue_template.fields.select { |element| element.link && element.options.empty? && !linked.include?(element) }
+      issue_template_active? ? LinkedField.dropped(issue_template, issue_template_links) : []
     end
 
     # Whether Redmine lets the user set the field on this issue by its own
@@ -65,11 +60,17 @@ module RedmineIssueTemplate
     # fields the tracker disables, custom fields the user can't see.
     def issue_template_settable?(attribute, user = User.current)
       if attribute.match?(/\A\d+\z/)
-        method(:editable_custom_field_values).super_method.call(user)
-                                             .any? { |value| value.custom_field_id.to_s == attribute }
+        values = redmine_method(:editable_custom_field_values).call(user)
+        values.any? { |value| value.custom_field_id.to_s == attribute }
       else
-        method(:safe_attribute_names).super_method.call(user).include?(attribute)
+        redmine_method(:safe_attribute_names).call(user).include?(attribute)
       end
+    end
+
+    # The method as it is after this module: Redmine's, or another plugin's
+    # that comes later, whatever the order the plugins were loaded in.
+    def redmine_method(name)
+      IssuePatch.instance_method(name).bind(self).super_method
     end
 
     # The fields the form leaves out or shows as text.

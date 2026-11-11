@@ -123,13 +123,14 @@ module RedmineIssueTemplate
 
     test 'the chooser\'s settings are saved as config.yml' do
       patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '0',
-                                 contact_links: [{ name: 'Forum', url: 'https://example.com/forum', about: 'Ask here' },
+                                 contact_links: [{ name: 'Forum', url: 'https://example.com/forum',
+                                                   about: "Ask here\r\nor read the FAQ" },
                                                  { name: '', url: '', about: '' }] }
       assert_redirected_to '/projects/ecookbook/settings/issue_templates'
       config = RedmineIssueTemplate::TemplateSet.for(@project).config
       assert_not config.blank_issues_enabled?
       links = config.contact_links.map { |link| [link.name, link.url, link.about] }
-      assert_equal [['Forum', 'https://example.com/forum', 'Ask here']], links
+      assert_equal [['Forum', 'https://example.com/forum', "Ask here\nor read the FAQ"]], links
 
       # A link the chooser can't show is refused, and config.yml stays as it was.
       patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '1',
@@ -137,6 +138,13 @@ module RedmineIssueTemplate
       assert_redirected_to '/projects/ecookbook/settings/issue_templates'
       assert_match(/contact_links\[0\]/, flash[:error])
       assert_not RedmineIssueTemplate::TemplateSet.for(@project).config.blank_issues_enabled?
+    end
+
+    test 'the chooser\'s settings go to the config file the chooser reads' do
+      import('config.yaml' => "blank_issues_enabled: false\n", 'feature.md' => github_fixture('bug.md'))
+      patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '1' }
+      assert_equal %w[config.yaml feature.md], IssueTemplateFile.where(project: @project).order(:path).pluck(:path)
+      assert RedmineIssueTemplate::TemplateSet.for(@project).config.blank_issues_enabled?
     end
 
     test 'the chooser\'s settings of templates from a repository are not saved here' do

@@ -26,6 +26,11 @@ module RedmineIssueTemplate
     end
 
     def build_new_issue_from_params
+      # The box's tracker field is Redmine's tracker field (the private
+      # default of the chosen tracker applies).
+      if params[:form_update_triggered_by] == 'issue_template_tracker_id'
+        params[:form_update_triggered_by] = 'issue_tracker_id'
+      end
       template = current_issue_template
       if template
         issue_template_defaults_into_params(template) if request.get?
@@ -63,20 +68,30 @@ module RedmineIssueTemplate
       redirect_to project_issue_template_chooser_path(@project, request.query_parameters.except('issue_template'))
     end
 
-    # Creating an issue in the browser without a template, when blank issues
-    # are not allowed: back to the chooser. The REST API and email are left
+    # Creating an issue in the browser without a template, when the project
+    # it goes to doesn't allow blank issues. The REST API and email are left
     # to Redmine; copies are not made from templates.
     def refuse_issue_without_template
       return if api_request? || @issue&.issue_template_active? || params[:copy_from].present?
-      return unless @project && issue_template_set&.any? && !issue_without_template_allowed?
+
+      project = @issue&.project || @project
+      return if project.nil? || issue_without_template_allowed?(project)
+
+      # A template that could no longer be used: the form again, with what was typed.
+      if params[:issue_template].present? && params[:issue_template] != 'blank'
+        @issue.errors.add(:base, l(:error_issue_template_unavailable))
+        return render(:new)
+      end
 
       flash[:error] = l(:error_issue_template_required)
-      redirect_to project_issue_template_chooser_path(@project)
+      redirect_to project_issue_template_chooser_path(project)
     end
 
-    def issue_without_template_allowed?
-      issue_template_set.config.blank_issues_enabled? ||
-        User.current.allowed_to?(:manage_issue_templates, @project)
+    def issue_without_template_allowed?(project = @project)
+      return true unless project.module_enabled?(:issue_templates)
+
+      set = TemplateSet.for(project)
+      set.none? || set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, project)
     end
 
     # The template's values, for the fields the request doesn't give. Only
