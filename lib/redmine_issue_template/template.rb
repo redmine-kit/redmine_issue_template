@@ -29,6 +29,11 @@ module RedmineIssueTemplate
       false
     end
 
+    # A YAML form's upload fields.
+    def uploads
+      []
+    end
+
     def messages
       errors
     end

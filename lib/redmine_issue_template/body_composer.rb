@@ -102,13 +102,19 @@ module RedmineIssueTemplate
       when 'textarea', 'input' then text_problem(element)
       when 'dropdown' then blank_problem(element, chosen(element))
       when 'checkboxes' then checkbox_problem(element)
-      when 'upload' then blank_problem(element, files(element))
+      when 'upload' then upload_problem(element)
       when IssueForm::LINK then blank_problem(element, given(element))
       end
     end
 
     def files(element)
       @files.fetch(element.ref, [])
+    end
+
+    def upload_problem(element)
+      return :not_accepted unless files(element).all? { |name| element.accepts?(name) }
+
+      blank_problem(element, files(element))
     end
 
     def blank_problem(element, values)

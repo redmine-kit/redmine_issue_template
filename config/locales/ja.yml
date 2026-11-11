@@ -18,6 +18,7 @@ ja:
   error_issue_template_no_repository: リポジトリが見つかりません
   error_issue_template_managed_elsewhere: テンプレートは取得元で編集してください。
   issue_template_error_unchecked: にチェックを入れてください
+  issue_template_error_not_accepted: "に添付できる拡張子は %{value} です"
   issue_template_error_separator: " "
   issue_template_error_not_yaml: は正しい YAML ではありません
   issue_template_error_quoted: は引用符で囲んでください

@@ -4,6 +4,9 @@ module RedmineIssueTemplate
   # The checks of an issue form's keys, fields and options: part of
   # IssueForm.
   module IssueFormChecks
+    # An extension in accept, such as ".png" or ".tar.gz".
+    ACCEPT = /\A(\.[A-Za-z0-9]+)+\z/
+
     private
 
     def check_options(index, type, attributes)
@@ -83,10 +86,22 @@ module RedmineIssueTemplate
       if validations.key?('required') && ![true, false].include?(validations['required'])
         element_error(index, :invalid_validation, key: 'required')
       end
+      check_accept(index, validations) if type == 'upload'
       return unless validations.key?('min_length')
       return if validations['min_length'].is_a?(Integer) && validations['min_length'] >= 0
 
       element_error(index, :invalid_validation, key: 'min_length')
+    end
+
+    # accept: extensions separated by commas, such as ".png,.jpg,.tar.gz".
+    def check_accept(index, validations)
+      return unless validations.key?('accept')
+
+      value = validations['accept']
+      extensions = value.is_a?(String) ? value.split(',').map(&:strip) : []
+      return if extensions.any? && extensions.all? { |extension| ACCEPT.match?(extension) }
+
+      element_error(index, :invalid_validation, key: 'accept')
     end
 
     def check_unique_ids

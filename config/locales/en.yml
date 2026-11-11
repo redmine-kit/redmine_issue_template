@@ -18,6 +18,7 @@ en:
   error_issue_template_no_repository: Repository not found
   error_issue_template_managed_elsewhere: Edit the templates where they are kept.
   issue_template_error_unchecked: must be checked
+  issue_template_error_not_accepted: "takes only these extensions: %{value}"
   issue_template_error_separator: " "
   issue_template_error_not_yaml: is not valid YAML
   issue_template_error_quoted: must be quoted

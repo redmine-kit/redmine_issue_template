@@ -68,6 +68,26 @@ module RedmineIssueTemplate
       assert_equal [], composer(answers).problems
     end
 
+    test 'an upload field takes only the extensions of accept' do
+      form = RedmineIssueTemplate::Parser.parse('f.yml' => <<~YAML).usable.first
+        name: Files
+        description: d
+        body:
+          - type: upload
+            id: shots
+            attributes:
+              label: Shots
+            validations:
+              accept: ".png,.jpg"
+      YAML
+      problems = lambda do |names|
+        RedmineIssueTemplate::BodyComposer.new(form, {}, files: { 'shots' => names }).problems.map(&:last)
+      end
+      assert_equal [], problems.call(%w[a.png b.JPG])
+      assert_equal [:not_accepted], problems.call(%w[a.png b.exe])
+      assert_equal [], problems.call([])
+    end
+
     test 'min_length counts the characters of a given answer' do
       short = RedmineIssueTemplate::Parser.parse(
         'f.yml' => "name: Form\ndescription: d\nbody:\n- type: input\n  id: a\n  attributes:\n    label: A\n  " \

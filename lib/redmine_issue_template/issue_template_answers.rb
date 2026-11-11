@@ -37,6 +37,7 @@ module RedmineIssueTemplate
         message = case problem
                   when :too_short then ::I18n.t('activerecord.errors.messages.too_short', count: element.min_length)
                   when :unchecked then ::I18n.t(:issue_template_error_unchecked)
+                  when :not_accepted then ::I18n.t(:issue_template_error_not_accepted, value: element.accept.join(', '))
                   else ::I18n.t('activerecord.errors.messages.blank')
                   end
         errors.add(:base, "#{element.label}#{::I18n.t(:issue_template_error_separator)}#{message}")

@@ -87,9 +87,9 @@ The body has these element types. Each one has `attributes` and, except `markdow
 | `input` | `label`, `description`, `placeholder`, `value` | `required`, `min_length` | A one-line text field |
 | `dropdown` | `label`, `description`, `multiple`, `options`, `default` | `required` | A select box; `default` is the index of the preselected option |
 | `checkboxes` | `label`, `description`, `options` (each with `label` and `required`) | `required` | A checkbox per option |
-| `upload` | `label`, `description` | `required`, `accept` (read, not checked yet) | A file field like Redmine's Files field; the files become the issue's files, and the section lists the ones attached in this field |
+| `upload` | `label`, `description` | `required`, `accept` (extensions separated by commas, such as `".png,.jpg,.log"`) | A file field like Redmine's Files field; the files become the issue's files, and the section lists the ones attached in this field |
 
-`validations` are always checked when the issue is created.
+`validations` are always checked when the issue is created. With `accept`, the field shows the extensions it takes, and a file with another extension is refused.
 
 ### The description
 

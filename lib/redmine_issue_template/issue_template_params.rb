@@ -38,8 +38,7 @@ module RedmineIssueTemplate
     # field takes).
     def issue_template_uploads_param(template)
       given = hash_param(params[:issue_template_uploads])
-      uploads = template.form? ? template.fields.select { |element| element.type == 'upload' } : []
-      uploads.to_h do |element|
+      template.uploads.to_h do |element|
         entries = hash_param(given[element.ref]).values.first(10)
         [element.ref, entries.filter_map { |entry| uploaded_attachment(hash_param(entry)) }]
       end

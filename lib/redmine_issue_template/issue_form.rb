@@ -61,6 +61,17 @@ module RedmineIssueTemplate
         validations['min_length']
       end
 
+      # The extensions an upload field takes (validations.accept), in lower
+      # case: none for any file.
+      def accept
+        value = validations['accept']
+        value.is_a?(String) ? value.split(',').map { |extension| extension.strip.downcase }.reject(&:empty?) : []
+      end
+
+      def accepts?(filename)
+        accept.empty? || accept.any? { |extension| filename.downcase.end_with?(extension) }
+      end
+
       def options
         attributes['options'] || []
       end
@@ -89,6 +100,10 @@ module RedmineIssueTemplate
 
     def fields
       elements.select(&:field?)
+    end
+
+    def uploads
+      elements.select { |element| element.type == 'upload' }
     end
 
     # Links that the project doesn't have, as warnings.

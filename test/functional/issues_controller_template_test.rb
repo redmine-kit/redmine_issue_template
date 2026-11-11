@@ -191,6 +191,26 @@ module RedmineIssueTemplate
       assert_select 'input[value=?]', token, count: 1
     end
 
+    test 'an upload field takes only the extensions of accept' do
+      set_tmp_attachments_directory
+      accept = "\n      accept: \".png,.jpg\""
+      form = github_fixture('bug_report.yml').sub(/(type: upload.*?required: false)/m, "\\1#{accept}")
+      import('bug_report.yml' => form)
+      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+      assert_select '.issue-template-fields em.info', text: 'Allowed extensions: .png, .jpg'
+
+      params = { project_id: 'ecookbook', issue_template: 'bug_report', issue: { tracker_id: '1', subject: 'Accept' },
+                 issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] } }
+      uploads = ->(name) { { 'screenshots' => { '1' => { 'token' => upload(name, 2).token } } } }
+      assert_no_difference 'Issue.count' do
+        post :create, params: params.merge(issue_template_uploads: uploads.call('notes.txt'))
+      end
+      assert_select '#errorExplanation li', text: 'Upload screenshots takes only these extensions: .png, .jpg'
+      assert_difference 'Issue.count' do
+        post :create, params: params.merge(issue_template_uploads: uploads.call('screen.PNG'))
+      end
+    end
+
     test 'a required upload field needs a file' do
       form = github_fixture('bug_report.yml').sub(/(type: upload.*?required:) false/m, '\\1 true')
       import('bug_report.yml' => form)

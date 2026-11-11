@@ -88,6 +88,20 @@ module RedmineIssueTemplate
       "name: Form\ndescription: d\nbody:\n#{elements.join}"
     end
 
+    def upload(accept)
+      "- type: upload\n  attributes:\n    label: L\n  validations:\n    accept: #{accept}\n"
+    end
+
+    test 'accept lists the extensions of an upload field' do
+      set = parse('form.yml' => form(upload('".PNG, .jpg,.tar.gz"')))
+      assert_equal [], errors_of(set, 'form.yml')
+      element = set.usable.first.uploads.first
+      assert_equal %w[.png .jpg .tar.gz], element.accept
+      assert element.accepts?('Screen.Png')
+      assert element.accepts?('logs.tar.gz')
+      assert_not element.accepts?('notes.txt')
+    end
+
     def dropdown(options, extra = '')
       "- type: dropdown\n  attributes:\n    label: L\n    options: #{options}\n#{extra}"
     end
@@ -110,6 +124,10 @@ module RedmineIssueTemplate
         form("#{INPUT}    foo: x\n") => %w[attribute_key],
         form("#{INPUT}  validations:\n    accept: x\n") => %w[validation_key],
         form("#{INPUT}  validations:\n    min_length: -1\n") => %w[invalid_validation],
+        form(upload('png')) => %w[invalid_validation],
+        form(upload('".png, jpg"')) => %w[invalid_validation],
+        form(upload('[.png]')) => %w[invalid_validation],
+        form(upload('""')) => %w[invalid_validation],
         form(dropdown('[a, a]')) => %w[options_not_unique],
         form(dropdown('[None, b]')) => %w[options_none],
         form(dropdown('[yes, b]')) => %w[options_boolean],

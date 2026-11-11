@@ -84,6 +84,9 @@
                locals: { attachment_param: "issue_template_uploads[#{element.ref}]",
                          saved_attachments: issue.issue_template_uploads.fetch(element.ref, []),
                          attachment_format_custom_field: true } %>
+    <% if element.accept.any? %>
+    <em class="info"><%= l(:setting_attachment_extensions_allowed) %>: <%= element.accept.join(', ') %></em>
+    <% end %>
     <%= issue_template_info(element) %>
   </p>
   <% end %>
