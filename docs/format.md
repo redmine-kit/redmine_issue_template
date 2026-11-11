@@ -128,7 +128,7 @@ contact_links:
 ```
 
 - `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser. Users with "Manage issue templates" can still create one. Issues from the REST API and from email are not affected.
-- `contact_links` are listed after the templates, under "Other contacts".
+- `contact_links` are listed after the templates, under "Other contacts". A link's `about` is Markdown, and can have several lines.
 
 The project settings show these settings under "Template chooser". When the templates are edited in Redmine, they can be changed there: saving makes `config.yml` again from the form, without its comments. Templates from a repository or GitHub keep `config.yml` there.
 
@@ -212,7 +212,7 @@ Some keys have no Redmine equivalent. They don't stop a template from working; t
 | Key | In Redmine |
 | --- | --- |
 | `name` | The template's name in the chooser |
-| `about`, `description` | The template's description in the chooser |
+| `about`, `description` | The template's description in the chooser and above the form, in Markdown |
 | `title` | The subject the form starts with |
 | `type` | The tracker of the same name, unless `tracker` is set |
 | `labels` | Not used, with a warning |

@@ -7,7 +7,7 @@
 <div class="box tabular issue-template-fields">
 <%# In div.wiki, as the markdown elements, so that the text starts at the
     box's edge rather than at the fields. %>
-<% if issue.issue_template.about.present? %><div class="wiki"><p><%= issue.issue_template.about %></p></div><% end %>
+<% if issue.issue_template.about.present? %><div class="wiki"><%= issue_template_markdown(issue.issue_template.about) %></div><% end %>
 <% issue.issue_template.elements.take_while { |element| element.type == 'markdown' }.each do |element| %>
 <div class="wiki"><%= issue_template_markdown(element.attributes['value']) %></div>
 <% end %>

@@ -88,10 +88,12 @@
     <%# One empty row to add a link; emptying a row removes its link. %>
     <% (config.contact_links + (manual ? [nil] : [])).each do |link| %>
       <tr>
-      <% %i[name url about].each do |key| %>
-        <td><%= text_field_tag "contact_links[][#{key}]", link&.public_send(key), id: nil, size: key == :about ? 50 : 25,
-                               disabled: !manual, 'aria-label': l(key == :about ? :field_description : :"field_#{key}") %></td>
+      <% %i[name url].each do |key| %>
+        <td><%= text_field_tag "contact_links[][#{key}]", link&.public_send(key), id: nil, size: 25,
+                               disabled: !manual, 'aria-label': l(:"field_#{key}") %></td>
       <% end %>
+        <td><%= text_area_tag 'contact_links[][about]', link&.about, id: nil, rows: 2, cols: 50,
+                              disabled: !manual, 'aria-label': l(:field_description) %></td>
       </tr>
     <% end %>
     </tbody>

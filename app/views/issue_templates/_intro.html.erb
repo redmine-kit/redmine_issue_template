@@ -6,6 +6,6 @@
 <% if template.form? %>
 <%= render partial: 'issue_templates/form_fields', locals: { issue: issue } %>
 <% elsif template.about.present? %>
-<div class="wiki issue-template-intro"><p><%= template.about %></p></div>
+<div class="wiki issue-template-intro"><%= issue_template_markdown(template.about) %></div>
 <% end %>
 <% end %>
