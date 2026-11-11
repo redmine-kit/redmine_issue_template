@@ -141,6 +141,14 @@ module RedmineIssueTemplate
       assert_equal 'bug.yml', set.find('bug').path
     end
 
+    test 'config.yml can be made again from the settings' do
+      link = { 'name' => 'Forum', 'url' => 'https://example.com', 'about' => "a\nb" }
+      content = RedmineIssueTemplate::ChooserConfig.dump(blank_issues_enabled: false, contact_links: [link])
+      config = parse('config.yml' => content).config
+      assert_not config.blank_issues_enabled?
+      assert_equal ["a\nb"], config.contact_links.map(&:about)
+    end
+
     test 'links of form fields' do
       form = lambda do |elements|
         "name: Form\ndescription: d\nbody:\n#{elements}"

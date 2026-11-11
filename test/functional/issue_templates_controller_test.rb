@@ -240,10 +240,53 @@ module RedmineIssueTemplate
       assert_equal 'Repository not found', flash[:error]
     end
 
-    test 'managing the templates needs the permission' do
+    # Every action of the settings, as [method, action, extra params].
+    ACTIONS = [
+      [:post, :sync, {}], [:patch, :settings, { blank_issues_enabled: '1' }], %i[get show file], [:get, :new, {}],
+      [:post, :create, { issue_template_file: { path: 'a.md', content: 'x' } }], %i[get edit file],
+      %i[patch update file], %i[delete destroy file]
+    ].freeze
+
+    def request_action(method, action, extra, file)
+      params = { project_id: 'ecookbook' }
+      params.merge!(extra == :file ? { id: file.id } : extra)
+      public_send(method, action, params: params)
+    end
+
+    test 'every action needs the permission and the module' do
+      file = IssueTemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
       Role.find(1).remove_permission!(:manage_issue_templates)
-      post :create, params: { project_id: 'ecookbook', issue_template_file: { path: 'a.md', content: 'x' } }
-      assert_response :forbidden
+      ACTIONS.each do |method, action, extra|
+        request_action(method, action, extra, file)
+        assert_response :forbidden, "#{method} #{action} without the permission"
+      end
+
+      Role.find(1).add_permission!(:manage_issue_templates)
+      @project.enabled_module_names = @project.enabled_module_names - ['issue_templates']
+      ACTIONS.each do |method, action, extra|
+        request_action(method, action, extra, file)
+        assert_response :forbidden, "#{method} #{action} without the module"
+      end
+    end
+
+    test 'a file of another project is not found' do
+      other = IssueTemplateFile.create!(project: Project.find(2), path: 'b.md',
+                                        content: "---\nname: Beta\nabout: b\n---\n")
+      ACTIONS.select { |*, extra| extra == :file }.each do |method, action, extra|
+        request_action(method, action, extra, other)
+        assert_response :not_found, "#{method} #{action}"
+      end
+    end
+
+    test 'templates from a repository are not changed in the settings' do
+      import(github_files, @project, source: 'repository')
+      file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
+      patch :update, params: { project_id: 'ecookbook', id: file.id,
+                               issue_template_file: { path: 'bug.md', content: 'x' } }
+      assert_redirected_to '/projects/ecookbook/settings/issue_templates'
+      delete :destroy, params: { project_id: 'ecookbook', id: file.id }
+      assert_redirected_to '/projects/ecookbook/settings/issue_templates'
+      assert_equal github_fixture('bug.md'), file.reload.content
     end
   end
 end

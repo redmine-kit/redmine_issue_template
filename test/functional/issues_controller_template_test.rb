@@ -385,6 +385,14 @@ module RedmineIssueTemplate
       get :new, params: { project_id: 'ecookbook', issue_template: 'hidden' }
       assert_response :success
       assert_select '#issue-form input#issue_due_date'
+
+      # What is typed in it is kept.
+      post :create, params: { project_id: 'ecookbook', issue_template: 'hidden',
+                              issue: { tracker_id: '1', subject: 'Dated', description: 'Text',
+                                       due_date: '2026-12-31' } }
+      issue = Issue.order(:id).last
+      assert_redirected_to "/issues/#{issue.id}"
+      assert_equal Date.new(2026, 12, 31), issue.due_date
     end
 
     test 'without a template the user can use, Redmine\'s form opens' do

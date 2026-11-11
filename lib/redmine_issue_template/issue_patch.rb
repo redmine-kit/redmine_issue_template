@@ -12,6 +12,7 @@ module RedmineIssueTemplate
     def self.prepended(base)
       base.attr_reader :issue_template
       base.attr_accessor :issue_template_answers
+      base.attr_writer :issue_template_defaults
       base.before_validation :apply_issue_template_links, on: :create, prepend: true
       base.before_validation :compose_issue_template_description, on: :create
       base.validate :validate_issue_template_answers, on: :create
@@ -19,6 +20,7 @@ module RedmineIssueTemplate
 
     def issue_template=(template)
       @issue_template = template
+      @issue_template_defaults = nil
       @issue_template_visibility = nil
       @issue_template_links = nil
       # Redmine caches the workflow's rules, read with the fields before.
@@ -31,19 +33,27 @@ module RedmineIssueTemplate
       new_record? && issue_template.present?
     end
 
-    # { hidden: [...], required: [...], fixed: [...], linked: [...] }:
-    # attribute names and custom field ids. Fixed: the values the template
-    # sets, shown as text. Linked: set by a form's field (LinkedField).
+    # The template's values for the project, given by the controller for the
+    # request, or resolved here.
+    def issue_template_defaults
+      @issue_template_defaults ||= IssueTemplateDefaults.new(issue_template, project)
+    end
+
+    # The one place that decides what the template does to the form:
+    # { hidden: [...], required: [...], preset: [...], linked: [...] },
+    # attribute names and custom field ids. Hidden: left out (fields Redmine
+    # requires and the template doesn't fill stay shown). Preset: the
+    # template's values, shown as text. Linked: set by a form's field.
+    # Built once the tracker and status are set (build_new_issue_from_params).
     def issue_template_visibility
-      return { hidden: [], required: [], fixed: [], linked: [] } unless issue_template_active? && project
+      return { hidden: [], required: [], preset: [], linked: [] } unless issue_template_active? && project
 
       @issue_template_visibility ||= begin
         visibility = issue_template.options.visibility(project)
         visibility[:hidden] -= issue_template_unfilled(visibility[:hidden])
         visibility[:hidden] |= ['description'] if issue_template.form?
         visibility[:linked] = issue_template_links.map(&:attribute)
-        visibility[:fixed] = IssueTemplateDefaults.new(issue_template, project).fixed.keys -
-                             visibility[:hidden] - visibility[:linked]
+        visibility[:preset] = issue_template_defaults.preset.keys - visibility[:hidden] - visibility[:linked]
         visibility
       end
     end
@@ -58,9 +68,9 @@ module RedmineIssueTemplate
       issue_template_active? ? LinkedField.dropped(issue_template, issue_template_links) : []
     end
 
-    # The fields the form leaves out or shows as text.
-    def issue_template_locked
-      issue_template_visibility.values_at(:hidden, :fixed, :linked).inject(:|)
+    # The fields not in Redmine's part of the form: left out or shown as text.
+    def issue_template_not_in_form
+      issue_template_visibility.values_at(:hidden, :preset, :linked).inject(:|)
     end
 
     def safe_attribute_names(user = nil)
@@ -69,14 +79,14 @@ module RedmineIssueTemplate
 
       # A form has its tracker and subject in its own box.
       names -= %w[tracker_id subject] if issue_template.form?
-      names - issue_template_locked - ['project_id']
+      names - issue_template_not_in_form - ['project_id']
     end
 
     def editable_custom_field_values(user = nil)
       values = super
       return values unless issue_template_active?
 
-      locked = issue_template_locked
+      locked = issue_template_not_in_form
       values.reject { |value| locked.include?(value.custom_field_id.to_s) }
     end
 
@@ -88,7 +98,7 @@ module RedmineIssueTemplate
       return names unless issue_template_active?
 
       required = issue_template_visibility[:required]
-      names | required.select { |name| issue_template_settable?(name, user || User.current) }
+      names | required.select { |name| issue_template_settable?(name, user) }
     end
 
     # Redmine checks the custom fields the form shows; those the template
@@ -113,7 +123,7 @@ module RedmineIssueTemplate
     def force_default_value_on_noneditable_custom_fields
       return super unless issue_template_active?
 
-      locked = issue_template_locked.select { |id| issue_template_settable?(id) }
+      locked = issue_template_not_in_form.select { |id| issue_template_settable?(id) }
       kept = custom_field_values.select { |value| locked.include?(value.custom_field_id.to_s) }
                                 .to_h { |value| [value, value.value] }
       super

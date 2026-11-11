@@ -25,12 +25,16 @@ class IssueTemplatesController < ApplicationController
   # chooser reads, made again from the form and checked as an edited file.
   def settings
     path = RedmineIssueTemplate::TemplateSet.for(@project).config.path || 'config.yml'
-    file = IssueTemplateFile.find_or_initialize_by(project_id: @project.id, path: path)
-    file.content = RedmineIssueTemplate::ChooserConfig.dump(
+    content = RedmineIssueTemplate::ChooserConfig.dump(
       blank_issues_enabled: params[:blank_issues_enabled] == '1', contact_links: contact_links_param
     )
-    if file.save(context: :settings)
-      RedmineIssueTemplate::Importer.refresh(@project)
+    file = nil
+    saved = save_files do
+      file = IssueTemplateFile.find_or_initialize_by(project_id: @project.id, path: path)
+      file.content = content
+      file.save(context: :settings)
+    end
+    if saved
       flash[:notice] = l(:notice_successful_update)
     else
       # Redmine shows flash messages as HTML.
@@ -56,12 +60,10 @@ class IssueTemplatesController < ApplicationController
   end
 
   def create
-    @file = IssueTemplateFile.new(project: @project, path: params.dig(:issue_template_file, :path),
-                                  content: params.dig(:issue_template_file, :content).to_s)
+    @file = IssueTemplateFile.new(project: @project, **file_params)
     return preview(:new) if params[:preview]
 
-    if @file.save(context: :settings)
-      RedmineIssueTemplate::Importer.refresh(@project)
+    if save_files { @file.save(context: :settings) }
       flash[:notice] = l(:notice_successful_create)
       redirect_to_settings
     else
@@ -78,12 +80,10 @@ class IssueTemplatesController < ApplicationController
   def edit; end
 
   def update
-    @file.attributes = { path: params.dig(:issue_template_file, :path),
-                         content: params.dig(:issue_template_file, :content).to_s }
+    @file.attributes = file_params
     return preview(:edit) if params[:preview]
 
-    if @file.save(context: :settings)
-      RedmineIssueTemplate::Importer.refresh(@project)
+    if save_files { @file.save(context: :settings) }
       flash[:notice] = l(:notice_successful_update)
       redirect_to_settings
     else
@@ -92,8 +92,7 @@ class IssueTemplatesController < ApplicationController
   end
 
   def destroy
-    @file.destroy
-    RedmineIssueTemplate::Importer.refresh(@project)
+    save_files { @file.destroy }
     flash[:notice] = l(:notice_successful_delete)
     redirect_to_settings
   end
@@ -134,6 +133,25 @@ class IssueTemplatesController < ApplicationController
     return deny_access unless @project.module_enabled?(:issue_templates)
 
     deny_access unless User.current.allowed_to?(:add_issues, @project)
+  end
+
+  # Changes the project's files and their errors and warnings together, one
+  # change at a time per project. The block returns whether it succeeded.
+  def save_files
+    IssueTemplateFile.transaction do
+      @project.lock!
+      saved = yield
+      raise ActiveRecord::Rollback unless saved
+
+      RedmineIssueTemplate::Importer.refresh(@project)
+      true
+    end
+  end
+
+  def file_params
+    file = params.fetch(:issue_template_file, {})
+    file = file.respond_to?(:permit) ? file.permit(:path, :content) : {}
+    { path: file[:path], content: file[:content].to_s }
   end
 
   # The form's contact links, without the empty rows.

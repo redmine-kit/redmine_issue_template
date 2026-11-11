@@ -43,8 +43,10 @@ module RedmineIssueTemplate
       return if performed? || template.nil? || @issue.nil?
 
       @issue.issue_template = template
-      @issue.issue_template_answers = issue_template_answers_param
-      IssueTemplateDefaults.new(template, @project).apply_hidden(@issue)
+      @issue.issue_template_defaults = issue_template_defaults(template)
+      @issue.issue_template_answers = issue_template_answers_param(template)
+      issue_template_defaults(template).apply_to_hidden_fields(@issue)
+      restore_shown_hidden_input(@issue, template)
     end
 
     def issue_template_set
@@ -53,20 +55,32 @@ module RedmineIssueTemplate
       @issue_template_set ||= TemplateSet.for(@project)
     end
 
-    def current_issue_template
-      key = params[:issue_template].to_s
-      return nil if key.blank? || key == 'blank'
+    # The templates the user can use in the project, once per request.
+    def usable_issue_templates
+      @usable_issue_templates ||= issue_template_set&.usable_for(@project) || []
+    end
 
-      issue_template_set&.usable_for(@project)&.detect { |template| template.key == key }
+    # The template's values, resolved once per request.
+    def issue_template_defaults(template)
+      @issue_template_defaults ||= IssueTemplateDefaults.new(template, @project)
+    end
+
+    # The template the request names: nil for none and for "blank".
+    def issue_template_key
+      key = params[:issue_template].to_s
+      key unless key.blank? || key == 'blank'
+    end
+
+    def current_issue_template
+      key = issue_template_key
+      usable_issue_templates.detect { |template| template.key == key } if key
     end
 
     def redirect_to_issue_template_chooser
-      return unless request.get? && !request.xhr? && @project && issue_template_set&.usable_for(@project)&.any?
+      return unless request.get? && !request.xhr? && @project && usable_issue_templates.any?
       return if params[:copy_from].present?
-
-      key = params[:issue_template].to_s
       return if current_issue_template
-      return if key == 'blank' && issue_without_template_allowed?
+      return if params[:issue_template] == 'blank' && issue_without_template_allowed?
 
       redirect_to project_issue_template_chooser_path(@project, request.query_parameters.except('issue_template'))
     end
@@ -75,8 +89,7 @@ module RedmineIssueTemplate
     # was typed (the answers in the description), rather than an issue
     # without the answers.
     def refuse_unavailable_issue_template
-      key = params[:issue_template].to_s
-      return if api_request? || key.blank? || key == 'blank' || @issue.nil? || @issue.issue_template_active?
+      return if api_request? || issue_template_key.nil? || @issue.nil? || @issue.issue_template_active?
 
       @issue.description = issue_template_answers_text if @issue.description.blank?
       @issue.errors.add(:base, l(:error_issue_template_unavailable))
@@ -98,114 +111,10 @@ module RedmineIssueTemplate
 
     def issue_without_template_allowed?(project = @project)
       return true unless project.module_enabled?(:issue_templates)
+      return true if User.current.allowed_to?(:manage_issue_templates, project)
 
-      set = TemplateSet.for(project)
-      set.usable_for(project).none? || set.config.blank_issues_enabled? ||
-        User.current.allowed_to?(:manage_issue_templates, project)
-    end
-
-    # The template's values, for the fields the request doesn't give. Only
-    # when the form opens: later requests carry the user's own values.
-    def issue_template_defaults_into_params(template)
-      defaults = IssueTemplateDefaults.new(template, @project).attributes
-      given = issue_params_hash
-      custom = defaults.delete('custom_field_values') || {}
-      merged = defaults.merge(given)
-      merged['custom_field_values'] = custom.merge(hash_param(given['custom_field_values'])) if custom.any?
-      params[:issue] = ActionController::Parameters.new(merged)
-    end
-
-    # Takes out of the request what it can't set while a template applies:
-    # the project, hidden and linked fields. The fixed values go in now,
-    # before Redmine assigns the attributes, so that the tracker comes first.
-    def restrict_issue_template_params(template)
-      fixed = IssueTemplateDefaults.new(template, @project).fixed
-      out = template.options.visibility(@project)[:hidden] | ['project_id']
-      out |= ['description'] if template.form?
-      out |= LinkedField.attributes(template, @project)
-      attrs = issue_params_hash.except(*out)
-      custom = hash_param(attrs['custom_field_values']).except(*out)
-      attrs['custom_fields'] = api_custom_fields(attrs['custom_fields'], out | fixed.keys) if attrs['custom_fields']
-      fixed.except(*out).each do |name, value|
-        if name.match?(/\A\d+\z/)
-          custom[name] = value
-        else
-          attrs[name] = value
-        end
-      end
-      attrs['custom_field_values'] = custom if custom.any?
-      params[:issue] = ActionController::Parameters.new(attrs)
-    end
-  end
-
-  # The issue attributes a template sets, resolved against the project.
-  class IssueTemplateDefaults
-    def initialize(template, project)
-      @template = template
-      @project = project
-    end
-
-    def attributes
-      options = @template.options
-      values = {
-        'tracker_id' => @template.tracker(@project)&.id,
-        'subject' => @template.title,
-        'description' => @template.form? ? nil : @template.body,
-        'priority_id' => options.priority_record&.id,
-        'category_id' => options.category_record(@project)&.id,
-        'fixed_version_id' => options.fixed_version_record(@project)&.id,
-        'assigned_to_id' => @template.assignee(@project)&.id,
-        'is_private' => private_value(options.is_private)
-      }.compact.transform_values { |value| value.is_a?(Integer) ? value.to_s : value }
-      custom = options.custom_field_values(@project)
-      values['custom_field_values'] = custom if custom.any?
-      values
-    end
-
-    # The values the form can't change: the template's attributes except the
-    # subject, the description and the assignee, which the form starts with.
-    # { "tracker_id" => "2", "3" => "x" }, custom fields by id.
-    def fixed
-      values = attributes
-      custom = values.delete('custom_field_values') || {}
-      values.except('subject', 'description', 'assigned_to_id').merge(custom)
-    end
-
-    # Hidden fields are not in the form, so the template's values are set
-    # directly, on every request: those Redmine lets the user set.
-    def apply_hidden(issue)
-      defaults = attributes
-      hidden = issue.issue_template_visibility[:hidden].select { |name| issue.issue_template_settable?(name) }
-      defaults.except('custom_field_values').each do |name, value|
-        next unless hidden.include?(name) && issue.respond_to?("#{name}=")
-
-        issue.public_send("#{name}=", value)
-      end
-      custom = (defaults['custom_field_values'] || {}).slice(*hidden)
-      issue.custom_field_values = custom if custom.any?
-    end
-
-    # A new issue of the project as the template's form shows it, for the
-    # preview in the project settings.
-    def new_issue(user = User.current)
-      issue = Issue.new(project: @project, author: user)
-      # Before the template applies, which takes its values out of the form.
-      issue.safe_attributes = attributes
-      issue.issue_template = @template
-      issue.issue_template_answers = {}
-      # The project's first tracker for a manager who can't add issues.
-      issue.tracker ||= issue.allowed_target_trackers(user).first || @project.trackers.first
-      issue.status ||= issue.default_status
-      apply_hidden(issue)
-      issue
-    end
-
-    private
-
-    def private_value(value)
-      return nil if value.nil?
-
-      value ? '1' : '0'
+      set = project == @project ? issue_template_set : TemplateSet.for(project)
+      set.config.blank_issues_enabled? || (project == @project ? usable_issue_templates : set.usable_for(project)).none?
     end
   end
 end

@@ -8,8 +8,8 @@ class IssueTemplateFile < ApplicationRecord
 
   belongs_to :project
 
-  validates :path, presence: true, format: { with: PATH }, uniqueness: { scope: :project_id }
-  validates :content, length: { maximum: 65_535 }
+  validates :path, presence: true, length: { maximum: 255 }, format: { with: PATH }, uniqueness: { scope: :project_id }
+  validates :content, length: { maximum: RedmineIssueTemplate::Parser::MAX_LENGTH }
   # Files saved in the project settings get the import's input check.
   validate :check_template, on: :settings
 

@@ -16,10 +16,16 @@ module RedmineIssueTemplate
 
   module_function
 
+  # Rules name a custom field by its id ("3") and other fields by attribute.
+  def custom_field_id?(name)
+    name.to_s.match?(/\A\d+\z/)
+  end
+
   def setup
-    %w[yaml_nodes parser redmine_options linked_field markdown_template redmine_rules issue_form_options issue_form
-       chooser_config template_set body_composer importer repository_source issue_patch issue_template_params
-       issues_controller_patch projects_helper_patch repository_patch hooks].each do |file|
+    %w[yaml_nodes message parser redmine_options linked_field template markdown_template redmine_rules
+       issue_form_options issue_form chooser_config template_set body_composer importer repository_source
+       issue_template_defaults issue_patch issue_template_params issues_controller_patch projects_helper_patch
+       repository_patch hooks].each do |file|
       require_relative "redmine_issue_template/#{file}"
     end
     Project.has_many :issue_template_files, dependent: :delete_all

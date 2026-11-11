@@ -5,7 +5,7 @@
 <% link = issue.issue_template_links.find { |linked| linked.element.equal?(element) } %>
 <% kind = link ? link.kind(issue) : :select %>
 <p>
-  <%= label_tag field_id do %><%= element.label %><%= content_tag(:span, ' *', class: 'required') if required %><% end %>
+  <%= issue_template_label(element, field_id) %>
   <% case kind %>
   <% when :select %>
   <% choices = link ? link.choices(issue) : element.options.map { |option| [option.to_s, option.to_s] } %>
@@ -22,5 +22,5 @@
   <% else %>
   <%= text_field_tag name, value, id: field_id, size: 60, placeholder: element.attributes['placeholder'], form: form %>
   <% end %>
-  <% if element.attributes['description'].present? %><em class="info"><%= issue_template_markdown(element.attributes['description'], inline: true) %></em><% end %>
+  <%= issue_template_info(element) %>
 </p>

@@ -18,8 +18,12 @@ module RedmineIssueTemplate
 
       files = files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
                    .select { |path, _| storable?(project, path) }
-      record = IssueTemplateSource.for(project)
+      record = nil
       IssueTemplateFile.transaction do
+        # One import at a time per project (a fetch, the button and a push
+        # can come together).
+        project.lock!
+        record = IssueTemplateSource.for(project)
         IssueTemplateFile.where(project_id: project.id).delete_all
         # A file too long to store is kept empty, with its error.
         files.each do |path, content|
@@ -38,12 +42,16 @@ module RedmineIssueTemplate
     # The errors and warnings of the stored files again, after an edit in
     # the project settings.
     def refresh(project)
-      record = IssueTemplateSource.for(project)
-      record.kind ||= 'manual'
-      files = IssueTemplateFile.where(project_id: project.id).pluck(:path, :content).to_h
-      record.message_list = messages(project, files)
-      record.digest = digest(files)
-      record.save!
+      record = IssueTemplateFile.transaction do
+        project.lock!
+        source = IssueTemplateSource.for(project)
+        source.kind ||= 'manual'
+        files = IssueTemplateFile.where(project_id: project.id).pluck(:path, :content).to_h
+        source.message_list = messages(project, files)
+        source.digest = digest(files)
+        source.save!
+        source
+      end
       TemplateSet.reset!
       record
     end
@@ -57,7 +65,7 @@ module RedmineIssueTemplate
     # out, so that one odd name doesn't stop the import.
     def storable?(project, path)
       return false unless Parser.kind(path)
-      return true if IssueTemplateFile::PATH.match?(path)
+      return true if path.length <= 255 && IssueTemplateFile::PATH.match?(path)
 
       Rails.logger.warn("redmine_issue_template: #{project.identifier}: file name not used: #{path.inspect}")
       false

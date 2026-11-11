@@ -7,8 +7,10 @@ module RedmineIssueTemplate
     # Whether Redmine lets the user set the field on this issue: not one of
     # the workflow's read-only fields, the fields the tracker disables or the
     # custom fields the user can't see.
-    def issue_template_settable?(attribute, user = User.current)
-      if attribute.match?(/\A\d+\z/)
+    # The user defaults to nil (User.current), for which Redmine caches the
+    # workflow's rules within the issue.
+    def issue_template_settable?(attribute, user = nil)
+      if RedmineIssueTemplate.custom_field_id?(attribute)
         values = redmine_method(:editable_custom_field_values).call(user)
         values.any? { |value| value.custom_field_id.to_s == attribute }
       else
@@ -20,9 +22,8 @@ module RedmineIssueTemplate
     # fields without a default) and the template doesn't fill: shown again,
     # or nothing could fill them.
     def issue_template_unfilled(hidden)
-      values = IssueTemplateDefaults.new(issue_template, project).attributes
-      filled = values.keys | (values['custom_field_values'] || {}).keys
-      required = redmine_method(:required_attribute_names).call(User.current) |
+      filled = issue_template_defaults.filled
+      required = redmine_method(:required_attribute_names).call(nil) |
                  available_custom_fields.select { |field| field.is_required? && field.default_value.blank? }
                                         .map { |field| field.id.to_s }
       hidden & (required - filled)

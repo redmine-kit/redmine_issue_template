@@ -24,6 +24,19 @@ module IssueTemplatesHelper
     html.html_safe
   end
 
+  # A field's label, marked when validations.required is set.
+  def issue_template_label(element, field_id)
+    label_tag(field_id) do
+      safe_join([element.label, (content_tag(:span, ' *', class: 'required') if element.required?)].compact)
+    end
+  end
+
+  # A field's description, under it.
+  def issue_template_info(element)
+    text = element.attributes['description']
+    content_tag(:em, issue_template_markdown(text, inline: true), class: 'info') if text.present?
+  end
+
   private
 
   # Paragraphs only: joined by line breaks. Anything else (lists, code)

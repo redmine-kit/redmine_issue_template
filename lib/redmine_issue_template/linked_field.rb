@@ -73,7 +73,7 @@ module RedmineIssueTemplate
     end
 
     def custom_field?
-      attribute.match?(/\A\d+\z/)
+      RedmineIssueTemplate.custom_field_id?(attribute)
     end
 
     # How the form shows the field: :select, :date, :textarea or :text.

@@ -6,14 +6,14 @@
 <% labels = { 'tracker_id' => :field_tracker, 'priority_id' => :field_priority, 'category_id' => :field_category,
               'fixed_version_id' => :field_fixed_version, 'is_private' => :field_is_private } %>
 <%# A form shows its tracker in its own box (_form_fields). %>
-<% fixed = issue.issue_template_visibility[:fixed] %>
-<% fixed -= ['tracker_id'] if issue.issue_template.form? %>
+<% preset = issue.issue_template_visibility[:preset] %>
+<% preset -= ['tracker_id'] if issue.issue_template.form? %>
 <% labels.each do |name, label| %>
-<% next unless fixed.include?(name) %>
+<% next unless preset.include?(name) %>
 <p><label><%= l(label) %></label> <span class="issue-template-value"><%= format_object(issue.public_send(name.delete_suffix('_id'))) %></span></p>
 <% end %>
 <% issue.custom_field_values.each do |value| %>
-<% next unless fixed.include?(value.custom_field_id.to_s) && value.custom_field.visible_by?(issue.project) %>
+<% next unless preset.include?(value.custom_field_id.to_s) && value.custom_field.visible_by?(issue.project) %>
 <p><label><%= value.custom_field.name %></label> <span class="issue-template-value"><%= show_value(value) %></span></p>
 <% end %>
 <% end %>
