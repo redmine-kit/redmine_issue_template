@@ -211,6 +211,13 @@ module RedmineIssueTemplate
       end
     end
 
+    test 'the script that sets up dropping files is only on forms with upload fields' do
+      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+      assert_select 'head script[src^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-'
+      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+      assert_select 'head script[src^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-', count: 0
+    end
+
     test 'a required upload field needs a file' do
       form = github_fixture('bug_report.yml').sub(/(type: upload.*?required:) false/m, '\\1 true')
       import('bug_report.yml' => form)

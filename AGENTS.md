@@ -18,7 +18,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 | `lib/redmine_issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, refusing issues without a template; the request's parameters (permitted answers and uploads, preset values, what the request can't set) |
 | `app/controllers/issue_templates_controller.rb`, `app/views/issue_templates/` | The chooser, the settings tab, the file pages, a YAML form's part at the top of Redmine's form |
 | `app/helpers/issue_templates_helper.rb`, `issue_template_form_helper.rb` | The one Markdown helper and the fields' labels; the change to Redmine's `projects_for_select` |
-| `assets/stylesheets/issue_template.css` | The plugin's CSS, each rule with its reason |
+| `assets/stylesheets/issue_template.css`, `assets/javascripts/issue_template.js` | The plugin's CSS, each rule with its reason; the one script (dropping files on upload fields) |
 | `test/` | Unit (`unit/`, `helpers/`) and functional tests, `test/screenshots/` for the docs' images, `test/fixtures/github/` example templates |
 
 ## Rules
@@ -40,7 +40,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 ### Screens
 
 - **Redmine's own screens.** The chooser, the settings tab and the file pages follow Redmine's core screens (enumerations, project settings tabs, issue categories); the issue form stays Redmine's form, with a YAML form's part at its top (`view_issues_form_details_top`), which Redmine renders again on each update.
-- **No JavaScript of the plugin's own.** The tracker field uses Redmine's `updateIssueFrom`, as Redmine's own tracker field does.
+- **JavaScript only where Redmine has no way.** The tracker field uses Redmine's `updateIssueFrom`, as Redmine's own tracker field does. The one script, `assets/javascripts/issue_template.js`, sets up dropping files on upload fields again after Redmine renders the form again (Redmine sets them up only when the page loads); it is loaded only on forms with upload fields. Add no other script without the same kind of reason.
 - **Text from templates** (descriptions, labels, options, contact links) is rendered through `issue_template_markdown` only, which uses Redmine's CommonMark formatter and turns images from other sites into links.
 
 ### Data

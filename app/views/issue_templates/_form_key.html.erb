@@ -2,7 +2,11 @@
     chosen template, and what the template shows (a form's part, or the
     values a Markdown template sets). %>
 <% if issue.issue_template_active? %>
-<% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %><% end %>
+<% content_for :header_tags do %>
+<%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %>
+<%# Only where a form has upload fields (issue_template.js says why). %>
+<%= javascript_include_tag 'issue_template', plugin: 'redmine_issue_template' if issue.issue_template.uploads.any? %>
+<% end %>
 <%= hidden_field_tag 'issue_template', issue.issue_template.key, id: nil %>
 <% if issue.issue_template.form? %>
 <%= render partial: 'issue_templates/form_fields', locals: { issue: issue } %>
