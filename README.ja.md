@@ -4,7 +4,7 @@
 [![Coverage](https://img.shields.io/codecov/c/github/redmine-kit/redmine_issue_template?label=Coverage)](https://codecov.io/gh/redmine-kit/redmine_issue_template)
 [![License](https://img.shields.io/github/license/redmine-kit/redmine_issue_template?label=License)](LICENSE)
 
-Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレートの Redmine プラグインです。「新しいチケット」を押すとテンプレート選択画面が開き、選んだテンプレートがチケットの入力画面を埋めます。テンプレートファイルはプロジェクトのリポジトリの `.redmine/ISSUE_TEMPLATE/` に置き、リポジトリが変わると Redmine が取り込みます。`.github/ISSUE_TEMPLATE/` のファイルも、そのまま読めます。
+Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレートの Redmine プラグインです。「新しいチケット」を押すとテンプレート選択画面が開き、選んだテンプレートがチケットの入力画面を埋めます。テンプレートファイルはプロジェクトのリポジトリの `.redmine/ISSUE_TEMPLATE/` に置き、リポジトリが変わると Redmine が取り込みます。読むのは `.redmine/ISSUE_TEMPLATE/` だけで、`.github/ISSUE_TEMPLATE/` のファイルは読みません。
 
 [English](README.md)
 

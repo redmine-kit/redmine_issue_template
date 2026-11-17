@@ -20,7 +20,8 @@ module RedmineIssueTemplate
           begin
             RepositorySource.sync(project)
           rescue StandardError => e
-            Rails.logger.error("redmine_issue_template: sync of #{project.identifier} failed: #{e.class}: #{e.message}")
+            # the error's class only: an adapter's message may carry the repository's URL
+            Rails.logger.error("redmine_issue_template: sync of #{project.identifier} failed: #{e.class}")
           end
         end
         result

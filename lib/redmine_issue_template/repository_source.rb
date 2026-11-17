@@ -4,6 +4,10 @@ module RedmineIssueTemplate
   # Reads the template folder from the project's main repository, through
   # Redmine's own repository adapters, on the default branch.
   module RepositorySource
+    # The template files read from the folder at most: the others are left
+    # out (a folder of templates has a few).
+    MAX_FILES = 50
+
     module_function
 
     # Imports the folder when it changed since the last import (or always
@@ -34,20 +38,26 @@ module RedmineIssueTemplate
     end
 
     # Some adapters fail on a folder that doesn't exist: then it has no files.
+    # The log names the project, the folder and the error's class only (an
+    # adapter's message may carry the repository's URL with its credentials).
     def read_folder(repository, folder)
       entries = Array(repository.entries(folder, nil)).select(&:is_file?).select { |entry| Parser.kind(entry.name) }
-      entries.to_h { |entry| [entry.name, content(repository, entry)] }
+      entries.first(MAX_FILES).to_h { |entry| [entry.name, content(repository, entry)] }.compact
     rescue Redmine::Scm::Adapters::CommandFailed => e
-      Rails.logger.warn("redmine_issue_template: #{repository.project.identifier}: #{folder}: #{e.message}")
+      Rails.logger.warn("redmine_issue_template: #{repository.project.identifier}: #{folder}: #{e.class}")
       {}
     end
 
     # A file too large to be a template is not read: it is reported as too
-    # long (Parser::TOO_LONG).
+    # long (Parser::TOO_LONG). A file the adapter can't read is left out (nil),
+    # so that it doesn't stop the import of the others.
     def content(repository, entry)
       return Parser::TOO_LONG if entry.size.to_i > Parser::MAX_LENGTH * 4
 
       repository.cat(entry.path, nil).to_s
+    rescue Redmine::Scm::Adapters::CommandFailed => e
+      Rails.logger.warn("redmine_issue_template: #{repository.project.identifier}: #{entry.name}: #{e.class}")
+      nil
     end
 
     # The last revision that changed the folder, when the adapter can tell.

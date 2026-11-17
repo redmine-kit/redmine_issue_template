@@ -1,15 +1,10 @@
 # Template format
 
-The templates are Markdown templates, YAML forms and `config.yml`. The files of `.github/ISSUE_TEMPLATE/` are read as they are. Redmine's own keys, such as the tracker and the priority, are top-level keys next to the others ([Redmine keys](#redmine-keys)).
+The templates are Markdown templates, YAML forms and `config.yml`, in the format of GitHub's issue templates and forms, with Redmine's keys added. Redmine's own keys, such as the tracker and the priority, are top-level keys next to the others ([Redmine keys](#redmine-keys)).
 
 ## Folder
 
-Redmine reads the first of these folders that has template files, on the default branch of the project's repository:
-
-1. `.redmine/ISSUE_TEMPLATE/`
-2. `.github/ISSUE_TEMPLATE/`
-
-The folders are not merged. To use templates in Redmine other than those in `.github/ISSUE_TEMPLATE/`, put them in `.redmine/ISSUE_TEMPLATE/`. A YAML form that uses Redmine's keys belongs in `.redmine/ISSUE_TEMPLATE/`; the files of `.github/ISSUE_TEMPLATE/` keep to GitHub's format.
+Redmine reads `.redmine/ISSUE_TEMPLATE/` on the default branch of the project's repository. The files of `.github/ISSUE_TEMPLATE/` are not read (decided 2026-11-18): copy the templates to use in Redmine into `.redmine/ISSUE_TEMPLATE/`.
 
 The chooser lists YAML forms (`.yml`, `.yaml`) first, then Markdown templates (`.md`), each sorted by file name. Prefix the file names with numbers to set the order (`1-bug.yml`, `2-feature.md`). The file name without its extension is the template's id in URLs (`?issue_template=1-bug`).
 
@@ -211,7 +206,6 @@ body:
 - Links follow Redmine's rules for the user: a field the workflow makes read-only, a field the tracker disables or a custom field the user can't see is not linked, and a link that the project doesn't have is reported as a warning on the template's page. Such a field with `options` is a select of them, answered into the description; without `options` it is left out.
 - An answer that is not one of the select's choices is ignored. Redmine still checks the other values, as in its own form: a number that isn't one, a field the workflow requires.
 - A blank answer leaves the field's default. Two fields can't have the same `link`; when a name and an id name the same field, the first sets it.
-- Like the [Redmine keys](#redmine-keys), `link` belongs in `.redmine/ISSUE_TEMPLATE/` or in the project settings. Keep the files of `.github/ISSUE_TEMPLATE/` without it.
 
 ## Other keys
 

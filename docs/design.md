@@ -4,19 +4,14 @@ Redmine Issue Template adds issue templates to Redmine. "New issue" opens a temp
 
 ## Goals
 
-- **Template files in the repository.** Markdown templates, YAML forms and `config.yml`. The files of `.github/ISSUE_TEMPLATE/` are read unchanged.
+- **Template files in the repository.** Markdown templates, YAML forms and `config.yml`, in `.redmine/ISSUE_TEMPLATE/`. The files of `.github/ISSUE_TEMPLATE/` are not read (decided 2026-11-18).
 - **Redmine's own concepts on top.** The tracker (bug, feature…), the priority, the category, the target version, the private flag, custom fields, and which fields of the issue form are shown, hidden or required, are set in the same files.
 - **The chooser replaces the first step of "New issue".** Users pick a template before the form, instead of choosing a template inside the form.
 - **The repository is the source.** Templates follow the default branch. Projects without a repository keep their templates in the project settings.
 
 ## Files
 
-Redmine reads the first of these folders that has template files (`.md`, `.yml`, `.yaml`), on the repository's default branch:
-
-1. `.redmine/ISSUE_TEMPLATE/`
-2. `.github/ISSUE_TEMPLATE/`
-
-The folders are not merged: `.redmine/` replaces `.github/`, so that a repository can keep templates for Redmine apart from those in `.github/`.
+Redmine reads the template files (`.md`, `.yml`, `.yaml`) of `.redmine/ISSUE_TEMPLATE/`, on the repository's default branch, at most 50 of them. `.github/ISSUE_TEMPLATE/` is not read.
 
 | File | Kind |
 | --- | --- |
@@ -28,7 +23,7 @@ The chooser lists the templates alphanumerically by file name, YAML forms before
 
 ### Redmine keys
 
-Redmine's keys are top-level keys next to the others, in a Markdown template's front matter or in a YAML form. None of them is a name the other keys use. A YAML form with Redmine's keys goes in `.redmine/ISSUE_TEMPLATE/`; the files of `.github/ISSUE_TEMPLATE/` keep to GitHub's format.
+Redmine's keys are top-level keys next to the others, in a Markdown template's front matter or in a YAML form. None of them is a name the other keys use.
 
 ```yaml
 tracker: Bug
@@ -74,7 +69,7 @@ Redmine shows descriptions with its text formatting setting. Templates are Markd
 The project stores the files it uses (`issue_template_files`) and where they came from (`issue_template_sources`: repository, GitHub, or the project settings; the revision; the time; the digest of the files). The errors and warnings are worked out from the stored files when they are shown. Pages read the stored files; they never read the repository.
 
 - **Redmine's repository.** After Redmine fetches the changesets of the project's main repository, the plugin compares the template folder's files with the stored ones, imports them again when they differ, and records the last revision that changed the folder. Any SCM Redmine supports works, through Redmine's own repository adapters. The project settings tab has a button that imports at once.
-- **redmine_github.** [Redmine GitHub](https://github.com/redmine-kit/redmine_github) receives GitHub's push events. When a push to the default branch changes `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/`, it calls `RedmineIssueTemplate::Importer.import(project, files:, revision:, source: 'github')` with the folder's files.
+- **redmine_github.** [Redmine GitHub](https://github.com/redmine-kit/redmine_github) receives GitHub's push events. When a push to the default branch changes `.redmine/ISSUE_TEMPLATE/`, it calls `RedmineIssueTemplate::Importer.import(project, files:, revision:, source: 'github', folder: '.redmine/ISSUE_TEMPLATE')` with the folder's files; another folder is refused.
 - **Project settings.** A project without templates in its repository creates, edits and deletes its files in the project settings, as text in an editor. Saving runs the same input check as an import, and a file with errors is not saved; the errors are shown as Redmine shows form errors. When the repository has templates, they are used, and the settings show them read-only: the file, its content and where it came from. The controller refuses edits to them too.
 
 A file with errors is marked in the settings, with its errors on its page, and left out of the chooser; the other files still work.

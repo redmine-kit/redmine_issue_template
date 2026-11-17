@@ -61,7 +61,16 @@ export interface SectionData {
 export interface SettingsData {
   manual: boolean;
   has_repository: boolean;
-  source: { kind: 'repository' | 'github'; folder: string; revision: string | null; synced_at: string | null } | null;
+  /** where the files come from (none: edited here): the folder, the revision, when (in the user's format), Redmine's pages */
+  source: {
+    kind: 'repository' | 'github';
+    folder: string;
+    revision: string | null;
+    synced_at: string | null;
+    synced_at_text: string | null;
+    folder_path?: string;
+    revision_path?: string | null;
+  } | null;
   errors: boolean;
   /** the name of CommonMark when the text formatting is another */
   text_formatting: string | null;

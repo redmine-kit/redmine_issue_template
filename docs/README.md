@@ -2,7 +2,7 @@
 
 Redmine Issue Template adds issue templates to Redmine. When a project has templates, "New issue" opens a template chooser. The chosen template fills in Redmine's issue form: the tracker (bug, feature…), the subject, the description, and the fields it sets. A YAML form shows its own fields and writes the answers into the description.
 
-The templates are files in the project's repository. Redmine reads the first of `.redmine/ISSUE_TEMPLATE/` and `.github/ISSUE_TEMPLATE/` that has template files, and imports the files again when the repository changes. A project without a repository edits the same files in its settings.
+The templates are files in the project's repository. Redmine reads `.redmine/ISSUE_TEMPLATE/` (not `.github/ISSUE_TEMPLATE/`), and imports the files again when the repository changes. A project without a repository edits the same files in its settings.
 
 ## Pages
 

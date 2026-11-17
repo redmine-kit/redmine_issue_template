@@ -1,17 +1,12 @@
 # テンプレートの形式
 
-テンプレートは Markdown テンプレート、YAML フォーム、`config.yml` です。`.github/ISSUE_TEMPLATE/` のファイルも、そのまま読めます。トラッカーや優先度などの Redmine のキーは、ほかのキーと同じ一番上の階層に書きます([Redmine のキー](#redmine-keys))。
+テンプレートは Markdown テンプレート、YAML フォーム、`config.yml` で、GitHub のチケットテンプレートとフォームの書式に Redmine のキーを加えたものです。トラッカーや優先度などの Redmine のキーは、ほかのキーと同じ一番上の階層に書きます([Redmine のキー](#redmine-keys))。
 
 <a id="folder"></a>
 
 ## フォルダー
 
-Redmine は、プロジェクトのリポジトリのデフォルトブランチで、次のうちテンプレートファイルがある最初のフォルダーを読みます。
-
-1. `.redmine/ISSUE_TEMPLATE/`
-2. `.github/ISSUE_TEMPLATE/`
-
-2 つのフォルダーは混ぜません。`.github/ISSUE_TEMPLATE/` と別のテンプレートを Redmine で使うときは、`.redmine/ISSUE_TEMPLATE/` に置きます。Redmine のキーを使う YAML フォームは `.redmine/ISSUE_TEMPLATE/` に置きます。`.github/ISSUE_TEMPLATE/` のファイルは、GitHub の書式のままにします。
+Redmine は、プロジェクトのリポジトリのデフォルトブランチで `.redmine/ISSUE_TEMPLATE/` を読みます。`.github/ISSUE_TEMPLATE/` のファイルは読みません (2026-11-18 に決定)。Redmine で使うテンプレートは `.redmine/ISSUE_TEMPLATE/` に置きます。
 
 テンプレート選択画面には、YAML フォーム(`.yml`、`.yaml`)が先、Markdown テンプレート(`.md`)が後で、それぞれファイル名の順です。順番を決めるには、ファイル名の先頭に番号を付けます(`1-bug.yml`、`2-feature.md`)。拡張子を除いたファイル名が、URL でのテンプレートの ID になります(`?issue_template=1-bug`)。
 
@@ -231,7 +226,6 @@ body:
 - つなぎ込みは、ユーザーに対する Redmine の規則に従います。ワークフローで読み取り専用にした項目、トラッカーで無効にした項目、ユーザーが見られないカスタムフィールドにはつなぎません。プロジェクトにないつなぎ先は、テンプレートの画面に警告として出します。そうした入力欄は、`options` があればその選択欄にして回答を説明に書き、なければ出しません。
 - 選択欄の選択肢にない回答は無視します。ほかの値は、Redmine の入力画面と同じく Redmine が検証します。数値でない値、ワークフローで必須の項目などです。
 - 空の回答は、項目のデフォルトのままにします。同じ `link` は 2 つの入力欄に書けません。名前と ID で同じ項目を指したときは、最初のものが入ります。
-- `link` は、[Redmine のキー](#redmine-keys)と同じく、`.redmine/ISSUE_TEMPLATE/` かプロジェクトの設定で使います。`.github/ISSUE_TEMPLATE/` のファイルには書きません。
 
 <a id="other-keys"></a>
 

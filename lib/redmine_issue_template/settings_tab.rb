@@ -7,6 +7,8 @@ module RedmineIssueTemplate
   # come from, whether they are edited here, the files with their errors and
   # warnings, and the chooser's settings (config.yml).
   class SettingsTab
+    include Redmine::I18n
+
     attr_reader :project
 
     def initialize(project)
@@ -71,11 +73,28 @@ module RedmineIssueTemplate
       { level: message.error? ? 'error' : 'warning', text: message.text }
     end
 
+    # Where the files come from: the repository's folder and the revision
+    # they were imported from, with Redmine's pages of them (paths built by
+    # Redmine's routes), and when, in the user's format.
     def source_data
       return nil if manual?
 
-      { kind: source.kind, folder: source.folder.presence || FOLDERS.first, revision: source.revision&.first(8),
-        synced_at: source.synced_at&.iso8601 }
+      folder = source.folder.presence || FOLDERS.first
+      { kind: source.kind, folder: folder, revision: source.revision&.first(8),
+        synced_at: source.synced_at&.iso8601, synced_at_text: source.synced_at && format_time(source.synced_at),
+        **repository_paths(folder) }
+    end
+
+    # The repository's folder and revision pages, for a source that is the
+    # project's repository.
+    def repository_paths(folder)
+      repository = project.repository
+      return {} unless source.kind == 'repository' && repository
+
+      routes = Rails.application.routes.url_helpers
+      base = { controller: 'repositories', id: project, repository_id: repository.identifier_param, only_path: true }
+      { folder_path: routes.url_for(base.merge(action: 'show', path: folder)),
+        revision_path: source.revision && routes.url_for(base.merge(action: 'revision', rev: source.revision)) }
     end
 
     def file_row(file)

@@ -4,7 +4,7 @@ Guidelines for people and coding agents working in this repository. They add to 
 
 ## What this project does
 
-Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue templates. "New issue" opens a template chooser; Markdown templates and YAML forms fill in and shape the issue form. The templates come from `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/` of the project's repository, from GitHub through [redmine_github](https://github.com/redmine-kit/redmine_github), or are edited in the project settings ([design.md](docs/design.md)). It is in early development.
+Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue templates. "New issue" opens a template chooser; Markdown templates and YAML forms fill in and shape the issue form. The templates come from `.redmine/ISSUE_TEMPLATE/` of the project's repository (never `.github/ISSUE_TEMPLATE/`), from GitHub through [redmine_github](https://github.com/redmine-kit/redmine_github), or are edited in the project settings ([design.md](docs/design.md)). It is in early development.
 
 ## Where things are
 
@@ -26,7 +26,7 @@ Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue 
 ### The template format
 
 - **Documented in [format.md](docs/format.md).** Every key, every element type and attribute, every check and what it does to the issue form is described there, with valid examples.
-- **Redmine's keys** are top-level keys whose names no other key uses (`tracker`, `priority`, `category`, `fixed_version`, `is_private`, `custom_fields`, `fields`), and `link` on a YAML form's field (a field with `link` has no `type`). They belong in `.redmine/ISSUE_TEMPLATE/` or the project settings; the files of `.github/ISSUE_TEMPLATE/` keep to GitHub's format.
+- **Redmine's keys** are top-level keys whose names no other key uses (`tracker`, `priority`, `category`, `fixed_version`, `is_private`, `custom_fields`, `fields`), and `link` on a YAML form's field (a field with `link` has no `type`). They belong in `.redmine/ISSUE_TEMPLATE/` or the project settings.
 - **The plugin in its own terms.** The documentation, the screens and the messages describe what the plugin does. They never describe GitHub's behavior or compare the plugin with GitHub.
 - **Checks** report errors and warnings as `Message`s in Redmine's validation sentences (`activerecord.errors.messages.*` or `issue_template_error_*`). A file with errors is left out of the chooser; the others still work.
 

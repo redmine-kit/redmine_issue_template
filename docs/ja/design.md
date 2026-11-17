@@ -6,7 +6,7 @@ Redmine Issue Template は、Redmine にチケットテンプレートを加え�
 
 ## 目的
 
-- **リポジトリのテンプレートファイル。** Markdown テンプレート、YAML フォーム、`config.yml` を使います。`.github/ISSUE_TEMPLATE/` のファイルも、そのまま読めます。
+- **リポジトリのテンプレートファイル。** `.redmine/ISSUE_TEMPLATE/` の Markdown テンプレート、YAML フォーム、`config.yml` を使います。`.github/ISSUE_TEMPLATE/` のファイルは読みません (2026-11-18 に決定)。
 - **その上に Redmine の概念。** トラッカー(バグ、機能など)、優先度、カテゴリ、対象バージョン、プライベート、カスタムフィールド、入力欄の表示・非表示・必須を、同じファイルに書けるようにします。
 - **選択画面が「新しいチケット」の最初の段になる。** 入力画面の中でテンプレートを選ぶのではなく、入力画面の前にテンプレートを選びます。
 - **リポジトリが正。** テンプレートはデフォルトブランチに従います。リポジトリのないプロジェクトは、テンプレートをプロジェクトの設定に置きます。
@@ -15,12 +15,7 @@ Redmine Issue Template は、Redmine にチケットテンプレートを加え�
 
 ## ファイル
 
-Redmine は、リポジトリのデフォルトブランチで、次のうちテンプレートのファイル(`.md`、`.yml`、`.yaml`)がある最初のフォルダーを読みます。
-
-1. `.redmine/ISSUE_TEMPLATE/`
-2. `.github/ISSUE_TEMPLATE/`
-
-2 つのフォルダーは混ぜません。`.redmine/` があれば `.github/` の代わりに使うので、Redmine 用のテンプレートを `.github/` と分けて持てます。
+Redmine は、リポジトリのデフォルトブランチで `.redmine/ISSUE_TEMPLATE/` のテンプレートのファイル(`.md`、`.yml`、`.yaml`)を 50 個まで読みます。`.github/ISSUE_TEMPLATE/` は読みません。
 
 | ファイル | 種類 |
 | --- | --- |
@@ -34,7 +29,7 @@ Redmine は、リポジトリのデフォルトブランチで、次のうちテ
 
 ### Redmine のキー
 
-Redmine のキーは、Markdown テンプレートの front matter でも YAML フォームでも、ほかのキーと同じ一番上の階層に書きます。ほかのキーと同じ名前のものはありません。Redmine のキーを使う YAML フォームは `.redmine/ISSUE_TEMPLATE/` に置きます。`.github/ISSUE_TEMPLATE/` のファイルは、GitHub の書式のままにします。
+Redmine のキーは、Markdown テンプレートの front matter でも YAML フォームでも、ほかのキーと同じ一番上の階層に書きます。ほかのキーと同じ名前のものはありません。
 
 ```yaml
 tracker: Bug
@@ -87,7 +82,7 @@ Redmine は、説明をテキスト書式の設定で表示します。テンプ
 プロジェクトは、使うファイル(`issue_template_files`)と、その取得元(`issue_template_sources`。リポジトリ、GitHub、プロジェクトの設定のどれか、リビジョン、時刻、ファイルのダイジェスト)を保存します。エラーと警告は、表示するときに保存したファイルから求めます。画面は保存したファイルを読み、リポジトリは読みません。
 
 - **Redmine のリポジトリ。** Redmine がプロジェクトのメインのリポジトリのコミットを取得したあと、テンプレートフォルダーのファイルを保存したものと比べ、違えば取り込み直して、フォルダーを最後に変えたリビジョンを記録します。Redmine のリポジトリのアダプターを使うので、Redmine が対応するすべての SCM で動きます。プロジェクトの設定のタブには、「インポート」のボタンがあります。
-- **redmine_github。** [Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub の push のイベントを受け取ります。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` か `.github/ISSUE_TEMPLATE/` が変わると、そのフォルダーのファイルを付けて `RedmineIssueTemplate::Importer.import(project, files:, revision:, source: 'github')` を呼びます。
+- **redmine_github。** [Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub の push のイベントを受け取ります。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` が変わると、そのフォルダーのファイルを付けて `RedmineIssueTemplate::Importer.import(project, files:, revision:, source: 'github', folder: '.redmine/ISSUE_TEMPLATE')` を呼びます。ほかのフォルダーは拒否します。
 - **プロジェクトの設定。** リポジトリにテンプレートがないプロジェクトは、プロジェクトの設定でファイルを作成、編集、削除します。編集はファイルのテキストをそのまま書く形です。保存するときに取り込みと同じ入力チェックを行い、エラーのあるファイルは保存せず、Redmine のフォームと同じ形でエラーを出します。リポジトリにテンプレートがあればそちらを使い、設定ではファイル、内容、取得元を読み取り専用で表示します。コントローラーも、それらの編集を受け付けません。
 
 エラーのあるファイルは、設定で印を付け、エラーはそのファイルの画面に表示し、選択画面には出しません。ほかのファイルはそのまま使えます。

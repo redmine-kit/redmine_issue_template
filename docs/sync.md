@@ -18,7 +18,7 @@ When the repository no longer has a template folder, the templates that came fro
 
 ## Redmine GitHub
 
-[Redmine GitHub](https://github.com/redmine-kit/redmine_github) connects GitHub repositories through a GitHub App. When GitHub reports a push to the default branch that changes `.redmine/ISSUE_TEMPLATE/` or `.github/ISSUE_TEMPLATE/`, Redmine GitHub reads the folder (the first one that has files) and hands the files to this plugin:
+[Redmine GitHub](https://github.com/redmine-kit/redmine_github) connects GitHub repositories through a GitHub App. When GitHub reports a push to the default branch that changes `.redmine/ISSUE_TEMPLATE/`, Redmine GitHub reads the folder and hands the files to this plugin (files of another folder, such as `.github/ISSUE_TEMPLATE/`, are refused with an `ArgumentError`):
 
 ```ruby
 RedmineIssueTemplate::Importer.import(
@@ -26,7 +26,7 @@ RedmineIssueTemplate::Importer.import(
   files: { 'bug_report.yml' => '...', 'config.yml' => '...' },  # file names in the folder => content
   revision: 'c0ffee…',                                          # the commit
   source: 'github',
-  folder: '.github/ISSUE_TEMPLATE'
+  folder: '.redmine/ISSUE_TEMPLATE'
 )
 ```
 

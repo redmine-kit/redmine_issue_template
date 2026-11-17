@@ -618,6 +618,7 @@ function IssueTemplateSettings() {
 	const [selected, setSelected] = useState(null);
 	const [deleting, setDeleting] = useState(null);
 	const [drawer, setDrawer] = useState(null);
+	const [importing, setImporting] = useState(false);
 	if (!project) return null;
 	if (query.isPending) return /* @__PURE__ */ jsx(SettingsSkeleton, {});
 	if (query.isError) return /* @__PURE__ */ jsx(Notice, {
@@ -668,7 +669,7 @@ function IssueTemplateSettings() {
 			}),
 			data.has_repository && /* @__PURE__ */ jsx(Button, {
 				icon: "import",
-				onClick: () => void sync(),
+				onClick: () => data.manual && data.files.length > 0 ? setImporting(true) : void sync(),
 				children: t("button_import")
 			}),
 			data.manual && /* @__PURE__ */ jsx(Button, {
@@ -713,15 +714,17 @@ function IssueTemplateSettings() {
 						items: [
 							{
 								label: data.source.kind === "github" ? "GitHub" : t("label_repository"),
-								value: data.source.folder
+								value: data.source.folder,
+								href: data.source.folder_path
 							},
 							...data.source.revision ? [{
 								label: t("label_revision"),
-								value: data.source.revision
+								value: data.source.revision,
+								href: data.source.revision_path ?? void 0
 							}] : [],
-							...data.source.synced_at ? [{
+							...data.source.synced_at_text ? [{
 								label: t("field_updated_on"),
-								value: new Date(data.source.synced_at).toLocaleString()
+								value: data.source.synced_at_text
 							}] : []
 						]
 					})] }),
@@ -759,12 +762,12 @@ function IssueTemplateSettings() {
 						sub: data.config.path,
 						selected: current.kind === "config",
 						onSelect: () => setSelected({ kind: "config" }),
-						cols: [{
-							content: configFile ? /* @__PURE__ */ jsx(FileState, { file: configFile }) : null,
+						cols: configFile ? [{
+							content: /* @__PURE__ */ jsx(FileState, { file: configFile }),
 							kind: "muted",
 							width: 104,
 							align: "right"
-						}]
+						}] : void 0
 					})
 				]
 			}), /* @__PURE__ */ jsx(Pane, {
@@ -796,6 +799,17 @@ function IssueTemplateSettings() {
 			file: drawer.file,
 			onClose: () => setDrawer(null),
 			onSaved: saved
+		}),
+		/* @__PURE__ */ jsx(ConfirmDialog, {
+			open: importing,
+			onOpenChange: setImporting,
+			title: t("button_import"),
+			description: t("text_issue_template_import_replace"),
+			action: t("button_import"),
+			onConfirm: () => {
+				setImporting(false);
+				sync();
+			}
 		}),
 		/* @__PURE__ */ jsx(ConfirmDialog, {
 			open: !!deleting,
@@ -830,14 +844,19 @@ function FileState({ file }) {
 /** The pane's heading: the file's name, and 編集 and 削除 when the templates are edited here. */
 function FileHeading({ path, onEdit, onDelete, elsewhere }) {
 	const t = useT();
+	if (elsewhere) return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(SectionHeading, {
+		heading: path,
+		inset: 24,
+		className: "mt-section"
+	}), /* @__PURE__ */ jsx("p", {
+		className: "-mt-1 px-gutter pb-3 text-meta text-text-muted",
+		children: t("error_issue_template_managed_elsewhere")
+	})] });
 	return /* @__PURE__ */ jsx(SectionHeading, {
 		heading: path,
 		inset: 24,
 		className: "mt-section",
-		actions: elsewhere ? /* @__PURE__ */ jsx("span", {
-			className: "text-meta text-text-muted",
-			children: t("error_issue_template_managed_elsewhere")
-		}) : /* @__PURE__ */ jsxs(Fragment, { children: [onEdit && /* @__PURE__ */ jsx(Button, {
+		actions: /* @__PURE__ */ jsxs(Fragment, { children: [onEdit && /* @__PURE__ */ jsx(Button, {
 			size: 28,
 			icon: "edit",
 			onClick: onEdit,

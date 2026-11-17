@@ -200,14 +200,14 @@ module RedmineIssueTemplate
     end
 
     test 'files from a repository are shown read-only and not edited in Redmine' do
-      import(github_files, @project, source: 'repository', folder: '.github/ISSUE_TEMPLATE')
+      import(github_files, @project, source: 'repository', folder: '.redmine/ISSUE_TEMPLATE')
       file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
       content = file.content
 
       get :show, params: { project_id: 'ecookbook', id: file.id }
       assert_response :success
       assert_select 'h2', text: /bug.md/
-      assert_select 'table.issue-template-source td', text: '.github/ISSUE_TEMPLATE'
+      assert_select 'table.issue-template-source td', text: '.redmine/ISSUE_TEMPLATE'
       assert_select 'div.box pre', text: /name: 🐞 Bug/
       assert_select 'div.contextual', 0
       assert_select '.issue-template-preview table.issue-templates td.name', text: '🐞 Bug'

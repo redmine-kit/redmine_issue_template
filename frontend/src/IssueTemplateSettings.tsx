@@ -31,6 +31,7 @@ export function IssueTemplateSettings() {
   const [selected, setSelected] = useState<Selection | null>(null);
   const [deleting, setDeleting] = useState<FileRow | null>(null);
   const [drawer, setDrawer] = useState<{ file?: FileData } | null>(null);
+  const [importing, setImporting] = useState(false);
   if (!project) return null;
   if (query.isPending) return <SettingsSkeleton />;
   if (query.isError) return <Notice tone="warning" text={t('kit.error.load_failed')} />;
@@ -69,7 +70,8 @@ export function IssueTemplateSettings() {
           {t('label_help')}
         </Button>
         {data.has_repository && (
-          <Button icon="import" onClick={() => void sync()}>
+          // over templates edited here, the import replaces them: it asks first
+          <Button icon="import" onClick={() => (data.manual && data.files.length > 0 ? setImporting(true) : void sync())}>
             {t('button_import')}
           </Button>
         )}
@@ -92,9 +94,9 @@ export function IssueTemplateSettings() {
                 columns={1}
                 className="px-gutter"
                 items={[
-                  { label: data.source.kind === 'github' ? 'GitHub' : t('label_repository'), value: data.source.folder },
-                  ...(data.source.revision ? [{ label: t('label_revision'), value: data.source.revision }] : []),
-                  ...(data.source.synced_at ? [{ label: t('field_updated_on'), value: new Date(data.source.synced_at).toLocaleString() }] : []),
+                  { label: data.source.kind === 'github' ? 'GitHub' : t('label_repository'), value: data.source.folder, href: data.source.folder_path },
+                  ...(data.source.revision ? [{ label: t('label_revision'), value: data.source.revision, href: data.source.revision_path ?? undefined }] : []),
+                  ...(data.source.synced_at_text ? [{ label: t('field_updated_on'), value: data.source.synced_at_text }] : []),
                 ]}
               />
             </>
@@ -120,7 +122,7 @@ export function IssueTemplateSettings() {
             sub={data.config.path}
             selected={current.kind === 'config'}
             onSelect={() => setSelected({ kind: 'config' })}
-            cols={[{ content: configFile ? <FileState file={configFile} /> : null, kind: 'muted', width: 104, align: 'right' }]}
+            cols={configFile ? [{ content: <FileState file={configFile} />, kind: 'muted', width: 104, align: 'right' }] : undefined}
           />
         </Pane>
         <Pane as="section" className="flex flex-col">
@@ -133,6 +135,17 @@ export function IssueTemplateSettings() {
       </Panes>
 
       {drawer && <IssueTemplateFileDrawer project={project} file={drawer.file} onClose={() => setDrawer(null)} onSaved={saved} />}
+      <ConfirmDialog
+        open={importing}
+        onOpenChange={setImporting}
+        title={t('button_import')}
+        description={t('text_issue_template_import_replace')}
+        action={t('button_import')}
+        onConfirm={() => {
+          setImporting(false);
+          void sync();
+        }}
+      />
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
@@ -157,28 +170,32 @@ function FileState({ file }: { file: FileRow }) {
 /** The pane's heading: the file's name, and 編集 and 削除 when the templates are edited here. */
 function FileHeading({ path, onEdit, onDelete, elsewhere }: { path: string; onEdit?: () => void; onDelete?: () => void; elsewhere: boolean }) {
   const t = useT();
+  // from elsewhere: the line under the name says where they are edited (beside it, it would squeeze the name at a phone's width)
+  if (elsewhere)
+    return (
+      <>
+        <SectionHeading heading={path} inset={24} className="mt-section" />
+        <p className="-mt-1 px-gutter pb-3 text-meta text-text-muted">{t('error_issue_template_managed_elsewhere')}</p>
+      </>
+    );
   return (
     <SectionHeading
       heading={path}
       inset={24}
       className="mt-section"
       actions={
-        elsewhere ? (
-          <span className="text-meta text-text-muted">{t('error_issue_template_managed_elsewhere')}</span>
-        ) : (
-          <>
-            {onEdit && (
-              <Button size={28} icon="edit" onClick={onEdit}>
-                {t('button_edit')}
-              </Button>
-            )}
-            {onDelete && (
-              <Button size={28} variant="danger" icon="delete" onClick={onDelete}>
-                {t('button_delete')}
-              </Button>
-            )}
-          </>
-        )
+        <>
+          {onEdit && (
+            <Button size={28} icon="edit" onClick={onEdit}>
+              {t('button_edit')}
+            </Button>
+          )}
+          {onDelete && (
+            <Button size={28} variant="danger" icon="delete" onClick={onDelete}>
+              {t('button_delete')}
+            </Button>
+          )}
+        </>
       }
     />
   );

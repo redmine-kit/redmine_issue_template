@@ -22,7 +22,7 @@ Redmine がプロジェクトのメインのリポジトリのコミットを取
 
 ## Redmine GitHub
 
-[Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub App で GitHub のリポジトリとつなぎます。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` か `.github/ISSUE_TEMPLATE/` が変わったという通知が GitHub から届くと、Redmine GitHub はそのフォルダー(ファイルがある最初のもの)を読み、ファイルをこのプラグインに渡します。
+[Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub App で GitHub のリポジトリとつなぎます。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` が変わったという通知が GitHub から届くと、Redmine GitHub はそのフォルダーを読み、ファイルをこのプラグインに渡します (`.github/ISSUE_TEMPLATE/` などほかのフォルダーのファイルは `ArgumentError` で拒否します)。
 
 ```ruby
 RedmineIssueTemplate::Importer.import(
@@ -30,7 +30,7 @@ RedmineIssueTemplate::Importer.import(
   files: { 'bug_report.yml' => '...', 'config.yml' => '...' },  # フォルダーの中のファイル名 => 内容
   revision: 'c0ffee…',                                          # コミット
   source: 'github',
-  folder: '.github/ISSUE_TEMPLATE'
+  folder: '.redmine/ISSUE_TEMPLATE'
 )
 ```
 

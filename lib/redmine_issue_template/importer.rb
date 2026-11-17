@@ -11,11 +11,13 @@ module RedmineIssueTemplate
     #   files:    { "bug.yml" => "...", ... } (file names in the folder)
     #   revision: the commit they come from (shown in the settings)
     #   source:   "repository", "github" or "manual"
-    #   folder:   the folder they were read from, e.g. ".github/ISSUE_TEMPLATE"
+    #   folder:   the folder they were read from: ".redmine/ISSUE_TEMPLATE"
+    #             (FOLDERS); files of another folder are refused
     # Returns the IssueTemplateSource; IssueTemplateSource.messages_for gives
     # the errors and warnings.
     def import(project, files:, revision: nil, source: 'repository', folder: nil)
       raise ArgumentError, "unknown source: #{source}" unless SOURCES.include?(source)
+      raise ArgumentError, "unsupported folder: #{folder}" if folder && !FOLDERS.include?(folder)
 
       files = files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
                    .select { |path, _| storable?(project, path) }

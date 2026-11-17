@@ -202,6 +202,36 @@ module RedmineIssueTemplate
       assert_equal [I18n.t(:error_issue_template_managed_elsewhere)], response.parsed_body['errors']
     end
 
+    test "the import from the repository's .redmine/ISSUE_TEMPLATE: the source with Redmine's pages of it" do
+      repository, = git_repository(@project, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+      # Redmine's fetch imports the folder and gives the revision; インポート reads it again at once
+      repository.fetch_changesets
+      post :sync, params: { project_id: 'ecookbook', format: 'json' }
+      assert_response :success
+      assert_equal({ 'kind' => 'notice', 'message' => I18n.t(:notice_issue_template_synced) }, response.parsed_body)
+
+      get :files, params: { project_id: 'ecookbook', format: 'json' }
+      data = response.parsed_body['issue_templates']
+      assert_not data['manual']
+      source = data['source']
+      assert_equal %w[repository .redmine/ISSUE_TEMPLATE], source.values_at('kind', 'folder')
+      pages = "/projects/ecookbook/repository/#{repository.identifier}"
+      imported = IssueTemplateSource.find_by(project: @project)
+      assert_equal "#{pages}/show/.redmine/ISSUE_TEMPLATE", source['folder_path']
+      assert_equal "#{pages}/revisions/#{imported.revision}", source['revision_path']
+      assert_equal Object.new.extend(Redmine::I18n).format_time(imported.synced_at), source['synced_at_text'],
+                   "the user's format"
+      assert_equal %w[task.md], data['files'].pluck('path')
+    end
+
+    test 'the import of a repository with templates in .github/ISSUE_TEMPLATE only: nothing to import' do
+      git_repository(@project, '.github/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+      post :sync, params: { project_id: 'ecookbook', format: 'json' }
+      assert_equal({ 'kind' => 'warning', 'message' => I18n.t(:warning_issue_template_nothing_to_import) },
+                   response.parsed_body)
+      assert_equal %w[bug_report.yml config.yml], IssueTemplateFile.where(project_id: @project.id).pluck(:path).sort
+    end
+
     test 'the import without a repository: 422 with the message' do
       Repository.where(project_id: @project.id).delete_all
       post :sync, params: { project_id: 'ecookbook', format: 'json' }
@@ -226,6 +256,8 @@ module RedmineIssueTemplate
         assert_includes [401, 403], response.status
         get :show, params: { project_id: 'ecookbook', id: file.id, format: 'json' }
         assert_includes [401, 403], response.status
+        post :sync, params: { project_id: 'ecookbook', format: 'json' }
+        assert_includes [401, 403], response.status
       end
     end
 
@@ -234,6 +266,8 @@ module RedmineIssueTemplate
       get :files, params: { project_id: 'ecookbook', format: 'json' }
       assert_response :forbidden
       post :preview, params: { project_id: 'ecookbook', format: 'json', issue_template_file: { path: 'a.md' } }
+      assert_response :forbidden
+      post :sync, params: { project_id: 'ecookbook', format: 'json' }
       assert_response :forbidden
     end
 

@@ -134,19 +134,63 @@ module RedmineIssueTemplate
     end
 
     test 'sync imports the folder of the repository when it changes' do
-      repository, dir = git_repository(@project, '.github/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+      repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
       source = RedmineIssueTemplate::RepositorySource.sync(@project)
       assert_equal 'repository', source.kind
-      assert_equal '.github/ISSUE_TEMPLATE', source.folder
+      assert_equal '.redmine/ISSUE_TEMPLATE', source.folder
       assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
 
       assert_nil RedmineIssueTemplate::RepositorySource.sync(@project), 'nothing changed'
 
       commit_files(dir, '.redmine/ISSUE_TEMPLATE/feature.yml' => github_fixture('bug_report.yml'))
       repository.fetch_changesets
-      assert_equal '.redmine/ISSUE_TEMPLATE', IssueTemplateSource.find_by(project: @project).folder
-      assert_equal %w[feature.yml], IssueTemplateFile.where(project: @project).pluck(:path)
+      assert_equal %w[bug.md feature.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
       assert_equal 40, IssueTemplateSource.find_by(project: @project).revision.to_s.length
+    end
+
+    test 'only .redmine/ISSUE_TEMPLATE is read: the files of .github/ISSUE_TEMPLATE are not' do
+      _repository, dir = git_repository(@project, '.github/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+      assert_nil RedmineIssueTemplate::RepositorySource.sync(@project)
+      assert_empty IssueTemplateFile.where(project: @project)
+
+      commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+      RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
+      assert_equal %w[task.md], IssueTemplateFile.where(project: @project).pluck(:path)
+      assert_raises(ArgumentError) do
+        import({ 'bug.md' => github_fixture('bug.md') }, @project, folder: '.github/ISSUE_TEMPLATE')
+      end
+    end
+
+    # What the repository has => what the import stores: one bad file doesn't stop the others.
+    {
+      'YAML with an alias' => ["a: &a [1]\nb: *a\n", :error],
+      'YAML nested too deep' => ["#{'[' * 5000}#{']' * 5000}\n", :error],
+      'a file too long' => ['x' * (RedmineIssueTemplate::Parser::MAX_LENGTH + 1), :error]
+    }.each do |name, (content, level)|
+      test "an import of #{name}: the file's error, the other files usable" do
+        git_repository(@project, '.redmine/ISSUE_TEMPLATE/bad.yml' => content,
+                                 '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+        RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
+        assert_equal %w[bad.yml task.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
+        messages = IssueTemplateSource.messages_for(@project).select { |message| message.path == 'bad.yml' }
+        assert(messages.any? { |message| message.error? == (level == :error) })
+        assert_equal %w[task], RedmineIssueTemplate::TemplateSet.for(@project).usable.map(&:key)
+      end
+    end
+
+    test 'an import reads at most RepositorySource::MAX_FILES files' do
+      files = (1..(RedmineIssueTemplate::RepositorySource::MAX_FILES + 3)).to_h do |i|
+        [format('.redmine/ISSUE_TEMPLATE/t%03d.md', i), "---\nname: T#{i}\nabout: a\n---\n"]
+      end
+      git_repository(@project, files)
+      RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
+      assert_equal RedmineIssueTemplate::RepositorySource::MAX_FILES, IssueTemplateFile.where(project: @project).count
+    end
+
+    test "names a repository can't give a file are not stored (a folder, a name of another kind)" do
+      import({ '../x.md' => "---\nname: X\nabout: a\n---\n", 'a/b.md' => 'x', 'c.txt' => 'x' }, @project)
+      assert_equal %w[b.md x.md], IssueTemplateFile.where(project: @project).pluck(:path).sort,
+                   'the names in the folder'
     end
 
     test 'templates removed from the repository go away; manual ones stay' do
