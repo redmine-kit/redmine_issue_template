@@ -76,10 +76,13 @@ the source.
 bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # on Redmine's master branch
+COVERAGE=1 bin/test              # also the plugin's coverage (coverage/coverage.xml)
 bin/services --down              # stops PostgreSQL
 bin/lint                         # RuboCop and Brakeman (in the same container tool)
 bin/screenshots                  # the screenshots of the docs (docs/images/, docs/ja/images/)
 ```
+
+`COVERAGE=1 bin/test` also measures the coverage of the plugin's files by its tests ([SimpleCov](https://github.com/simplecov-ruby/simplecov), in one worker, so it takes longer) and writes it as Cobertura XML to `coverage/coverage.xml`. CI runs it on Redmine 7.0.3 and uploads the file to [Codecov](https://app.codecov.io/gh/redmine-kit/redmine_issue_template) with GitHub's OIDC token, without a Codecov token (`.github/workflows/ci.yml`, `codecov.yml`).
 
 `bin/screenshots` (Docker only for now) takes the screenshots in headless Chromium from Redmine's test data and GitHub's examples (`test/screenshots/screens.rb`). Run it after changing a screen.
 

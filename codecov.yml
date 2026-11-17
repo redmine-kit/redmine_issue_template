@@ -1,0 +1,14 @@
+# Codecov (https://docs.codecov.com/docs/codecov-yaml). CI uploads the plugin's
+# coverage by OIDC (.github/workflows/ci.yml). The checks inform and don't fail
+# a pull request yet.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+comment: false
+ignore:
+  - "test/**"
