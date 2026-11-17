@@ -48,6 +48,94 @@ module RedmineIssueTemplate
                    data['files'].first.slice('kind', 'name', 'errors'))
       assert_equal false, data['config']['blank_issues_enabled']
       assert_equal 2, data['config']['contact_links'].size
+      # the chooser the files make (config.yml's preview)
+      assert_equal ['bug_report'], data.dig('chooser', 'templates').pluck('key')
+      assert_equal false, data.dig('chooser', 'blank')
+    end
+
+    test "a file's preview: a template's row and its part of the form, as the new issue's form gets them" do
+      get :show, params: { project_id: 'ecookbook', id: file.id, format: 'json' }
+      preview = response.parsed_body.dig('issue_template_file', 'preview')
+      assert_equal 'template', preview['kind']
+      assert_equal 'bug_report', preview.dig('chooser_row', 'key')
+      assert_nil preview.dig('issue', 'description'), "a form's description is made from the answers"
+      refs = preview.dig('section', 'elements').filter_map { |element| element['ref'] }
+      assert_includes refs, 'what-happened'
+      assert_includes refs, 'screenshots'
+
+      get :show, params: { project_id: 'ecookbook', id: file('config.yml').id, format: 'json' }
+      preview = response.parsed_body.dig('issue_template_file', 'preview')
+      assert_equal 'config', preview['kind']
+      assert_equal ['bug_report'], preview.dig('chooser', 'templates').pluck('key')
+    end
+
+    test 'a file with errors has no preview, and its messages' do
+      broken = IssueTemplateFile.new(project: @project, path: 'broken.yml', content: "name: Broken\nbody: []\n")
+      broken.save!(validate: false)
+      get :show, params: { project_id: 'ecookbook', id: broken.id, format: 'json' }
+      data = response.parsed_body['issue_template_file']
+      assert_nil data['preview']
+      assert(data['messages'].any? { |message| message['level'] == 'error' })
+    end
+
+    test 'the preview of a file as typed: nothing is saved' do
+      task = "---\nname: Task\nabout: A task\ntitle: \"[Task] \"\n---\n## Steps\n"
+      assert_no_difference 'IssueTemplateFile.count' do
+        post :preview, params: { project_id: 'ecookbook', format: 'json',
+                                 issue_template_file: { path: 'task.md', content: task } }
+      end
+      assert_response :success
+      preview = response.parsed_body.dig('preview', 'preview')
+      assert_equal({ 'subject' => '[Task] ', 'description' => "## Steps\n" },
+                   preview['issue'].slice('subject', 'description').transform_values { |v| v.gsub("\r\n", "\n") })
+      assert_equal 'Task', preview.dig('chooser_row', 'name')
+
+      # an existing file with what was typed in place of its saved text
+      post :preview, params: { project_id: 'ecookbook', format: 'json',
+                               issue_template_file: { id: file.id.to_s, path: 'bug_report.yml', content: "name: x\n" } }
+      assert_nil response.parsed_body.dig('preview', 'preview')
+      assert(response.parsed_body.dig('preview', 'messages').any? { |message| message['level'] == 'error' })
+      assert_includes file.reload.content, 'Bug Report'
+    end
+
+    # name => the file's params; each gets its messages (no preview), never an error of the server
+    {
+      'a name with a folder' => { path: '../x.md', content: "---\nname: x\nabout: y\n---\n" },
+      'a name of another kind' => { path: 'x.txt', content: 'x' },
+      'YAML with an alias' => { path: 'x.yml', content: "a: &a [1]\nb: *a\n" },
+      'a text too long' => { path: 'x.md', content: 'x' * (Parser::MAX_LENGTH + 1) }
+    }.each do |name, given|
+      test "the preview of a file as typed: #{name}" do
+        post :preview, params: { project_id: 'ecookbook', format: 'json', issue_template_file: given }
+        assert_response :success
+        assert_nil response.parsed_body.dig('preview', 'preview')
+        assert(response.parsed_body.dig('preview', 'messages').any? { |message| message['level'] == 'error' })
+      end
+    end
+
+    # name => params of the preview; each is 404 or a preview of a new file, never an error of the server
+    {
+      "another project's file" => lambda {
+        other = IssueTemplateFile.create!(project_id: 2, path: 'o.md', content: '')
+        { issue_template_file: { id: other.id.to_s, path: 'o.md' } }
+      },
+      'an id that is a list' => -> { { issue_template_file: { id: ['1'], path: 'a.md' } } },
+      'a file that is a string' => -> { { issue_template_file: 'x' } }
+    }.each do |name, given|
+      test "the preview's unexpected params: #{name}" do
+        post :preview, params: { project_id: 'ecookbook', format: 'json' }.merge(instance_exec(&given))
+        assert_includes [200, 404], response.status
+        if response.status == 200
+          assert_not_equal 'o', response.parsed_body.dig('preview', 'preview', 'chooser_row', 'key'),
+                           "another project's file is never read"
+        end
+      end
+    end
+
+    test 'the preview of templates from the repository: 403, as their forms' do
+      import({ 'bug_report.yml' => github_fixture('bug_report.yml') }, @project, source: 'repository')
+      post :preview, params: { project_id: 'ecookbook', format: 'json', issue_template_file: { path: 'a.md' } }
+      assert_response :forbidden
     end
 
     test "a file: its content and messages; another project's file is 404" do
@@ -134,12 +222,18 @@ module RedmineIssueTemplate
         put :settings, params: { project_id: 'ecookbook', format: 'json', blank_issues_enabled: true }
         assert_includes [401, 403], response.status
         assert_not config.blank_issues_enabled?
+        post :preview, params: { project_id: 'ecookbook', format: 'json', issue_template_file: { path: 'a.md' } }
+        assert_includes [401, 403], response.status
+        get :show, params: { project_id: 'ecookbook', id: file.id, format: 'json' }
+        assert_includes [401, 403], response.status
       end
     end
 
     test 'the module turned off: refused' do
       @project.enabled_module_names = @project.enabled_module_names - ['issue_templates']
       get :files, params: { project_id: 'ecookbook', format: 'json' }
+      assert_response :forbidden
+      post :preview, params: { project_id: 'ecookbook', format: 'json', issue_template_file: { path: 'a.md' } }
       assert_response :forbidden
     end
 

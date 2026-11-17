@@ -13,7 +13,8 @@ Redmine::Plugin.register :redmine_issue_template do
 
   project_module :issue_templates do
     permission :manage_issue_templates,
-               { issue_templates: %i[files sync settings show new create edit update destroy], projects: :settings },
+               { issue_templates: %i[files sync settings show new create edit update destroy preview],
+                 projects: :settings },
                require: :member
   end
 end
@@ -31,15 +32,21 @@ ActiveSupport.on_load(:redmine_kit_ui) do
     api_version 1
     module_path 'kit/issue_template.js'
     # New issue: the chooser as a step before the form, then the template's
-    # part at the form's top (KitForm answers which applies)
-    new_issue :template, permission: :add_issues, params: %i[issue_template issue_template_answers],
-                         chooser: 'IssueTemplateChooser', section: 'IssueTemplateSection'
-    # Project settings › Issue templates, and the file forms it opens
+    # part: its line and the values it sets at the form's top, a YAML form's
+    # fields after the subject (KitForm answers which applies). The upload
+    # fields' files go with Redmine's own uploads; the part names them by id.
+    new_issue :template, permission: :add_issues,
+                         params: %i[issue_template issue_template_answers issue_template_uploads],
+                         chooser: 'IssueTemplateChooser', section: 'IssueTemplateSection',
+                         sections: [{ component: 'IssueTemplateFields', after: :subject }]
+    # Project settings › Issue templates, and the file forms it opens (in a
+    # drawer from the tab; these screens for their URLs, beside the tabs)
     project_settings :issue_templates, label: :label_issue_template_plural, permission: :manage_issue_templates,
                                        component: 'IssueTemplateSettings'
     screen path: '/projects/:project_id/issue_templates/new', component: 'IssueTemplateEdit', menu_item: :settings,
-           permission: :manage_issue_templates, title: :label_issue_template_file_new
+           permission: :manage_issue_templates, title: :label_issue_template_file_new, settings_tab: :issue_templates
     screen path: '/projects/:project_id/issue_templates/:id/edit', component: 'IssueTemplateEdit',
-           menu_item: :settings, permission: :manage_issue_templates, title: :label_issue_template_plural
+           menu_item: :settings, permission: :manage_issue_templates, title: :label_issue_template_plural,
+           settings_tab: :issue_templates
   end
 end

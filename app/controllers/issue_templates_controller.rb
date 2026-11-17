@@ -14,7 +14,7 @@ class IssueTemplatesController < ApplicationController
   before_action :authorize_chooser, only: :index
   before_action :authorize, except: :index
   before_action :find_file, only: %i[show edit update destroy]
-  before_action :require_manual, only: %i[settings new create edit update destroy]
+  before_action :require_manual, only: %i[settings new create edit update destroy preview]
 
   # What Redmine's issue form needs, for the preview.
   helper :issues, :journals, :projects, :custom_fields, :issue_relations, :watchers, :attachments
@@ -68,7 +68,7 @@ class IssueTemplatesController < ApplicationController
 
   def create
     @file = IssueTemplateFile.new(project: @project, **file_params)
-    return preview(:new) if params[:preview]
+    return render_with_preview(:new) if params[:preview]
 
     saved = save_files { @file.save(context: :settings) }
     return render_saved(saved, @file, created: true) if request.format.json?
@@ -81,10 +81,13 @@ class IssueTemplatesController < ApplicationController
     end
   end
 
-  # A file read-only, with where it came from.
+  # A file read-only, with where it came from. The new UI's JSON has the
+  # file's preview too (KitPreview).
   def show
     if request.format.json?
-      return render json: { issue_template_file: RedmineIssueTemplate::SettingsTab.new(@project).file_data(@file) }
+      data = RedmineIssueTemplate::SettingsTab.new(@project).file_data(@file)
+      preview = RedmineIssueTemplate::KitPreview.new(@project, @file).to_h[:preview]
+      return render json: { issue_template_file: data.merge(preview: preview) }
     end
 
     @source = IssueTemplateSource.find_by(project_id: @project.id)
@@ -95,7 +98,7 @@ class IssueTemplatesController < ApplicationController
 
   def update
     @file.attributes = file_params
-    return preview(:edit) if params[:preview]
+    return render_with_preview(:edit) if params[:preview]
 
     saved = save_files { @file.save(context: :settings) }
     return render_saved(saved, @file) if request.format.json?
@@ -108,6 +111,19 @@ class IssueTemplatesController < ApplicationController
     end
   end
 
+  # The new UI's preview of a file as typed in its form, without saving
+  # (POST /projects/:id/issue_templates/preview.json { issue_template_file:
+  # { id, path, content } }): the file's own errors (its name) and the
+  # template's messages and preview (KitPreview), as Redmine's form shows
+  # them with its preview button.
+  def preview
+    file = previewed_file
+    return render_404 unless file
+
+    file.attributes = file_params
+    render json: { preview: RedmineIssueTemplate::KitPreview.typed(@project, file) }
+  end
+
   def destroy
     save_files { @file.destroy }
     return head :no_content if request.format.json?
@@ -117,15 +133,6 @@ class IssueTemplatesController < ApplicationController
   end
 
   private
-
-  def settings_flash(saved, file)
-    if saved
-      flash[:notice] = l(:notice_successful_update)
-    else
-      # Redmine shows flash messages as HTML.
-      flash[:error] = file.errors.full_messages.map { |message| ERB::Util.html_escape(message) }.join('<br>')
-    end
-  end
 
   # The import's outcome: [the flash's kind, Redmine's message].
   def sync_result
@@ -139,7 +146,7 @@ class IssueTemplatesController < ApplicationController
   end
 
   # The page again with the preview, without saving.
-  def preview(view)
+  def render_with_preview(view)
     build_preview(@file) if @file.valid?(:settings)
     render view
   end

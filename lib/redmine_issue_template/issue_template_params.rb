@@ -35,12 +35,27 @@ module RedmineIssueTemplate
 
     # The files of the form's upload fields: { ref => [Attachment] }, from
     # the tokens of Redmine's uploads (at most 10 a field, as Redmine's Files
-    # field takes).
+    # field takes). A field given as a list (the new UI) names attachment ids
+    # instead (issue_template_upload_ids_param).
     def issue_template_uploads_param(template)
       given = hash_param(params[:issue_template_uploads])
       template.uploads.to_h do |element|
-        entries = hash_param(given[element.ref]).values.first(10)
+        entries = given[element.ref].is_a?(Array) ? [] : hash_param(given[element.ref]).values.first(10)
         [element.ref, entries.filter_map { |entry| uploaded_attachment(hash_param(entry)) }]
+      end
+    end
+
+    # The new UI's upload fields: { ref => [attachment id] }. The app sends
+    # the files themselves in Redmine's own `uploads`, and the plugin never
+    # sees their tokens: an id only names a file of the issue's uploads
+    # (IssueTemplateAnswers#issue_template_uploads), so it can't reach a file
+    # the request didn't give Redmine. Ids are digits, at most 10 a field.
+    def issue_template_upload_ids_param(template)
+      given = hash_param(params[:issue_template_uploads])
+      template.uploads.to_h do |element|
+        list = given[element.ref]
+        ids = list.is_a?(Array) ? list.grep(String).grep(/\A\d{1,12}\z/).first(10).map(&:to_i) : []
+        [element.ref, ids]
       end
     end
 

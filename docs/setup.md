@@ -50,14 +50,19 @@ Then add templates to the repository ([Template format](format.md)) and fetch th
 With [Redmine Kit UI](https://github.com/redmine-kit/redmine_kit_ui) installed, the plugin works in its new UI too,
 through its extension API (`kit_ui` in `init.rb`; nothing to set up):
 
-- **New issue** shows the template chooser as a step of the new UI's form, and the chosen template at the form's top:
-  its description, the values it sets, and a form's fields. The rules are the same as in Redmine's form (hidden, preset,
-  linked and required fields; the answers in the description; blank issues as `config.yml` says), decided by the plugin
-  on the server.
-- **Project settings › Issue templates** lists the files with their state, imports from the repository, and saves the
-  chooser's settings; new and edited files open the file's form.
-- Not yet in the new UI: a form's upload fields (the field says so; Redmine's page has them) and the previews of the file
-  pages.
+- **New issue** shows the template chooser as a step of the new UI's form. The chosen template is at the form's top
+  (its name with 変更, its description and the values it sets), and a form's fields come after the subject, where the
+  description would be. The rules are the same as in Redmine's form (hidden, preset, linked and required fields; the
+  answers in the description; blank issues as `config.yml` says), decided by the plugin on the server.
+- **Upload fields** are the new UI's own file field: the new UI uploads the files with Redmine's limits (size,
+  extensions, the field's `accept`) and sends them with Redmine's own uploads, and the form names them by attachment id;
+  the server takes only files of that request that the user uploaded.
+- **Project settings › Issue templates** has two panes: the files with their state (errors, warnings), then
+  テンプレートの選択画面 (`config.yml`); and the chosen file with 編集 and 削除, its messages, プレビュー (the chooser's row and
+  the new issue's form with it, as users see them), 内容, and for `config.yml` 設定 (blank issues and contact links).
+  The header has ヘルプ, インポート (with a repository) and 新しいテンプレート. A new file and 編集 open the file's form in a
+  drawer, with プレビュー of the text as typed; the form's URL (`/projects/<id>/issue_templates/new`,
+  `…/<file>/edit`) shows the same form as a page, beside the settings' tabs, with 形式のヘルプ.
 
 The new UI's module is `assets/javascripts/kit/issue_template.js`, built from `frontend/` (React and TypeScript):
 `cd frontend && npm ci && npm run check` type-checks it, builds it and runs `bin/check-ui`; commit the built file with

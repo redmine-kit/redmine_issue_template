@@ -46,6 +46,18 @@ module RedmineIssueTemplate
       chooser_part(set.usable_for(@project, @user))
     end
 
+    # A template's row of the chooser (the form's step, the settings' preview).
+    def chooser_row(template)
+      { key: template.key, name: template.name, about: template.about.to_s, kind: kind(template),
+        tracker: template.tracker(@project)&.name }
+    end
+
+    # The template's part of the form for an issue it applies to: the form's,
+    # and the settings' preview (KitPreview).
+    def template_data
+      template_part[:data]
+    end
+
     private
 
     # No template yet: the chooser, or a blank issue the user may create.
@@ -68,11 +80,6 @@ module RedmineIssueTemplate
     # The chooser offers a blank issue as IssueTemplatesController#index does.
     def blank?
       set.config.blank_issues_enabled? || @user.allowed_to?(:manage_issue_templates, @project)
-    end
-
-    def chooser_row(template)
-      { key: template.key, name: template.name, about: template.about.to_s, kind: kind(template),
-        tracker: template.tracker(@project)&.name }
     end
 
     def kind(template)

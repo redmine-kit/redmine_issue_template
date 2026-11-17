@@ -56,7 +56,7 @@ module RedmineIssueTemplate
     def to_h
       { manual: manual?, has_repository: project.repository.present?, source: source_data,
         errors: errors?, text_formatting: text_formatting_warning? ? common_mark_name : nil,
-        files: files.map { |file| file_row(file) }, config: config_data }
+        files: files.map { |file| file_row(file) }, config: config_data, chooser: chooser_data }
     end
 
     # A file with its messages (the file page's).
@@ -90,6 +90,12 @@ module RedmineIssueTemplate
       config = set.config
       { path: config.path || 'config.yml', blank_issues_enabled: config.blank_issues_enabled?,
         contact_links: config.contact_links.map { |link| link.to_h.transform_values(&:to_s) } }
+    end
+
+    # The chooser the project's templates make now (the preview of
+    # config.yml), as the new issue's step draws it.
+    def chooser_data
+      KitPreview.chooser(set, project)
     end
 
     def common_mark_name

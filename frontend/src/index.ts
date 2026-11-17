@@ -3,5 +3,6 @@
 // react/jsx-runtime and @redmine-kit/ui stay imports, which the app's import map resolves to its own.
 export { IssueTemplateChooser } from './IssueTemplateChooser';
 export { IssueTemplateSection } from './IssueTemplateSection';
+export { IssueTemplateFields } from './IssueTemplateFields';
 export { IssueTemplateSettings } from './IssueTemplateSettings';
 export { IssueTemplateEdit } from './IssueTemplateEdit';

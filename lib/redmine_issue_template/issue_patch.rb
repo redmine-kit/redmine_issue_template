@@ -13,7 +13,7 @@ module RedmineIssueTemplate
     def self.prepended(base)
       base.attr_reader :issue_template
       base.attr_accessor :issue_template_answers
-      base.attr_writer :issue_template_defaults, :issue_template_uploads
+      base.attr_writer :issue_template_defaults, :issue_template_uploads, :issue_template_upload_ids
       # The new UI's form draws the tracker and the subject in its own fields
       # (KitForm), not in the form's part as Redmine's form does.
       base.attr_accessor :issue_template_host_fields

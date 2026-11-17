@@ -50,8 +50,11 @@ module RedmineIssueTemplate
       @controller.instance_variable_get(:@issue)
     end
 
+    # A kit request: redmine_kit_ui's rule (RedmineKitUi.kit_request?, the
+    # session's JSON with X-Redmine-Kit) answers yes.
     def as_kit_user(user)
       IssuesController.any_instance.stubs(:find_current_user).returns(user)
+      IssuesController.any_instance.stubs(:issue_template_kit_request?).returns(true)
       @request.headers['X-Redmine-Kit'] = '1'
     end
 
@@ -157,12 +160,113 @@ module RedmineIssueTemplate
       assert_equal [I18n.t(:error_issue_template_unavailable)], response.parsed_body['errors']
     end
 
+    test 'the REST API with the header but no session is left to Redmine too (redmine_kit_ui decides)' do
+      with_settings rest_api_enabled: '1' do
+        @request.headers['X-Redmine-API-Key'] = User.find(3).api_key
+        @request.headers['X-Redmine-Kit'] = '1'
+        post :create, params: { project_id: 'ecookbook', format: 'json', issue: { subject: 'API', tracker_id: 1 } }
+      end
+      assert_response :created
+    end
+
+    test "an upload field: the part's element with the extensions it takes" do
+      accept = "\n      accept: \".png,.jpg\""
+      form = github_fixture('bug_report.yml').sub(/(type: upload.*?required: false)/m, "\\1#{accept}")
+      import('bug_report.yml' => form)
+      upload = answer(built({ issue_template: 'bug_report' }))[:data][:elements].detect { |e| e[:type] == 'upload' }
+      assert_equal({ type: 'upload', ref: 'screenshots', accept: %w[.png .jpg] }, upload.slice(:type, :ref, :accept))
+    end
+
+    # The new UI's upload fields (NewIssueFileField): the app sends the files in
+    # Redmine's own `uploads` and the part names them by attachment id. Each
+    # case: the files the request gives Redmine, the ids the field names, and
+    # whether the issue is created with the file in the field (a required one).
+    UPLOAD_CASES = {
+      "the user's own upload, sent and named" => [->(mine, _other, _attached) { [[mine], [mine.id.to_s]] }, true],
+      'an id of an upload the request did not send' => [->(mine, _other, _attached) { [[], [mine.id.to_s]] }, false],
+      "another user's upload, its token sent" => [->(_mine, other, _attached) { [[other], [other.id.to_s]] }, false],
+      'a file of another issue (attached already)' => [lambda { |_mine, _other, attached|
+        [[attached], [attached.id.to_s]]
+      }, false],
+      'an id that is not a number' => [->(mine, _other, _attached) { [[mine], ["#{mine.id} OR 1=1"]] }, false],
+      'ids of another shape (a mapping)' => [->(mine, _other, _attached) { [[mine], { 'a' => mine.id.to_s }] }, false],
+      'no ids' => [->(mine, _other, _attached) { [[mine], nil] }, false]
+    }.freeze
+
+    UPLOAD_CASES.each do |name, (given, created)|
+      test "the new UI's required upload field: #{name}" do
+        set_tmp_attachments_directory
+        form = github_fixture('bug_report.yml').sub(/(type: upload.*?required:) false/m, '\\1 true')
+        import('bug_report.yml' => form)
+        mine = upload('screen.png', 3)
+        other = upload('theirs.png', 2)
+        attached = upload('old.png', 3)
+        attached.update!(container: Issue.find(1))
+        sent, ids = given.call(mine, other, attached)
+        as_kit_user(User.find(3))
+        assert_difference 'Issue.count', created ? 1 : 0 do
+          post :create, params: {
+            project_id: 'ecookbook', format: 'json', issue_template: 'bug_report',
+            issue: { subject: 'Upload', uploads: sent.map { |file| { token: file.token, filename: file.filename } } },
+            issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] },
+            issue_template_uploads: ids ? { 'screenshots' => ids } : nil
+          }.compact
+        end
+        if created
+          issue = Issue.last
+          assert_equal ['screen.png'], issue.attachments.map(&:filename)
+          assert issue.description.gsub("\r\n", "\n").end_with?("### Upload screenshots\n\nattachment:\"screen.png\"")
+        else
+          assert_response :unprocessable_content
+          assert(response.parsed_body['errors'].any? { |message| message.start_with?('Upload screenshots') })
+          assert_nil other.reload.container, "another user's file is never attached"
+        end
+      end
+    end
+
+    test "the new UI's upload field without the permission to add issues: Redmine's 403, no file attached" do
+      set_tmp_attachments_directory
+      Role.find(2).remove_permission!(:add_issues)
+      mine = upload('screen.png', 3)
+      as_kit_user(User.find(3))
+      assert_no_difference 'Issue.count' do
+        post :create, params: { project_id: 'ecookbook', format: 'json', issue_template: 'bug_report',
+                                issue: { subject: 'No', uploads: [{ token: mine.token, filename: 'screen.png' }] },
+                                issue_template_uploads: { 'screenshots' => [mine.id.to_s] } }
+      end
+      assert_response :forbidden
+      assert_nil mine.reload.container
+    end
+
+    test "the new UI's upload field takes only the extensions of accept" do
+      set_tmp_attachments_directory
+      accept = "\n      accept: \".png\""
+      form = github_fixture('bug_report.yml').sub(/(type: upload.*?required: false)/m, "\\1#{accept}")
+      import('bug_report.yml' => form)
+      notes = upload('notes.txt', 3)
+      as_kit_user(User.find(3))
+      assert_no_difference 'Issue.count' do
+        post :create, params: { project_id: 'ecookbook', format: 'json', issue_template: 'bug_report',
+                                issue: { subject: 'Accept', uploads: [{ token: notes.token, filename: 'notes.txt' }] },
+                                issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] },
+                                issue_template_uploads: { 'screenshots' => [notes.id.to_s] } }
+      end
+      assert_includes response.parsed_body['errors'], 'Upload screenshots takes only these extensions: .png'
+      assert_nil notes.reload.container
+    end
+
     test 'the REST API without the header is left to Redmine: a blank issue is created' do
       with_settings rest_api_enabled: '1' do
         @request.headers['X-Redmine-API-Key'] = User.find(3).api_key
         post :create, params: { project_id: 'ecookbook', format: 'json', issue: { subject: 'API', tracker_id: 1 } }
       end
       assert_response :created
+    end
+
+    private
+
+    def upload(name, user_id)
+      Attachment.create!(file: uploaded_test_file('testfile.txt', 'text/plain'), filename: name, author_id: user_id)
     end
   end
 end

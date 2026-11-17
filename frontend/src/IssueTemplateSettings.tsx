@@ -1,126 +1,152 @@
 import { useState } from 'react';
 import {
-  ApiError, AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice,
-  SectionHeading, Skeleton, SkeletonRegion, Textarea, kitApi, useExtensionContext, useKitQuery, useT,
+  ApiError, AttrGrid, Badge, Button, CardHeaderActions, Checkbox, ConfirmDialog, EmptyState, FormActions, FormRow, Icon, IconButton, Input, ListRow,
+  Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, kitApi, useExtensionContext, useKitInvalidate, useKitQuery,
+  useT,
 } from '@redmine-kit/ui';
-import { chooserSettingsPath, editPage, filePath, newPage, settingsPath, syncPath, type ContactLink, type FileRow, type SettingsData } from './api';
+import { ChooserList } from './ChooserList';
+import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
+import { TemplatePreview } from './TemplatePreview';
+import { PreviewSkeleton } from './useTemplateFileForm';
+import { DOCS, chooserSettingsPath, filePath, settingsPath, syncPath, type ContactLink, type FileData, type FileRow, type SettingsData } from './api';
 
-// Project settings › Issue templates (the manifest's project_settings tab), as Redmine's tab has it (SettingsTab): where
-// the templates come from, the files with their state (errors, warnings), and the chooser's settings (config.yml's
-// blank_issues_enabled and contact_links). インポート reads the repository again; when the templates are edited here,
-// 新しいテンプレート and each file's 編集 open the file's form (the plugin's screens), 削除 asks first, and the chooser's
-// settings are saved into config.yml. Templates from elsewhere open read-only (Redmine's file page) and their settings
-// can't be changed here.
+// Project settings › Issue templates (the manifest's project_settings tab), as Redmine's tab has it (SettingsTab), in two
+// panes: the files at the start (where they come from, each template with its state: errors, warnings, or usable; then
+// テンプレートの選択画面, config.yml), the chosen one at the end: its name with 編集 and 削除, its errors and warnings, and
+// its tabs: プレビュー (what users see with it, KitPreview, with the new issue form's components), 内容 (the text), and for
+// config.yml 設定 (blank_issues_enabled and contact_links, saved into config.yml). Below 1024px the panes stack.
+// The card's header has ヘルプ, インポート (the project's repository) and 新しいテンプレート (CardHeaderActions). A new file and
+// 編集 open the file's form in a drawer (IssueTemplateFileDrawer; its URL is the file's page); 削除 asks first. Templates
+// from elsewhere are read-only here: no 新しいテンプレート, 編集 or 削除, and the chooser's settings can't be changed.
 
-const DOCS = 'https://redmine-kit.github.io/redmine_issue_template/';
+type Selection = { kind: 'file'; id: number } | { kind: 'config' };
+type Band = { tone: 'neutral' | 'warning' | 'danger'; text: string };
 
 export function IssueTemplateSettings() {
   const t = useT();
   const { project } = useExtensionContext();
   const query = useKitQuery<{ issue_templates: SettingsData }>(project && settingsPath(project));
-  const [notice, setNotice] = useState<{ tone: 'neutral' | 'warning' | 'danger'; text: string } | null>(null);
+  const invalidate = useKitInvalidate();
+  const [band, setBand] = useState<Band | null>(null);
+  const [selected, setSelected] = useState<Selection | null>(null);
   const [deleting, setDeleting] = useState<FileRow | null>(null);
+  const [drawer, setDrawer] = useState<{ file?: FileData } | null>(null);
   if (!project) return null;
   if (query.isPending) return <SettingsSkeleton />;
   if (query.isError) return <Notice tone="warning" text={t('kit.error.load_failed')} />;
   const data = query.data.issue_templates;
-  const fail = (error: unknown) => setNotice({ tone: 'danger', text: error instanceof ApiError && error.errors.length ? error.errors.join('\n') : t('kit.error.load_failed') });
+  const templates = data.files.filter((file) => file.kind !== 'config');
+  const configFile = data.files.find((file) => file.kind === 'config');
+  const current: Selection = selected?.kind === 'config' || (selected && templates.some((file) => file.id === selected.id)) ? selected : templates[0] ? { kind: 'file', id: templates[0].id } : { kind: 'config' };
+  const fail = (error: unknown) => setBand({ tone: 'danger', text: error instanceof ApiError && error.errors.length ? error.errors.join('\n') : t('kit.error.load_failed') });
   const sync = () =>
     kitApi
       .post<{ kind: 'notice' | 'warning'; message: string }>(syncPath(project), {})
       .then((answer) => {
-        setNotice({ tone: answer.kind === 'warning' ? 'warning' : 'neutral', text: answer.message });
-        return query.refetch();
+        setBand({ tone: answer.kind === 'warning' ? 'warning' : 'neutral', text: answer.message });
+        invalidate();
       })
       .catch(fail);
   const remove = (file: FileRow) =>
     kitApi
       .delete(filePath(project, file.id))
       .then(() => {
-        setNotice({ tone: 'neutral', text: t('notice_successful_delete') });
-        return query.refetch();
+        setBand({ tone: 'neutral', text: t('notice_successful_delete') });
+        setSelected(null);
+        invalidate();
       })
       .catch(fail);
+  const saved = (created: boolean) => {
+    setDrawer(null);
+    setBand({ tone: 'neutral', text: t(created ? 'notice_successful_create' : 'notice_successful_update') });
+    invalidate();
+  };
 
   return (
-    <div className="flex min-w-0 flex-col pb-6">
-      {notice && <Notice tone={notice.tone} role="status" wrap text={notice.text} />}
+    <>
+      <CardHeaderActions>
+        <Button variant="ghost" icon="help" onClick={() => window.open(DOCS, '_blank', 'noopener,noreferrer')}>
+          {t('label_help')}
+        </Button>
+        {data.has_repository && (
+          <Button icon="import" onClick={() => void sync()}>
+            {t('button_import')}
+          </Button>
+        )}
+        {data.manual && (
+          <Button variant="primary" icon="plus" onClick={() => setDrawer({})}>
+            {t('label_issue_template_file_new')}
+          </Button>
+        )}
+      </CardHeaderActions>
+      {band && <Notice tone={band.tone} role="status" wrap text={band.text} />}
       {data.errors && <Notice tone="danger" wrap text={t('text_issue_template_files_with_errors')} />}
       {data.text_formatting && <Notice tone="warning" wrap text={t('warning_issue_template_text_formatting', { name: data.text_formatting })} />}
 
-      {data.source && (
-        <>
-          <SectionHeading heading={t('label_repository')} inset={24} className="mt-section" />
-          <AttrGrid
-            columns={1}
-            className="px-gutter"
-            items={[
-              { label: data.source.kind === 'github' ? 'GitHub' : t('label_repository'), value: data.source.folder },
-              ...(data.source.revision ? [{ label: t('label_revision'), value: data.source.revision }] : []),
-              ...(data.source.synced_at ? [{ label: t('field_updated_on'), value: new Date(data.source.synced_at).toLocaleString() }] : []),
-            ]}
-          />
-        </>
-      )}
-
-      <SectionHeading
-        heading={t('label_issue_template_plural')}
-        count={data.files.length}
-        inset={24}
-        className="mt-section"
-        actions={
-          <>
-            <IconButton icon="help" size={28} aria-label={t('label_help')} onClick={() => window.open(DOCS, '_blank', 'noopener,noreferrer')} />
-            {data.has_repository && (
-              <Button size={28} icon="import" onClick={() => void sync()}>
-                {t('button_import')}
-              </Button>
-            )}
-          </>
-        }
-        action={data.manual ? t('label_issue_template_file_new') : undefined}
-        icon="plus"
-        href={data.manual ? newPage(project) : undefined}
-      />
-      {data.files.length === 0 ? (
-        <EmptyState variant="block" text={t('label_no_data')} />
-      ) : (
-        <div className="flex flex-col">
-          {data.files.map((file) => (
+      <Panes dividers stacked>
+        <Pane as="nav" width={320} aria-label={t('label_issue_template_plural')} className="pb-6">
+          {data.source && (
+            <>
+              <SectionHeading heading={t('label_repository')} inset={24} className="mt-section" />
+              <AttrGrid
+                columns={1}
+                className="px-gutter"
+                items={[
+                  { label: data.source.kind === 'github' ? 'GitHub' : t('label_repository'), value: data.source.folder },
+                  ...(data.source.revision ? [{ label: t('label_revision'), value: data.source.revision }] : []),
+                  ...(data.source.synced_at ? [{ label: t('field_updated_on'), value: new Date(data.source.synced_at).toLocaleString() }] : []),
+                ]}
+              />
+            </>
+          )}
+          <SectionHeading heading={t('label_issue_template_plural')} count={templates.length} inset={24} className="mt-section" />
+          {templates.length === 0 && <EmptyState variant="block" text={t('label_no_data')} />}
+          {templates.map((file) => (
             <ListRow
               key={file.id}
               id={String(file.id)}
-              icon={file.kind === 'config' ? 'settings' : file.kind === 'form' ? 'grid' : 'document'}
-              title={file.path}
-              mono
-              sub={[file.name, file.tracker].filter(Boolean).join(' · ') || undefined}
-              href={data.manual ? editPage(project, file.id) : filePath(project, file.id).replace(/\.json$/, '')}
-              inset={24}
-              divider
-              cols={[{ content: <FileState file={file} />, kind: 'muted', width: 96, align: 'right' }]}
-              actions={data.manual ? [{ icon: 'delete', label: t('button_delete'), action: 'delete', danger: true }] : []}
-              onAction={() => setDeleting(file)}
+              icon={file.kind === 'form' ? 'grid' : 'document'}
+              title={file.name ?? file.path}
+              sub={[file.path, file.tracker].filter(Boolean).join(' · ')}
+              selected={current.kind === 'file' && current.id === file.id}
+              onSelect={() => setSelected({ kind: 'file', id: file.id })}
+              cols={[{ content: <FileState file={file} />, kind: 'muted', width: 104, align: 'right' }]}
             />
           ))}
-        </div>
-      )}
+          <ListRow
+            id="config"
+            icon="settings"
+            title={t('label_issue_template_chooser')}
+            sub={data.config.path}
+            selected={current.kind === 'config'}
+            onSelect={() => setSelected({ kind: 'config' })}
+            cols={[{ content: configFile ? <FileState file={configFile} /> : null, kind: 'muted', width: 104, align: 'right' }]}
+          />
+        </Pane>
+        <Pane as="section" className="flex flex-col">
+          {current.kind === 'config' ? (
+            <ConfigPane key="config" data={data} file={configFile} onEdit={(file) => setDrawer({ file })} onSaved={() => { setBand({ tone: 'neutral', text: t('notice_successful_update') }); invalidate(); }} onError={fail} />
+          ) : (
+            <FilePane key={current.id} id={current.id} manual={data.manual} onEdit={(file) => setDrawer({ file })} onDelete={setDeleting} files={data.files} />
+          )}
+        </Pane>
+      </Panes>
 
-      <ChooserSettings key={JSON.stringify(data.config)} data={data} onSaved={() => setNotice({ tone: 'neutral', text: t('notice_successful_update') })} onError={fail} refetch={() => void query.refetch()} />
-
+      {drawer && <IssueTemplateFileDrawer project={project} file={drawer.file} onClose={() => setDrawer(null)} onSaved={saved} />}
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={t('kit.confirm.delete_title', { name: deleting?.path ?? '' })}
+        title={t('kit.common.delete_named', { name: deleting?.path ?? '' })}
         onConfirm={() => {
           if (deleting) void remove(deleting);
           setDeleting(null);
         }}
       />
-    </div>
+    </>
   );
 }
 
-/** A file's state, as Redmine's tab marks it: its errors (not usable), its warnings, or fine. */
+/** A file's state, as Redmine's tab marks it: its errors (not usable), its warnings, or usable. */
 function FileState({ file }: { file: FileRow }) {
   const t = useT();
   if (file.errors) return <Badge tone="danger" icon="warning">{t('label_issue_template_errors', { count: file.errors })}</Badge>;
@@ -128,8 +154,109 @@ function FileState({ file }: { file: FileRow }) {
   return <Icon name="check" size={14} aria-label={t('label_issue_template_usable')} />;
 }
 
+/** The pane's heading: the file's name, and 編集 and 削除 when the templates are edited here. */
+function FileHeading({ path, onEdit, onDelete, elsewhere }: { path: string; onEdit?: () => void; onDelete?: () => void; elsewhere: boolean }) {
+  const t = useT();
+  return (
+    <SectionHeading
+      heading={path}
+      inset={24}
+      className="mt-section"
+      actions={
+        elsewhere ? (
+          <span className="text-meta text-text-muted">{t('error_issue_template_managed_elsewhere')}</span>
+        ) : (
+          <>
+            {onEdit && (
+              <Button size={28} icon="edit" onClick={onEdit}>
+                {t('button_edit')}
+              </Button>
+            )}
+            {onDelete && (
+              <Button size={28} variant="danger" icon="delete" onClick={onDelete}>
+                {t('button_delete')}
+              </Button>
+            )}
+          </>
+        )
+      }
+    />
+  );
+}
+
+/** A template file: its messages, プレビュー and 内容 (GET the file: its text, messages and preview). */
+function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual: boolean; files: FileRow[]; onEdit: (file: FileData) => void; onDelete: (file: FileRow) => void }) {
+  const t = useT();
+  const { project } = useExtensionContext();
+  const query = useKitQuery<{ issue_template_file: FileData }>(project && filePath(project, id));
+  const [tab, setTab] = useState('preview');
+  const row = files.find((file) => file.id === id);
+  if (query.isPending) return <FilePaneSkeleton path={row?.path} />;
+  if (query.isError) return <Notice tone="warning" text={t('kit.error.load_failed')} />;
+  const file = query.data.issue_template_file;
+  return (
+    <>
+      <FileHeading path={file.path} elsewhere={!manual} onEdit={() => onEdit(file)} onDelete={row ? () => onDelete(row) : undefined} />
+      {file.messages.map((message) => (
+        <Notice key={message.text} tone={message.level === 'error' ? 'danger' : 'warning'} wrap text={message.text} />
+      ))}
+      <Tabs aria-label={file.path} items={[{ value: 'preview', label: t('label_preview') }, { value: 'content', label: t('field_content') }]} value={tab} onValueChange={setTab} className="flex min-w-0 flex-col">
+        <TabsContent value="preview">
+          <TemplatePreview preview={file.preview} />
+        </TabsContent>
+        <TabsContent value="content">
+          <FileContent content={file.content} />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
+function FileContent({ content }: { content: string }) {
+  const t = useT();
+  return (
+    <div className="px-gutter py-section">
+      <Textarea readOnly mono aria-label={t('field_content')} rows={Math.min(content.split('\n').length, 80)} maxRows={80} value={content} />
+    </div>
+  );
+}
+
+/** config.yml: 設定 (the chooser's settings), プレビュー (the chooser the templates make) and 内容 (when the file exists). */
+function ConfigPane({ data, file, onEdit, onSaved, onError }: { data: SettingsData; file?: FileRow; onEdit: (file: FileData) => void; onSaved: () => void; onError: (error: unknown) => void }) {
+  const t = useT();
+  const { project } = useExtensionContext();
+  const query = useKitQuery<{ issue_template_file: FileData }>(project && file ? filePath(project, file.id) : null);
+  const [tab, setTab] = useState('settings');
+  const loaded = file ? query.data?.issue_template_file : undefined;
+  return (
+    <>
+      <FileHeading path={data.config.path} elsewhere={!data.manual} onEdit={loaded ? () => onEdit(loaded) : undefined} />
+      {loaded?.messages.map((message) => (
+        <Notice key={message.text} tone={message.level === 'error' ? 'danger' : 'warning'} wrap text={message.text} />
+      ))}
+      <Tabs
+        aria-label={data.config.path}
+        items={[{ value: 'settings', label: t('label_settings') }, { value: 'preview', label: t('label_preview') }, ...(file ? [{ value: 'content', label: t('field_content') }] : [])]}
+        value={tab}
+        onValueChange={setTab}
+        className="flex min-w-0 flex-col"
+      >
+        <TabsContent value="settings">
+          <ChooserSettings key={JSON.stringify(data.config)} data={data} onSaved={onSaved} onError={onError} />
+        </TabsContent>
+        <TabsContent value="preview">
+          <div inert className="flex min-w-0 flex-col pt-section pb-6">
+            <ChooserList data={data.chooser} />
+          </div>
+        </TabsContent>
+        {file && <TabsContent value="content">{loaded ? <FileContent content={loaded.content} /> : <PreviewSkeleton />}</TabsContent>}
+      </Tabs>
+    </>
+  );
+}
+
 /** The chooser's settings (config.yml): saved here when the templates are edited here, read-only otherwise. */
-function ChooserSettings({ data, onSaved, onError, refetch }: { data: SettingsData; onSaved: () => void; onError: (error: unknown) => void; refetch: () => void }) {
+function ChooserSettings({ data, onSaved, onError }: { data: SettingsData; onSaved: () => void; onError: (error: unknown) => void }) {
   const t = useT();
   const { project } = useExtensionContext();
   const [blank, setBlank] = useState(data.config.blank_issues_enabled);
@@ -138,24 +265,20 @@ function ChooserSettings({ data, onSaved, onError, refetch }: { data: SettingsDa
   const filled = links.filter((link) => link.name || link.url || link.about);
   const dirty = blank !== data.config.blank_issues_enabled || JSON.stringify(filled) !== JSON.stringify(data.config.contact_links);
   const readOnly = !data.manual;
-  const setLink = (index: number, patch: Partial<ContactLink>) => setLinks((current) => current.map((link, i) => (i === index ? { ...link, ...patch } : link)));
+  const setLink = (index: number, patch: Partial<ContactLink>) => setLinks((list) => list.map((link, i) => (i === index ? { ...link, ...patch } : link)));
   const save = () => {
     if (!project) return;
     setSaving(true);
     kitApi
       .put(chooserSettingsPath(project), { blank_issues_enabled: blank, contact_links: filled })
-      .then(() => {
-        onSaved();
-        refetch();
-      })
+      .then(onSaved)
       .catch(onError)
       .finally(() => setSaving(false));
   };
   return (
-    <>
-      <SectionHeading heading={t('label_issue_template_chooser')} inset={24} className="mt-section" />
-      <div className="flex flex-col gap-3 px-gutter">
-        <Checkbox label={t('label_issue_template_blank_issues_enabled')} checked={blank} readOnly={readOnly} onCheckedChange={(checked) => setBlank(checked === true)} />
+    <div className="flex min-w-0 flex-col">
+      <div className="flex flex-col gap-3 px-gutter pt-section">
+        <Checkbox label={t('label_issue_template_blank_issues_enabled')} checked={blank} disabled={readOnly} onCheckedChange={(checked) => setBlank(checked === true)} />
       </div>
       <SectionHeading
         heading={t('label_issue_template_contact_links')}
@@ -164,7 +287,7 @@ function ChooserSettings({ data, onSaved, onError, refetch }: { data: SettingsDa
         className="mt-section"
         action={readOnly ? undefined : t('button_add')}
         icon="plus"
-        onAction={() => setLinks((current) => [...current, { name: '', url: '', about: '' }])}
+        onAction={() => setLinks((list) => [...list, { name: '', url: '', about: '' }])}
       />
       {links.length === 0 && <EmptyState variant="block" text={t('label_no_data')} />}
       {links.map((link, index) => (
@@ -176,7 +299,7 @@ function ChooserSettings({ data, onSaved, onError, refetch }: { data: SettingsDa
             <FormRow layout="stack" label={t('field_url')} className="min-w-0 flex-1">
               <Input value={link.url} mono readOnly={readOnly} onChange={(event) => setLink(index, { url: event.target.value })} />
             </FormRow>
-            {!readOnly && <IconButton icon="delete" size={32} tone="danger" aria-label={t('button_delete')} onClick={() => setLinks((current) => current.filter((_, i) => i !== index))} />}
+            {!readOnly && <IconButton icon="delete" size={32} tone="danger" aria-label={t('button_delete')} onClick={() => setLinks((list) => list.filter((_, i) => i !== index))} />}
           </div>
           <FormRow layout="stack" label={t('field_description')}>
             <Textarea rows={2} value={link.about} readOnly={readOnly} onChange={(event) => setLink(index, { about: event.target.value })} />
@@ -184,10 +307,17 @@ function ChooserSettings({ data, onSaved, onError, refetch }: { data: SettingsDa
         </div>
       ))}
       {readOnly ? (
-        <p className="px-gutter pt-3 text-meta text-text-muted">{t('text_issue_template_chooser_elsewhere')}</p>
+        <p className="px-gutter pt-3 pb-6 text-meta text-text-muted">{t('text_issue_template_chooser_elsewhere')}</p>
       ) : (
-        <FormActions placement="sticky" dirty={dirty}>
-          <Button variant="ghost" disabled={!dirty || saving} onClick={() => { setBlank(data.config.blank_issues_enabled); setLinks(data.config.contact_links); }}>
+        <FormActions placement="sticky" edge dirty={dirty}>
+          <Button
+            variant="ghost"
+            disabled={!dirty || saving}
+            onClick={() => {
+              setBlank(data.config.blank_issues_enabled);
+              setLinks(data.config.contact_links);
+            }}
+          >
             {t('button_cancel')}
           </Button>
           <Button submit="primary" variant="primary" disabled={!dirty || saving} tip={dirty ? undefined : t('kit.common.no_changes')} onClick={save}>
@@ -195,20 +325,58 @@ function ChooserSettings({ data, onSaved, onError, refetch }: { data: SettingsDa
           </Button>
         </FormActions>
       )}
+    </div>
+  );
+}
+
+/** A file's pane while its text and preview come: its heading (the name, known from the list), its tabs, the preview. */
+function FilePaneSkeleton({ path }: { path?: string }) {
+  const t = useT();
+  return (
+    <>
+      <SectionHeading heading={path ?? <Skeleton width={160} height={14} className="inline-block align-middle" />} inset={24} className="mt-section" />
+      <Tabs aria-label={path ?? t('label_loading')} items={[{ value: 'preview', label: t('label_preview') }, { value: 'content', label: t('field_content') }]} value="preview" className="flex min-w-0 flex-col">
+        <PreviewSkeleton />
+      </Tabs>
     </>
   );
 }
 
+/** A row of the files' list while it comes: the ListRow itself, with bars for its icon, name and file name. */
+function RowSkeleton({ id, width }: { id: string; width: number }) {
+  // the bars inline, in the row's text lines, so that the row is as tall as a loaded one
+  return (
+    <ListRow
+      id={id}
+      icon={<Skeleton width={16} height={16} />}
+      title={<Skeleton width={width} height={12} className="inline-block align-middle" />}
+      sub={<Skeleton width={width * 0.7} height={10} className="inline-block align-middle" />}
+    />
+  );
+}
+
+/** The tab while its files come: the two panes as the loaded tab lays them out (the list's heading and rows, the chosen
+ *  file's heading, tabs and preview), so that nothing moves when the files arrive. */
 function SettingsSkeleton() {
   const t = useT();
   return (
-    <SkeletonRegion label={t('label_loading')} className="flex flex-col gap-3 px-gutter py-section">
-      <Skeleton width="30%" height={14} />
-      <Skeleton width="70%" height={32} />
-      <Skeleton width="65%" height={32} />
-      <Skeleton width="60%" height={32} />
-      <Skeleton width="30%" height={14} />
-      <Skeleton width="40%" height={20} />
+    <SkeletonRegion label={t('label_loading')} className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* the header's actions as bars: at a phone's width they take the header's second line */}
+      <CardHeaderActions>
+        <Skeleton width={88} height={32} />
+        <Skeleton width={160} height={32} />
+      </CardHeaderActions>
+      <Panes dividers stacked>
+        <Pane as="nav" width={320} aria-label={t('label_issue_template_plural')} className="pb-6">
+          <SectionHeading heading={t('label_issue_template_plural')} inset={24} className="mt-section" />
+          <RowSkeleton id="1" width={120} />
+          <RowSkeleton id="2" width={96} />
+          <RowSkeleton id="3" width={140} />
+        </Pane>
+        <Pane as="section" className="flex flex-col">
+          <FilePaneSkeleton />
+        </Pane>
+      </Panes>
     </SkeletonRegion>
   );
 }

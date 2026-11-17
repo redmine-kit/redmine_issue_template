@@ -20,6 +20,17 @@ module RedmineIssueTemplate
       { path: file[:path], content: file[:content].to_s }
     end
 
+    # The file a preview is of: the project's file it names (its saved
+    # version is replaced by what was typed, not saved), or a new one; nil
+    # for an id of another shape or of another project's file.
+    def previewed_file
+      id = params.dig(:issue_template_file, :id) if params[:issue_template_file].respond_to?(:dig)
+      return IssueTemplateFile.new(project: @project) if id.blank?
+      return nil unless id.is_a?(String) || id.is_a?(Integer)
+
+      IssueTemplateFile.where(project_id: @project.id).find_by(id: id.to_s)
+    end
+
     # The form's contact links, without the empty rows.
     def contact_links_param
       rows = params[:contact_links]
@@ -31,6 +42,17 @@ module RedmineIssueTemplate
         permitted = row.permit(:name, :url, :about)
         link = %w[name url about].to_h { |key| [key, permitted[key].to_s.gsub("\r\n", "\n").strip] }
         link if link.values.any?(&:present?)
+      end
+    end
+
+    # Redmine's page after the chooser's settings: its notice, or the
+    # file's messages as one sentence of text (Redmine shows a flash as HTML:
+    # escaped, and no markup of the plugin's own).
+    def settings_flash(saved, file)
+      if saved
+        flash[:notice] = l(:notice_successful_update)
+      else
+        flash[:error] = ERB::Util.html_escape(file.errors.full_messages.to_sentence)
       end
     end
 

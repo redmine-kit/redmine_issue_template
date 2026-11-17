@@ -67,6 +67,8 @@ export interface SettingsData {
   text_formatting: string | null;
   files: FileRow[];
   config: { path: string; blank_issues_enabled: boolean; contact_links: ContactLink[] };
+  /** the chooser the project's templates make now (config.yml's preview) */
+  chooser: ChooserData;
 }
 
 export interface FileRow {
@@ -79,12 +81,29 @@ export interface FileRow {
   warnings: number;
 }
 
-/** A file (GET /projects/:id/issue_templates/:id.json). */
+export interface Message {
+  level: 'error' | 'warning';
+  text: string;
+}
+
+/** What users see with a file (KitPreview): the chooser a config.yml makes, or a template's row and its new issue's form. */
+export type Preview =
+  | { kind: 'config'; chooser: ChooserData }
+  | { kind: 'template'; chooser_row: TemplateRow; issue: { tracker: string | null; subject: string; description: string | null }; section: SectionData };
+
+/** A file (GET /projects/:id/issue_templates/:id.json), with its preview (none when it has errors). */
 export interface FileData {
   id: number;
   path: string;
   content: string;
-  messages: { level: 'error' | 'warning'; text: string }[];
+  messages: Message[];
+  preview: Preview | null;
+}
+
+/** The preview of a file as typed (POST /projects/:id/issue_templates/preview.json). */
+export interface PreviewData {
+  messages: Message[];
+  preview: Preview | null;
 }
 
 const base = (project: { identifier: string }) => `/projects/${encodeURIComponent(project.identifier)}/issue_templates`;
@@ -93,10 +112,14 @@ export const filesPath = settingsPath;
 export const filePath = (project: { identifier: string }, id: number | string) => `${base(project)}/${encodeURIComponent(String(id))}.json`;
 export const chooserSettingsPath = (project: { identifier: string }) => `${base(project)}/settings.json`;
 export const syncPath = (project: { identifier: string }) => `${base(project)}/sync.json`;
+export const previewPath = (project: { identifier: string }) => `${base(project)}/preview.json`;
 /** the pages the app draws (init.rb's screens) and Redmine's settings tab */
 export const newPage = (project: { identifier: string }) => `${base(project)}/new`;
 export const editPage = (project: { identifier: string }, id: number) => `${base(project)}/${id}/edit`;
 export const tabPage = (project: { identifier: string }) => `/projects/${encodeURIComponent(project.identifier)}/settings/issue_templates`;
+
+/** The format's documentation (ヘルプ). */
+export const DOCS = 'https://redmine-kit.github.io/redmine_issue_template/format';
 
 /** A contact link's URL, only when it is a web page (a link of any other scheme stays text). */
 export const webUrl = (url: string) => (/^https?:\/\//i.test(url) ? url : undefined);

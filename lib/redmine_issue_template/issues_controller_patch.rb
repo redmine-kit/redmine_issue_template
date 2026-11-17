@@ -41,6 +41,7 @@ module RedmineIssueTemplate
       @issue.issue_template_defaults = issue_template_defaults(template)
       @issue.issue_template_answers = issue_template_answers_param(template)
       @issue.issue_template_uploads = issue_template_uploads_param(template)
+      @issue.issue_template_upload_ids = issue_template_upload_ids_param(template)
       issue_template_defaults(template).apply_to_hidden_fields(@issue)
       restore_shown_hidden_input(@issue, template)
     end
@@ -129,11 +130,19 @@ module RedmineIssueTemplate
       redirect_to project_issue_template_chooser_path(project)
     end
 
-    # Redmine's form, and the new UI's requests (redmine_kit_ui: JSON with the
-    # header X-Redmine-Kit), which come from the browser too: they follow the
-    # same rules. Other JSON is the REST API, left to Redmine.
+    # Redmine's form, and the new UI's requests (redmine_kit_ui's kit
+    # requests: JSON with the browser's session), which come from the browser
+    # too: they follow the same rules. Other JSON is the REST API, left to
+    # Redmine. Whether a request is a kit request is redmine_kit_ui's rule.
     def browser_request?
-      !api_request? || request.headers['X-Redmine-Kit'] == '1'
+      !api_request? || issue_template_kit_request?
+    end
+
+    # A kit request of the new UI (redmine_kit_ui's rule; without it, none).
+    def issue_template_kit_request?
+      return false unless defined?(RedmineKitUi.kit_request?)
+
+      RedmineKitUi.kit_request?(self)
     end
 
     # A refusal of the new UI's create, as Redmine's REST API answers one.

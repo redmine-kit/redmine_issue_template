@@ -1,14 +1,14 @@
-import { useState } from 'react';
 import {
-  ApiError, Button, Card, CardBody, CardHeader, ErrorState, FormActions, FormActionsSkeleton, FormRow, Input, Notice, Skeleton, SkeletonRegion,
-  Textarea, kitApi, useExtensionContext, useKitNavigate, useKitQuery, useT,
+  ApiError, Button, Card, CardBody, CardHeader, ErrorState, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton,
+  SkeletonRegion, Tabs, useExtensionContext, useKitNavigate, useKitQuery, useT,
 } from '@redmine-kit/ui';
-import { filePath, settingsPath, tabPage, type FileData } from './api';
+import { DOCS, filePath, tabPage, type FileData } from './api';
+import { useTemplateFileForm } from './useTemplateFileForm';
 
-// A template file's form (the manifest's screens: /projects/:project_id/issue_templates/new and …/:id/edit), as Redmine's
-// new and edit pages have it: ファイル名 (with the names it takes) and 内容. 保存 creates or updates the file through the
-// plugin's actions (the same checks as Redmine's form: the file's errors come back as Redmine's messages), then goes back
-// to the settings tab; キャンセル goes back without saving.
+// A template file's page (the manifest's screens: /projects/:project_id/issue_templates/new and …/:id/edit, with the
+// project's settings tabs beside it, チケットテンプレート marked): the URL opened directly (a reload, a link); inside the
+// app the settings tab opens the same form in a drawer (IssueTemplateFileDrawer). ‹ 戻る and キャンセル go back to the tab,
+// 保存 goes back after saving. Beside the form, 形式のヘルプ: the format in short and ヘルプ, the full documentation.
 
 export function IssueTemplateEdit() {
   const t = useT();
@@ -31,65 +31,86 @@ export function IssueTemplateEdit() {
       </Card>
     );
   }
-  return <FileForm key={id ?? 'new'} project={project} file={id ? query.data?.issue_template_file : undefined} />;
+  return <FilePage key={id ?? 'new'} project={project} file={id ? query.data?.issue_template_file : undefined} />;
 }
 
-function FileForm({ project, file }: { project: { identifier: string; name: string }; file?: FileData }) {
+function FilePage({ project, file }: { project: { identifier: string }; file?: FileData }) {
   const t = useT();
   const navigate = useKitNavigate();
-  const [path, setPath] = useState(file?.path ?? '');
-  const [content, setContent] = useState(file?.content ?? '');
-  const [errors, setErrors] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const dirty = path !== (file?.path ?? '') || content !== (file?.content ?? '');
   const back = () => navigate(tabPage(project));
-  const save = () => {
-    setSaving(true);
-    setErrors([]);
-    const body = { issue_template_file: { path, content } };
-    const request = file ? kitApi.put(filePath(project, file.id), body) : kitApi.post(settingsPath(project), body);
-    request
-      .then(back)
-      .catch((error: unknown) => setErrors(error instanceof ApiError && error.errors.length ? error.errors : [t('kit.error.load_failed')]))
-      .finally(() => setSaving(false));
-  };
-  const title = file ? file.path : t('label_issue_template_file_new');
+  const form = useTemplateFileForm({ project, file, onSaved: back, onCancel: back });
   return (
-    <Card aria-label={title}>
-      <CardHeader title={title} subtitle={project.name} divider={errors.length === 0 && !file?.messages.length} />
-      {errors.length > 0 && <Notice tone="danger" role="alert" wrap text={errors.join('\n')} />}
-      {file?.messages.map((message) => (
-        <Notice key={message.text} tone={message.level === 'error' ? 'danger' : 'warning'} wrap text={message.text} />
-      ))}
-      <CardBody className="flex flex-col gap-4 px-gutter py-section">
-        <FormRow layout="stack" label={t('field_filename')} required hint={t('text_issue_template_path_info')}>
-          <Input value={path} mono onChange={(event) => setPath(event.target.value)} />
-        </FormRow>
-        <FormRow layout="stack" label={t('field_content')}>
-          <Textarea rows={16} maxRows={60} mono value={content} onChange={(event) => setContent(event.target.value)} />
-        </FormRow>
-      </CardBody>
-      <FormActions placement="sticky" dirty={dirty}>
-        <Button data-form-cancel variant="ghost" disabled={saving} onClick={back}>
-          {t('button_cancel')}
-        </Button>
-        <Button submit="primary" variant="primary" keycap="⌘↵" disabled={!path.trim() || saving} onClick={save}>
-          {t('button_save')}
-        </Button>
+    <Card aria-label={form.title}>
+      <CardHeader
+        back={{ label: t('button_back'), href: tabPage(project) }}
+        title={form.title}
+        sidebarToggle
+        sidebarLabel={t('label_settings')}
+        divider
+      />
+      {form.bands}
+      <Panes dividers stacked>
+        <Pane as="section" aria-label={form.title} className="flex flex-col">
+          {form.body}
+        </Pane>
+        <Pane as="aside" width={360} aria-label={t('label_issue_template_format_help')} className="pb-6">
+          <FormatHelp />
+        </Pane>
+      </Panes>
+      <FormActions placement="footer" dirty={form.dirty}>
+        {form.actions}
       </FormActions>
     </Card>
   );
 }
 
-function EditSkeleton() {
+/** The format in short, and the full documentation. */
+function FormatHelp() {
   const t = useT();
   return (
+    <>
+      <SectionHeading heading={t('label_issue_template_format_help')} inset={24} className="mt-section" />
+      <div className="flex flex-col gap-3 px-gutter">
+        <Prose text={t('text_issue_template_format_help')} />
+        <Button variant="plain" size={28} iconEnd="external" className="self-start" onClick={() => window.open(DOCS, '_blank', 'noopener,noreferrer')}>
+          {t('label_help')}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+/** The page while the file comes: the loaded page's header, panes, tabs, fields and help, with bars for the file's name and
+ *  text, so that nothing moves when it arrives (the text's height is the file's). */
+function EditSkeleton() {
+  const t = useT();
+  const { project } = useExtensionContext();
+  return (
     <Card aria-label={t('label_loading')}>
-      <CardHeader title={<Skeleton width={200} height={16} />} divider />
-      <SkeletonRegion label={t('label_loading')} className="flex flex-col gap-4 px-gutter py-section">
-        <Skeleton width="40%" height={32} />
-        <Skeleton width="100%" height={320} />
-      </SkeletonRegion>
+      <CardHeader
+        back={project ? { label: t('button_back'), href: tabPage(project) } : undefined}
+        title={<Skeleton width={120} height={16} className="inline-block align-middle" />}
+        sidebarToggle
+        sidebarLabel={t('label_settings')}
+        divider
+      />
+      <Panes dividers stacked>
+        <Pane as="section" className="flex flex-col">
+          <Tabs aria-label={t('label_loading')} items={[{ value: 'edit', label: t('button_edit') }, { value: 'preview', label: t('label_preview') }]} value="edit" className="flex min-w-0 flex-col">
+            <SkeletonRegion label={t('label_loading')} className="flex min-w-0 flex-col gap-4 px-gutter py-section">
+              <FormRow layout="stack" label={t('field_filename')} required hint={t('text_issue_template_path_info')}>
+                <Skeleton width="100%" height={32} />
+              </FormRow>
+              <FormRow layout="stack" label={t('field_content')} required>
+                <Skeleton width="100%" height={320} />
+              </FormRow>
+            </SkeletonRegion>
+          </Tabs>
+        </Pane>
+        <Pane as="aside" width={360} aria-label={t('label_issue_template_format_help')} className="pb-6">
+          <FormatHelp />
+        </Pane>
+      </Panes>
       <FormActionsSkeleton />
     </Card>
   );

@@ -25,7 +25,7 @@ module RedmineIssueTemplate
     %w[yaml_nodes message parser redmine_options linked_field template markdown_template redmine_rules
        issue_form_checks issue_form chooser_config template_set body_composer importer repository_source
        issue_template_defaults issue_template_answers issue_patch issue_template_params issues_controller_patch
-       projects_helper_patch repository_patch settings_tab settings_params kit_form hooks].each do |file|
+       projects_helper_patch repository_patch settings_tab settings_params kit_form kit_preview hooks].each do |file|
       require_relative "redmine_issue_template/#{file}"
     end
     Project.has_many :issue_template_files, dependent: :delete_all

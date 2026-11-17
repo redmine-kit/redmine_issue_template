@@ -7,5 +7,8 @@ resources :projects, only: [] do
   post 'issue_templates/sync', to: 'issue_templates#sync', as: 'sync_issue_templates'
   # PUT too: the new UI's requests (redmine_kit_ui's kitApi) have no PATCH
   match 'issue_templates/settings', to: 'issue_templates#settings', as: 'issue_template_settings', via: %i[patch put]
+  # the new UI's preview of a file as typed (JSON only)
+  post 'issue_templates/preview', to: 'issue_templates#preview', as: 'preview_issue_templates', format: true,
+                                  constraints: { format: 'json' }
   resources :issue_templates, only: %i[show new create edit update destroy]
 end
