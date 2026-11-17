@@ -5,6 +5,7 @@
 #   bin/test --redmine    # also every Redmine test, with the plugin installed
 #   bin/test <files>      # some files of the plugin's tests
 #   REDMINE_BRANCH=master bin/test   # on Redmine's master branch
+#   COVERAGE=1 bin/test   # also the plugin's coverage, in coverage/coverage.xml
 # Commands that run inside the container are in single quotes on purpose.
 # shellcheck disable=SC2016
 set -euo pipefail
@@ -38,10 +39,18 @@ run() {
   "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="$db" \
     -e PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}" "$image" sh -c "$setup"' && "$@"'"$teardown" test "$@"
 }
-# The plugin's tests, with coverage written to coverage/coverage.xml.
+# The plugin's tests. With COVERAGE=1 (CI sets it), also their coverage of the
+# plugin's files (test/test_helper.rb), written to coverage/coverage.xml by one
+# worker, whose result is the whole run's. COVERAGE itself stays out of the
+# container: Redmine's test_helper starts its own SimpleCov with it.
 run_plugin() {
+  if [[ -z "${COVERAGE:-}" ]]; then
+    run "$@"
+    return
+  fi
   mkdir -p coverage
-  "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="$db" -e PLUGIN_COVERAGE=1 \
+  rm -f coverage/.resultset.json
+  "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="$db" -e PLUGIN_COVERAGE=plugin \
     -e PARALLEL_WORKERS=1 -v "$PWD/coverage:/redmine/plugins/redmine_issue_template/coverage" "$image" \
     sh -c "$setup"' && "$@"'"$teardown" test "$@"
 }

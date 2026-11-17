@@ -1,15 +1,21 @@
 # frozen_string_literal: true
 
-# Coverage of the plugin's own files (bin/test sets PLUGIN_COVERAGE for the
-# plugin's tests), written as Cobertura XML to coverage/ for Codecov. It starts
-# before Redmine loads, so that lib/ and app/ are counted.
-if ENV['PLUGIN_COVERAGE']
+# Coverage of the plugin's own files (init.rb, app/, lib/) by its tests, when
+# bin/test asks for it (COVERAGE=1 bin/test sets PLUGIN_COVERAGE), written as
+# Cobertura XML to coverage/coverage.xml for Codecov. It starts before Redmine
+# loads, so that the files are counted from the start; files no test loads count
+# as not covered. Started once: another plugin's test helper loaded later
+# doesn't start it again.
+if ENV['PLUGIN_COVERAGE'] && !(defined?(SimpleCov) && SimpleCov.running)
   require 'simplecov'
   require 'simplecov-cobertura'
+  SimpleCov.command_name ENV['PLUGIN_COVERAGE']
   SimpleCov.start do
     root File.expand_path('..', __dir__)
-    add_filter '/test/'
+    track_files '{init.rb,app/**/*.rb,lib/**/*.rb}'
+    add_filter { |file| !file.project_filename.match?(%r{\A/(?:init\.rb\z|app/|lib/)}) }
     enable_coverage :branch
+    merge_timeout 3600
     formatter SimpleCov::Formatter::CoberturaFormatter
   end
 end
