@@ -1,0 +1,11 @@
+# Sourced by bin/test, bin/services and bin/lint: the container CLI to use in
+# $cli. Apple container when it is installed and running, else Docker;
+# CONTAINER_CLI=container|docker chooses.
+# shellcheck shell=bash
+if [[ -n "${CONTAINER_CLI:-}" ]]; then
+  cli=$CONTAINER_CLI
+elif command -v container >/dev/null && container system status >/dev/null 2>&1; then
+  cli=container
+else
+  cli=docker
+fi

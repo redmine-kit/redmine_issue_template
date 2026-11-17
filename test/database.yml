@@ -1,6 +1,8 @@
 test:
   adapter: postgresql
-  host: postgres
-  database: redmine_test
+  # bin/test: the service's name in Docker; its address in Apple container
+  # (containers don't find each other by name there)
+  host: <%= ENV.fetch('TEST_DATABASE_HOST', 'postgres') %>
+  database: <%= ENV.fetch('TEST_DATABASE', 'redmine_test') %>
   username: postgres
   encoding: unicode

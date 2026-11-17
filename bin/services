@@ -1,10 +1,37 @@
 #!/usr/bin/env bash
-# Starts PostgreSQL 16 for the tests, or stops it with --down.
+# Starts PostgreSQL 16 for the tests, or stops it with --down: in Apple
+# container when it runs, else in Docker (CONTAINER_CLI=container|docker
+# chooses). No host ports: the tests run in a container on the same network.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-compose=(docker compose -f test/compose.yml -p redmine-issue-template-test)
-if [[ "${1:-}" == "--down" ]]; then
-  "${compose[@]}" down -v
+source bin/container_cli
+if [[ "$cli" == docker ]]; then
+  compose=(docker compose -f test/compose.yml -p redmine-issue-template-test)
+  if [[ "${1:-}" == "--down" ]]; then
+    "${compose[@]}" down -v
+    exit 0
+  fi
+  "${compose[@]}" up -d --wait postgres
   exit 0
 fi
-"${compose[@]}" up -d --wait
+# Apple container: the same service as test/compose.yml.
+network=redmine-issue-template-test
+postgres=redmine-issue-template-test-postgres
+if [[ "${1:-}" == "--down" ]]; then
+  container rm -f "$postgres" >/dev/null 2>&1 || true
+  container network rm "$network" >/dev/null 2>&1 || true
+  exit 0
+fi
+container network inspect "$network" >/dev/null 2>&1 || container network create "$network" >/dev/null
+if ! container inspect "$postgres" 2>/dev/null | grep -q '"state" : "running"'; then
+  container rm -f "$postgres" >/dev/null 2>&1 || true
+  container run -d --name "$postgres" --network "$network" -m 1G --progress none \
+    -e POSTGRES_HOST_AUTH_METHOD=trust \
+    postgres:16@sha256:f9a7b9ebf6f56201f949db745e47bc423c0f0f8294bafe991cc10bf74b029657 >/dev/null
+fi
+for _ in $(seq 60); do
+  container exec "$postgres" pg_isready -q -U postgres && exit 0
+  sleep 2
+done
+echo "PostgreSQL did not start: container logs $postgres" >&2
+exit 1

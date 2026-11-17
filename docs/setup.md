@@ -47,18 +47,18 @@ Then add templates to the repository ([Template format](format.md)) and fetch th
 
 ## Tests
 
-`bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in Docker, then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed. `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
+`bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed. `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
 
 ```sh
 bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # on Redmine's master branch
 bin/services --down              # stops PostgreSQL
-bin/lint                         # RuboCop and Brakeman
+bin/lint                         # RuboCop and Brakeman (in the same container tool)
 bin/screenshots                  # the screenshots of the docs (docs/images/, docs/ja/images/)
 ```
 
-`bin/screenshots` takes the screenshots in headless Chromium from Redmine's test data and GitHub's examples (`test/screenshots/screens.rb`). Run it after changing a screen.
+`bin/screenshots` (Docker only for now) takes the screenshots in headless Chromium from Redmine's test data and GitHub's examples (`test/screenshots/screens.rb`). Run it after changing a screen.
 
 ## To verify
 

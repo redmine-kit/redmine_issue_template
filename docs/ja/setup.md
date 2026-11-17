@@ -59,18 +59,18 @@ git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redm
 
 ## テスト
 
-`bin/test` は、Docker の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
+`bin/test` は、コンテナ ([Apple container](https://github.com/apple/container) がインストールされて動いていればそれ、なければ Docker。`CONTAINER_CLI=container` または `CONTAINER_CLI=docker` で選べます) の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
 
 ```sh
 bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # Redmine の master ブランチで実行
 bin/services --down              # PostgreSQL を止める
-bin/lint                         # RuboCop and Brakeman
+bin/lint                         # RuboCop と Brakeman (同じコンテナのツールで)
 bin/screenshots                  # ドキュメントのスクリーンショット(docs/images/、docs/ja/images/)
 ```
 
-`bin/screenshots` は、Redmine のテストのデータと GitHub の例を使い、ヘッドレスの Chromium でスクリーンショットを撮ります(`test/screenshots/screens.rb`)。画面を変えたら実行します。
+`bin/screenshots` (今は Docker だけ) は、Redmine のテストのデータと GitHub の例を使い、ヘッドレスの Chromium でスクリーンショットを撮ります(`test/screenshots/screens.rb`)。画面を変えたら実行します。
 
 <a id="to-verify"></a>
 

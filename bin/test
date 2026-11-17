@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# The plugin's tests in Redmine 7.0.3 on PostgreSQL 16, in Docker.
+# The plugin's tests in Redmine 7.0.3 on PostgreSQL 16, in Apple container when
+# it runs, else in Docker (CONTAINER_CLI=container|docker chooses).
 #   bin/test              # the plugin's tests, then Redmine's tests of the issue form
 #   bin/test --redmine    # also every Redmine test, with the plugin installed
 #   bin/test <files>      # some files of the plugin's tests
@@ -9,20 +10,40 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 image=redmine-issue-template-test${REDMINE_BRANCH:+-$REDMINE_BRANCH}
-network=redmine-issue-template-test_default
+source bin/container_cli
 bin/services >/dev/null
-docker buildx build --load -q -t "$image" --build-arg REDMINE_BRANCH="${REDMINE_BRANCH:-}" -f test/Dockerfile . >/dev/null
+if [[ "$cli" == docker ]]; then
+  network=redmine-issue-template-test_default
+  opts=()
+  docker buildx build --load -q -t "$image" --build-arg REDMINE_BRANCH="${REDMINE_BRANCH:-}" -f test/Dockerfile . >/dev/null
+else
+  # Apple container (bin/services): PostgreSQL by its address, since containers
+  # don't find each other by name on a network of their own, and more memory
+  # than the 1 GB a container gets by default, for the parallel workers.
+  network=redmine-issue-template-test
+  opts=(-m 4G -e TEST_DATABASE_HOST="$(container inspect redmine-issue-template-test-postgres |
+    sed -n 's/.*"ipv4Address" : "\([0-9.]*\)\/.*/\1/p' | head -1)")
+  # The build's log only when it fails (`container build -q` doesn't return).
+  log=$(mktemp)
+  container build --progress plain -t "$image" --build-arg REDMINE_BRANCH="${REDMINE_BRANCH:-}" -f test/Dockerfile . >"$log" 2>&1 ||
+    { cat "$log" >&2; exit 1; }
+  rm -f "$log"
+fi
 setup='bin/rails db:drop db:create db:migrate redmine:plugins:migrate db:schema:dump >/dev/null'
+# A database of this run's own (test/database.yml reads TEST_DATABASE): runs at
+# the same time share the PostgreSQL container. Dropped when the tests end.
+db="redmine_test_$$"
+teardown='; status=$?; bin/rails db:drop >/dev/null 2>&1; exit $status'
 run() {
-  docker run --rm --network "$network" -e PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}" "$image" \
-    sh -c "$setup"' && "$@"' test "$@"
+  "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="$db" \
+    -e PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}" "$image" sh -c "$setup"' && "$@"'"$teardown" test "$@"
 }
 # The plugin's tests, with coverage written to coverage/coverage.xml.
 run_plugin() {
   mkdir -p coverage
-  docker run --rm --network "$network" -e PLUGIN_COVERAGE=1 -e PARALLEL_WORKERS=1 \
-    -v "$PWD/coverage:/redmine/plugins/redmine_issue_template/coverage" "$image" \
-    sh -c "$setup"' && "$@"' test "$@"
+  "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="$db" -e PLUGIN_COVERAGE=1 \
+    -e PARALLEL_WORKERS=1 -v "$PWD/coverage:/redmine/plugins/redmine_issue_template/coverage" "$image" \
+    sh -c "$setup"' && "$@"'"$teardown" test "$@"
 }
 redmine_tests=(test/functional/issues_controller_test.rb test/functional/projects_controller_test.rb
   test/unit/issue_test.rb test/unit/repository_git_test.rb)
