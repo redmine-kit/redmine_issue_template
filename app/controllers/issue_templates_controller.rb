@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
 # The template chooser of "New issue" (#index) and, in the project settings,
-# the import from the repository and the files edited in Redmine.
+# the import from the repository and the files edited in Redmine. The
+# settings' actions also answer the new UI's kit requests (redmine_kit_ui,
+# JSON with the browser's session): the same checks, 201 or 204 for a save,
+# 422 with Redmine's messages, 403 where Redmine's page refuses.
 class IssueTemplatesController < ApplicationController
+  include RedmineIssueTemplate::SettingsParams
   menu_item :new_issue, only: :index
 
   before_action :find_project_by_project_id
@@ -14,6 +18,13 @@ class IssueTemplatesController < ApplicationController
   # What Redmine's issue form needs, for the preview.
   helper :issues, :journals, :projects, :custom_fields, :issue_relations, :watchers, :attachments
   helper IssueTemplateFormHelper
+
+  # The settings tab's data for the new UI (GET /projects/:id/issue_templates.json).
+  def files
+    return redirect_to_settings unless request.format.json?
+
+    render json: { issue_templates: RedmineIssueTemplate::SettingsTab.new(@project).to_h }
+  end
 
   def index
     @set = RedmineIssueTemplate::TemplateSet.for(@project)
@@ -31,24 +42,22 @@ class IssueTemplatesController < ApplicationController
       file.content = chooser_config_content
       file.save(context: :settings)
     end
-    if saved
-      flash[:notice] = l(:notice_successful_update)
-    else
-      # Redmine shows flash messages as HTML.
-      flash[:error] = file.errors.full_messages.map { |message| ERB::Util.html_escape(message) }.join('<br>')
-    end
+    return render_saved(saved, file) if request.format.json?
+
+    settings_flash(saved, file)
     redirect_to_settings
   end
 
   # "Import": the template folder of the project's repository.
   def sync
-    if @project.repository.nil?
-      flash[:error] = l(:error_issue_template_no_repository)
-    elsif RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
-      flash[:notice] = l(:notice_issue_template_synced)
-    else
-      flash[:warning] = l(:warning_issue_template_nothing_to_import)
+    kind, message = sync_result
+    if request.format.json?
+      return render json: { errors: [message] }, status: :unprocessable_content if kind == :error
+
+      return render json: { kind: kind, message: message }
     end
+
+    flash[kind] = message
     redirect_to_settings
   end
 
@@ -60,7 +69,10 @@ class IssueTemplatesController < ApplicationController
     @file = IssueTemplateFile.new(project: @project, **file_params)
     return preview(:new) if params[:preview]
 
-    if save_files { @file.save(context: :settings) }
+    saved = save_files { @file.save(context: :settings) }
+    return render_saved(saved, @file, created: true) if request.format.json?
+
+    if saved
       flash[:notice] = l(:notice_successful_create)
       redirect_to_settings
     else
@@ -70,6 +82,10 @@ class IssueTemplatesController < ApplicationController
 
   # A file read-only, with where it came from.
   def show
+    if request.format.json?
+      return render json: { issue_template_file: RedmineIssueTemplate::SettingsTab.new(@project).file_data(@file) }
+    end
+
     @source = IssueTemplateSource.find_by(project_id: @project.id)
     build_preview(@file)
   end
@@ -80,7 +96,10 @@ class IssueTemplatesController < ApplicationController
     @file.attributes = file_params
     return preview(:edit) if params[:preview]
 
-    if save_files { @file.save(context: :settings) }
+    saved = save_files { @file.save(context: :settings) }
+    return render_saved(saved, @file) if request.format.json?
+
+    if saved
       flash[:notice] = l(:notice_successful_update)
       redirect_to_settings
     else
@@ -90,11 +109,33 @@ class IssueTemplatesController < ApplicationController
 
   def destroy
     save_files { @file.destroy }
+    return head :no_content if request.format.json?
+
     flash[:notice] = l(:notice_successful_delete)
     redirect_to_settings
   end
 
   private
+
+  def settings_flash(saved, file)
+    if saved
+      flash[:notice] = l(:notice_successful_update)
+    else
+      # Redmine shows flash messages as HTML.
+      flash[:error] = file.errors.full_messages.map { |message| ERB::Util.html_escape(message) }.join('<br>')
+    end
+  end
+
+  # The import's outcome: [the flash's kind, Redmine's message].
+  def sync_result
+    if @project.repository.nil?
+      [:error, l(:error_issue_template_no_repository)]
+    elsif RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
+      [:notice, l(:notice_issue_template_synced)]
+    else
+      [:warning, l(:warning_issue_template_nothing_to_import)]
+    end
+  end
 
   # The page again with the preview, without saving.
   def preview(view)
@@ -143,31 +184,6 @@ class IssueTemplatesController < ApplicationController
     end
   end
 
-  # config.yml as the settings form gives it.
-  def chooser_config_content
-    RedmineIssueTemplate::ChooserConfig.dump(blank_issues_enabled: params[:blank_issues_enabled] == '1',
-                                             contact_links: contact_links_param)
-  end
-
-  def file_params
-    file = params.fetch(:issue_template_file, {})
-    file = file.respond_to?(:permit) ? file.permit(:path, :content) : {}
-    { path: file[:path], content: file[:content].to_s }
-  end
-
-  # The form's contact links, without the empty rows.
-  def contact_links_param
-    rows = params[:contact_links]
-    return [] unless rows.is_a?(Array)
-
-    rows.filter_map do |row|
-      next unless row.respond_to?(:permit)
-
-      link = %w[name url about].to_h { |key| [key, row.permit(:name, :url, :about)[key].to_s.gsub("\r\n", "\n").strip] }
-      link if link.values.any?(&:present?)
-    end
-  end
-
   def find_file
     @file = IssueTemplateFile.where(project_id: @project.id).find(params[:id])
   rescue ActiveRecord::RecordNotFound
@@ -178,6 +194,9 @@ class IssueTemplatesController < ApplicationController
   def require_manual
     source = IssueTemplateSource.find_by(project_id: @project.id)
     return if source.nil? || source.manual?
+    if request.format.json?
+      return render json: { errors: [l(:error_issue_template_managed_elsewhere)] }, status: :forbidden
+    end
 
     flash[:error] = l(:error_issue_template_managed_elsewhere)
     redirect_to_settings

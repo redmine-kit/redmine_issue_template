@@ -73,7 +73,7 @@ module RedmineIssueTemplate
     end
 
     def redirect_to_issue_template_chooser
-      return unless request.get? && !request.xhr? && @project && usable_issue_templates.any?
+      return unless issue_template_chooser_page?
       return if params[:copy_from].present?
       return if current_issue_template
       return if params[:issue_template] == 'blank' && issue_without_template_allowed?
@@ -81,11 +81,24 @@ module RedmineIssueTemplate
       redirect_to project_issue_template_chooser_path(@project, request.query_parameters.except('issue_template'))
     end
 
+    # Redmine's page of the form, in a project with templates: not its
+    # updates, the REST API, or the new UI (redmine_kit_ui), which shows the
+    # chooser as a step of its own form (KitForm), for its JSON and its page.
+    def issue_template_chooser_page?
+      request.get? && !request.xhr? && !api_request? && !kit_shell_page? && @project.present? &&
+        usable_issue_templates.any?
+    end
+
+    def kit_shell_page?
+      defined?(RedmineKitUi.shell_page?) && RedmineKitUi.shell_page?(self)
+    end
+
     # A template that could no longer be used: the form again, with what
     # was typed (the answers in the description), rather than an issue
     # without the answers.
     def refuse_unavailable_issue_template
-      return if api_request? || issue_template_key.nil? || @issue.nil? || @issue.issue_template_active?
+      return if !browser_request? || issue_template_key.nil? || @issue.nil? || @issue.issue_template_active?
+      return render_issue_template_error(l(:error_issue_template_unavailable)) if api_request?
 
       @issue.description = issue_template_answers_text if @issue.description.blank?
       @issue.errors.add(:base, l(:error_issue_template_unavailable))
@@ -96,13 +109,36 @@ module RedmineIssueTemplate
     # it goes to doesn't allow blank issues. The REST API and email are left
     # to Redmine; copies are not made from templates.
     def refuse_issue_without_template
-      return if api_request? || @issue&.issue_template_active? || params[:copy_from].present?
+      return unless issue_without_template_checked?
 
       project = @issue&.project || @project
       return if project.nil? || issue_without_template_allowed?(project)
+      return render_issue_template_error(l(:error_issue_template_required)) if api_request?
 
+      redirect_to_chooser_with_error(project)
+    end
+
+    # A new issue of the browser that no template applies to (a copy is made
+    # from its issue, not from a template).
+    def issue_without_template_checked?
+      browser_request? && !@issue&.issue_template_active? && params[:copy_from].blank?
+    end
+
+    def redirect_to_chooser_with_error(project)
       flash[:error] = l(:error_issue_template_required)
       redirect_to project_issue_template_chooser_path(project)
+    end
+
+    # Redmine's form, and the new UI's requests (redmine_kit_ui: JSON with the
+    # header X-Redmine-Kit), which come from the browser too: they follow the
+    # same rules. Other JSON is the REST API, left to Redmine.
+    def browser_request?
+      !api_request? || request.headers['X-Redmine-Kit'] == '1'
+    end
+
+    # A refusal of the new UI's create, as Redmine's REST API answers one.
+    def render_issue_template_error(message)
+      render json: { errors: [message] }, status: :unprocessable_content
     end
 
     def issue_without_template_allowed?(project = @project)

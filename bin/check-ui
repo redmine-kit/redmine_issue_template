@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+// Checks that a Kit-aware plugin's modules draw only with the app's components (redmine_kit_ui's docs/plugins-kit.md
+// "Design", ui-mock's docs/components/usage.md): the same rule the app's own screens follow (ui-mock
+// scripts/check-components.mjs). A plugin's screen that styles itself looks unlike the app and breaks in dark mode, right
+// to left or another density; one that injects HTML or evaluates code is a security hole.
+//
+//   bin/check-ui [files…]     (default: assets/javascripts/**/*.js, the built module, and frontend/src/**/*.{js,jsx,ts,tsx},
+//                              its source)
+//
+// It reports, with the file and line:
+// - raw elements the app has components for: <button>, <input>, <select>, <textarea>, <table>, <a> (createElement('button') …);
+// - inline styles (style:), colors written out (#fff, rgb(), hsl()) and Tailwind color or size utilities in className
+//   (bg-…, text-[…], w-[…]): use the components' props and the theme's tokens;
+// - dangerouslySetInnerHTML, innerHTML, eval, new Function, import() of a URL, fetch/XMLHttpRequest (use kitApi);
+// - in the built module (not its source, whose other imports the build bundles): imports other than react,
+//   react/jsx-runtime and @redmine-kit/ui (a module is one file; the app gives these).
+// A line may opt out with a comment saying why: // check-ui-ok: <reason>
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
+
+const root = new URL('..', import.meta.url).pathname;
+const RULES = [
+  [/\b(?:createElement|h|jsxs?)\(\s*['"](button|input|select|textarea|table|a)['"]|<(button|input|select|textarea|table|a)[\s>]/, 'a raw element: use the app component (Button, Input, Select, Textarea, DataTable, a link prop)'],
+  [/\bstyle\s*[:=]/, 'an inline style: use the components and the theme'],
+  [/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/, 'a color written out: use a component tone or the theme'],
+  [/className\s*[:=][^\n]*\b(?:bg|text|border|ring|fill|stroke)-(?:\[|[a-z]+-\d)/, 'a color utility: use a component tone'],
+  [/className\s*[:=][^\n]*\b(?:w|h|p[xytrbl]?|m[xytrbl]?|text|gap)-\[/, 'an arbitrary size: use the components’ sizes and the spacing tokens'],
+  [/dangerouslySetInnerHTML|\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML/, 'HTML from a string: render text (the app sanitizes Redmine’s formatted text itself)'],
+  [/\beval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*['"]/, 'code from a string'],
+  [/\bimport\s*\(/, 'a dynamic import: a plugin’s module is one file'],
+  [/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/, 'a request of its own: use kitApi / useKitQuery (the session, CSRF and errors as the app’s)'],
+];
+const IMPORT_RULE = [
+  /^\s*import\b[^'"]*['"](?!react['"]|react\/jsx-runtime['"]|@redmine-kit\/ui['"])[^'"]+['"]/,
+  'an import the app doesn’t give: only react, react/jsx-runtime and @redmine-kit/ui',
+];
+const SOURCE = /\.(?:jsx?|tsx?)$/;
+
+const walk = (dir, pattern) =>
+  !existsSync(dir)
+    ? []
+    : readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+        if (name === 'node_modules') return [];
+        return statSync(path).isDirectory() ? walk(path, pattern) : pattern.test(path) ? [path] : [];
+      });
+
+const files = process.argv.length > 2 ? process.argv.slice(2) : [...walk(join(root, 'assets/javascripts'), /\.js$/), ...walk(join(root, 'frontend/src'), SOURCE)];
+let problems = 0;
+const sourceDir = join(root, 'frontend') + sep;
+for (const file of files) {
+  // a source file of the frontend (src/, the docs' examples): its imports are bundled by the build, the built module's
+  // are checked
+  const rules = resolve(file).startsWith(sourceDir) ? RULES : [...RULES, IMPORT_RULE];
+  readFileSync(file, 'utf8')
+    .split('\n')
+    .forEach((line, i) => {
+      if (/^\s*\/\//.test(line) || /check-ui-ok:/.test(line)) return;
+      for (const [re, message] of rules) {
+        if (re.test(line)) {
+          problems++;
+          console.log(`${relative(process.cwd(), file)}:${i + 1}: ${message}\n  ${line.trim()}`);
+        }
+      }
+    });
+}
+if (problems) {
+  console.log(`\n${problems} problem${problems === 1 ? '' : 's'}`);
+  process.exit(1);
+}
+console.log(`check-ui: ${files.length} file${files.length === 1 ? '' : 's'}, no problems`);

@@ -28,3 +28,10 @@ ja:
   issue_template_error_not_with_link: "は link と一緒に書けません"
   issue_template_error_too_similar: はほかのラベルと似すぎています
   issue_template_error_ignored: は無視されます
+  label_issue_template_start: "作成を始める"
+  label_issue_template_form: "フォーム"
+  text_issue_template_blank_info: "テンプレートを使わずに作成します"
+  text_issue_template_upload_unavailable: "この画面では、この欄にまだファイルを添付できません。"
+  label_issue_template_errors: "エラー %{count}"
+  label_issue_template_warnings: "警告 %{count}"
+  label_issue_template_usable: "使用可能"

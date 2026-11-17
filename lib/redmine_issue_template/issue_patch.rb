@@ -14,6 +14,9 @@ module RedmineIssueTemplate
       base.attr_reader :issue_template
       base.attr_accessor :issue_template_answers
       base.attr_writer :issue_template_defaults, :issue_template_uploads
+      # The new UI's form draws the tracker and the subject in its own fields
+      # (KitForm), not in the form's part as Redmine's form does.
+      base.attr_accessor :issue_template_host_fields
       base.before_validation :apply_issue_template_links, on: :create, prepend: true
       base.before_validation :compose_issue_template_description, on: :create
       base.validate :validate_issue_template_answers, on: :create
@@ -80,8 +83,9 @@ module RedmineIssueTemplate
       names = super
       return names unless issue_template_active?
 
-      # A form has its tracker and subject in its own box.
-      names -= %w[tracker_id subject] if issue_template.form?
+      # A form has its tracker and subject in its own box (Redmine's form; the
+      # new UI's keeps them in its own fields).
+      names -= %w[tracker_id subject] if issue_template.form? && !issue_template_host_fields
       names - issue_template_not_in_form - ['project_id']
     end
 

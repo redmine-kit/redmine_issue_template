@@ -55,6 +55,26 @@ git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redm
 
 そのうえで、リポジトリにテンプレートを置いてリポジトリを取得するか([テンプレートの形式](format.md))、プロジェクトの設定でファイルを追加します([取り込みと同期](sync.md))。
 
+<a id="redmine-kits-new-ui"></a>
+
+## Redmine Kit の新しい UI
+
+[Redmine Kit UI](https://github.com/redmine-kit/redmine_kit_ui) をインストールすると、このプラグインはその拡張 API
+(`init.rb` の `kit_ui`。設定は不要です) で新しい UI でも動きます:
+
+- **新しいチケット** は、新しい UI のフォームのステップとしてテンプレートの選択画面を表示し、選んだテンプレートを
+  フォームの先頭に表示します: テンプレートの説明、テンプレートが設定する値、フォームの入力欄です。ルールは Redmine の
+  フォームと同じで (非表示、設定済み、リンク、必須の項目。説明に書く回答。`config.yml` のとおりの空白のチケット)、
+  サーバーでプラグインが決めます。
+- **プロジェクトの設定 › チケットテンプレート** は、ファイルとその状態を一覧し、リポジトリからインポートし、
+  テンプレートの選択画面の設定を保存します。新しいファイルや編集するファイルはファイルのフォームを開きます。
+- 新しい UI にはまだないもの: フォームのアップロード欄 (欄にその旨を表示します。Redmine の画面にはあります) と、
+  ファイルのページのプレビュー。
+
+新しい UI のモジュールは `assets/javascripts/kit/issue_template.js` で、`frontend/` (React と TypeScript) から
+ビルドします: `cd frontend && npm ci && npm run check` で型チェック、ビルド、`bin/check-ui` を実行します。ビルドした
+ファイルはソースと一緒にコミットします。
+
 <a id="tests"></a>
 
 ## テスト

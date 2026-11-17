@@ -28,3 +28,10 @@ en:
   issue_template_error_not_with_link: "can't be used with link"
   issue_template_error_too_similar: is too similar to another label
   issue_template_error_ignored: will be ignored
+  label_issue_template_start: "Get started"
+  label_issue_template_form: "Form"
+  text_issue_template_blank_info: "Create an issue without a template"
+  text_issue_template_upload_unavailable: "Files can't be attached to this field on this screen yet."
+  label_issue_template_errors: "Errors: %{count}"
+  label_issue_template_warnings: "Warnings: %{count}"
+  label_issue_template_usable: "Usable"

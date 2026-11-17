@@ -45,6 +45,24 @@ Turn on the project module "Issue templates" in the project's settings (or for n
 
 Then add templates to the repository ([Template format](format.md)) and fetch the repository, or add the files in the project settings ([Import and sync](sync.md)).
 
+## Redmine Kit's new UI
+
+With [Redmine Kit UI](https://github.com/redmine-kit/redmine_kit_ui) installed, the plugin works in its new UI too,
+through its extension API (`kit_ui` in `init.rb`; nothing to set up):
+
+- **New issue** shows the template chooser as a step of the new UI's form, and the chosen template at the form's top:
+  its description, the values it sets, and a form's fields. The rules are the same as in Redmine's form (hidden, preset,
+  linked and required fields; the answers in the description; blank issues as `config.yml` says), decided by the plugin
+  on the server.
+- **Project settings › Issue templates** lists the files with their state, imports from the repository, and saves the
+  chooser's settings; new and edited files open the file's form.
+- Not yet in the new UI: a form's upload fields (the field says so; Redmine's page has them) and the previews of the file
+  pages.
+
+The new UI's module is `assets/javascripts/kit/issue_template.js`, built from `frontend/` (React and TypeScript):
+`cd frontend && npm ci && npm run check` type-checks it, builds it and runs `bin/check-ui`; commit the built file with
+the source.
+
 ## Tests
 
 `bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed. `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
