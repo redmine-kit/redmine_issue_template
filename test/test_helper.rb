@@ -12,7 +12,8 @@ if ENV['PLUGIN_COVERAGE'] && !(defined?(SimpleCov) && SimpleCov.running)
   SimpleCov.command_name ENV['PLUGIN_COVERAGE']
   SimpleCov.start do
     root File.expand_path('..', __dir__)
-    track_files '{init.rb,app/**/*.rb,lib/**/*.rb}'
+    # A glob from the plugin's folder: SimpleCov reads it from the current one (Redmine's).
+    track_files "#{root}/{init.rb,app/**/*.rb,lib/**/*.rb}"
     add_filter { |file| !file.project_filename.match?(%r{\A/(?:init\.rb\z|app/|lib/)}) }
     enable_coverage :branch
     merge_timeout 3600
