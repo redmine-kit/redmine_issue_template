@@ -7,6 +7,7 @@
 # 422 with Redmine's messages, 403 where Redmine's page refuses.
 class IssueTemplatesController < ApplicationController
   include RedmineIssueTemplate::SettingsParams
+
   menu_item :new_issue, only: :index
 
   before_action :find_project_by_project_id
