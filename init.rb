@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative 'lib/redmine_issue_template'
+require_relative 'lib/redmine_kit/issue_template'
 
-Redmine::Plugin.register :redmine_issue_template do
-  name 'Redmine Issue Template'
+Redmine::Plugin.register :redmine_kit_issue_template do
+  name 'Redmine Kit Issue Template'
   author 'Redmine Kit'
   description 'Issue templates: a template chooser for New issue, Markdown templates and YAML forms'
-  version RedmineIssueTemplate::VERSION
+  version RedmineKit::IssueTemplate::VERSION
   url 'https://github.com/redmine-kit/redmine_issue_template'
   author_url 'https://github.com/redmine-kit'
   requires_redmine version_or_higher: '7.0.0'
@@ -19,7 +19,7 @@ Redmine::Plugin.register :redmine_issue_template do
   end
 end
 
-RedmineIssueTemplate.setup
+RedmineKit::IssueTemplate.setup
 
 # The new UI (redmine_kit_ui's docs/plugins-kit.md): what this plugin adds to
 # it, declared in Ruby next to the permission it names. Rails' load hook of
@@ -28,7 +28,7 @@ RedmineIssueTemplate.setup
 # The components are frontend/src's, built into
 # assets/javascripts/kit/issue_template.js; labels are this plugin's locale keys.
 ActiveSupport.on_load(:redmine_kit_ui) do
-  kit_ui :redmine_issue_template do
+  kit_ui :redmine_kit_issue_template do
     api_version 1
     module_path 'kit/issue_template.js'
     # New issue: the chooser as a step before the form, then the template's

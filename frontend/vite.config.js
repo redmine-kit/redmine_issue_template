@@ -19,7 +19,7 @@ export default defineConfig({
       external: ['react', 'react/jsx-runtime', '@redmine-kit/ui'],
       output: {
         banner:
-          "// Redmine Issue Template's module for Redmine Kit's new UI, built from frontend/src by `npm run build`\n" +
+          "// Redmine Kit Issue Template's module for Redmine Kit's new UI, built from frontend/src by `npm run build`\n" +
           '// (frontend/vite.config.js). Edit the source, not this file. React and @redmine-kit/ui come from the app.',
       },
     },

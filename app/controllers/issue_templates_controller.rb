@@ -6,7 +6,7 @@
 # JSON with the browser's session): the same checks, 201 or 204 for a save,
 # 422 with Redmine's messages, 403 where Redmine's page refuses.
 class IssueTemplatesController < ApplicationController
-  include RedmineIssueTemplate::SettingsParams
+  include RedmineKit::IssueTemplate::SettingsParams
 
   menu_item :new_issue, only: :index
 
@@ -24,11 +24,11 @@ class IssueTemplatesController < ApplicationController
   def files
     return redirect_to_settings unless request.format.json?
 
-    render json: { issue_templates: RedmineIssueTemplate::SettingsTab.new(@project).to_h }
+    render json: { issue_templates: RedmineKit::IssueTemplate::SettingsTab.new(@project).to_h }
   end
 
   def index
-    @set = RedmineIssueTemplate::TemplateSet.for(@project)
+    @set = RedmineKit::IssueTemplate::TemplateSet.for(@project)
     @carried = request.query_parameters.except('issue_template')
     @blank = @set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, @project)
   end
@@ -36,7 +36,7 @@ class IssueTemplatesController < ApplicationController
   # The chooser's settings from the project settings: the config file the
   # chooser reads, made again from the form and checked as an edited file.
   def settings
-    path = RedmineIssueTemplate::TemplateSet.for(@project).config.path || 'config.yml'
+    path = RedmineKit::IssueTemplate::TemplateSet.for(@project).config.path || 'config.yml'
     file = nil
     saved = save_files do
       file = IssueTemplateFile.find_or_initialize_by(project_id: @project.id, path: path)
@@ -85,8 +85,8 @@ class IssueTemplatesController < ApplicationController
   # file's preview too (KitPreview).
   def show
     if request.format.json?
-      data = RedmineIssueTemplate::SettingsTab.new(@project).file_data(@file)
-      preview = RedmineIssueTemplate::KitPreview.new(@project, @file).to_h[:preview]
+      data = RedmineKit::IssueTemplate::SettingsTab.new(@project).file_data(@file)
+      preview = RedmineKit::IssueTemplate::KitPreview.new(@project, @file).to_h[:preview]
       return render json: { issue_template_file: data.merge(preview: preview) }
     end
 
@@ -121,7 +121,7 @@ class IssueTemplatesController < ApplicationController
     return render_404 unless file
 
     file.attributes = file_params
-    render json: { preview: RedmineIssueTemplate::KitPreview.typed(@project, file) }
+    render json: { preview: RedmineKit::IssueTemplate::KitPreview.typed(@project, file) }
   end
 
   def destroy
@@ -138,7 +138,7 @@ class IssueTemplatesController < ApplicationController
   def sync_result
     if @project.repository.nil?
       [:error, l(:error_issue_template_no_repository)]
-    elsif RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
+    elsif RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
       [:notice, l(:notice_issue_template_synced)]
     else
       [:warning, l(:warning_issue_template_nothing_to_import)]
@@ -158,7 +158,7 @@ class IssueTemplatesController < ApplicationController
     @preview_errors = file.errors_in(set)
     return if @preview_errors.any?
 
-    if RedmineIssueTemplate::Parser.kind(file.path) == :config
+    if RedmineKit::IssueTemplate::Parser.kind(file.path) == :config
       @preview = { templates: set.usable, config: set.config, blank: set.config.blank_issues_enabled? }
     else
       preview_template(set.templates.detect { |template| template.path == file.path })
@@ -166,8 +166,8 @@ class IssueTemplatesController < ApplicationController
   end
 
   def preview_template(template)
-    @preview = { templates: [template], config: RedmineIssueTemplate::ChooserConfig.default, blank: false }
-    @issue = RedmineIssueTemplate::IssueTemplateDefaults.new(template, @project).new_issue
+    @preview = { templates: [template], config: RedmineKit::IssueTemplate::ChooserConfig.default, blank: false }
+    @issue = RedmineKit::IssueTemplate::IssueTemplateDefaults.new(template, @project).new_issue
     @priorities = IssuePriority.active
     @allowed_statuses = @issue.new_statuses_allowed_to(User.current)
   end

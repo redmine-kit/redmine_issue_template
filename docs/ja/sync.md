@@ -5,7 +5,7 @@
 | 取得元 | ファイルを取り込むタイミング | 編集する場所 |
 | --- | --- | --- |
 | リポジトリ | プロジェクトのメインのリポジトリを取得したとき、または「インポート」を押したとき | リポジトリ |
-| GitHub | [Redmine GitHub](https://github.com/redmine-kit/redmine_github) が、デフォルトブランチへの push を受け取ったとき | GitHub |
+| GitHub | [Redmine Kit GitHub](https://github.com/redmine-kit/redmine_github) が、デフォルトブランチへの push を受け取ったとき | GitHub |
 | プロジェクトの設定 | タブでファイルを編集したとき | Redmine |
 
 <a id="the-projects-repository"></a>
@@ -18,14 +18,14 @@ Redmine がプロジェクトのメインのリポジトリのコミットを取
 
 リポジトリからテンプレートフォルダーがなくなると、リポジトリから取り込んだテンプレートは消えます。プロジェクトの設定で編集したテンプレートは残ります。
 
-<a id="redmine-github"></a>
+<a id="redmine-kit-github"></a>
 
-## Redmine GitHub
+## Redmine Kit GitHub
 
-[Redmine GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub App で GitHub のリポジトリとつなぎます。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` が変わったという通知が GitHub から届くと、Redmine GitHub はそのフォルダーを読み、ファイルをこのプラグインに渡します (`.github/ISSUE_TEMPLATE/` などほかのフォルダーのファイルは `ArgumentError` で拒否します)。
+[Redmine Kit GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub App で GitHub のリポジトリとつなぎます。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` が変わったという通知が GitHub から届くと、Redmine Kit GitHub はそのフォルダーを読み、ファイルをこのプラグインに渡します (`.github/ISSUE_TEMPLATE/` などほかのフォルダーのファイルは `ArgumentError` で拒否します)。
 
 ```ruby
-RedmineIssueTemplate::Importer.import(
+RedmineKit::IssueTemplate::Importer.import(
   project,
   files: { 'bug_report.yml' => '...', 'config.yml' => '...' },  # フォルダーの中のファイル名 => 内容
   revision: 'c0ffee…',                                          # コミット

@@ -10,19 +10,19 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 cd "$(dirname "$0")/.."
-image=redmine-issue-template-test${REDMINE_BRANCH:+-$REDMINE_BRANCH}
+image=redmine-kit-issue-template-test${REDMINE_BRANCH:+-$REDMINE_BRANCH}
 source bin/container_cli
 bin/services >/dev/null
 if [[ "$cli" == docker ]]; then
-  network=redmine-issue-template-test_default
+  network=redmine-kit-issue-template-test_default
   opts=()
   docker buildx build --load -q -t "$image" --build-arg REDMINE_BRANCH="${REDMINE_BRANCH:-}" -f test/Dockerfile . >/dev/null
 else
   # Apple container (bin/services): PostgreSQL by its address, since containers
   # don't find each other by name on a network of their own, and more memory
   # than the 1 GB a container gets by default, for the parallel workers.
-  network=redmine-issue-template-test
-  opts=(-m 4G -e TEST_DATABASE_HOST="$(container inspect redmine-issue-template-test-postgres |
+  network=redmine-kit-issue-template-test
+  opts=(-m 4G -e TEST_DATABASE_HOST="$(container inspect redmine-kit-issue-template-test-postgres |
     sed -n 's/.*"ipv4Address" : "\([0-9.]*\)\/.*/\1/p' | head -1)")
   # The build's log only when it fails (`container build -q` doesn't return).
   log=$(mktemp)
@@ -51,7 +51,7 @@ run_plugin() {
   mkdir -p coverage
   rm -f coverage/.resultset.json
   "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="$db" -e PLUGIN_COVERAGE=plugin \
-    -e PARALLEL_WORKERS=1 -v "$PWD/coverage:/redmine/plugins/redmine_issue_template/coverage" "$image" \
+    -e PARALLEL_WORKERS=1 -v "$PWD/coverage:/redmine/plugins/redmine_kit_issue_template/coverage" "$image" \
     sh -c "$setup"' && "$@"'"$teardown" test "$@"
 }
 redmine_tests=(test/functional/issues_controller_test.rb test/functional/projects_controller_test.rb
@@ -59,11 +59,11 @@ redmine_tests=(test/functional/issues_controller_test.rb test/functional/project
 # Redmine's tests that fail with the current gems for known reasons.
 known=$(grep -v -e '^#' -e '^$' test/redmine_known_failures.txt | sed 's/[.]/\\./g' | paste -sd '|' -)
 if [[ "${1:-}" == "--redmine" ]]; then
-  run_plugin bin/rails test plugins/redmine_issue_template/test
+  run_plugin bin/rails test plugins/redmine_kit_issue_template/test
   run bin/rails test --exclude "/^($known)\$/"
 elif (($#)); then
-  run_plugin bin/rails test "${@/#/plugins/redmine_issue_template/}"
+  run_plugin bin/rails test "${@/#/plugins/redmine_kit_issue_template/}"
 else
-  run_plugin bin/rails test plugins/redmine_issue_template/test
+  run_plugin bin/rails test plugins/redmine_kit_issue_template/test
   run bin/rails test --exclude "/^($known)\$/" "${redmine_tests[@]}"
 fi

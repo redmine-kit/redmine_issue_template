@@ -4,18 +4,18 @@ Guidelines for people and coding agents working in this repository. They add to 
 
 ## What this project does
 
-Redmine Issue Template (`redmine_issue_template`) is a Redmine plugin for issue templates. "New issue" opens a template chooser; Markdown templates and YAML forms fill in and shape the issue form. The templates come from `.redmine/ISSUE_TEMPLATE/` of the project's repository (never `.github/ISSUE_TEMPLATE/`), from GitHub through [redmine_github](https://github.com/redmine-kit/redmine_github), or are edited in the project settings ([design.md](docs/design.md)). It is in early development.
+Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin for issue templates. "New issue" opens a template chooser; Markdown templates and YAML forms fill in and shape the issue form. The templates come from `.redmine/ISSUE_TEMPLATE/` of the project's repository (never `.github/ISSUE_TEMPLATE/`), from GitHub through [redmine_kit_github](https://github.com/redmine-kit/redmine_github), or are edited in the project settings ([design.md](docs/design.md)). It is in early development.
 
 ## Where things are
 
 | Path | What |
 | --- | --- |
-| `lib/redmine_issue_template/parser.rb`, `template.rb`, `issue_form.rb`, `issue_form_checks.rb`, `markdown_template.rb`, `chooser_config.rb`, `redmine_options.rb`, `yaml_nodes.rb` | Reading template files and checking them |
-| `lib/redmine_issue_template/message.rb` | Errors and warnings of the files, in Redmine's validation sentences |
-| `lib/redmine_issue_template/template_set.rb` | A project's parsed templates, cached per process by a database key |
-| `lib/redmine_issue_template/importer.rb`, `repository_source.rb`, `repository_patch.rb` | Importing and storing files (the entry point for redmine_github) |
-| `lib/redmine_issue_template/issue_patch.rb` (`issue_template_visibility`, the one place), `redmine_rules.rb`, `issue_template_defaults.rb`, `issue_template_answers.rb`, `linked_field.rb`, `body_composer.rb` | What a template does to a new issue: hidden, preset, linked and required fields, the template's values, the description from the answers, the files of upload fields |
-| `lib/redmine_issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, refusing issues without a template; the request's parameters (permitted answers and uploads, preset values, what the request can't set) |
+| `lib/redmine_kit/issue_template/parser.rb`, `template.rb`, `issue_form.rb`, `issue_form_checks.rb`, `markdown_template.rb`, `chooser_config.rb`, `redmine_options.rb`, `yaml_nodes.rb` | Reading template files and checking them |
+| `lib/redmine_kit/issue_template/message.rb` | Errors and warnings of the files, in Redmine's validation sentences |
+| `lib/redmine_kit/issue_template/template_set.rb` | A project's parsed templates, cached per process by a database key |
+| `lib/redmine_kit/issue_template/importer.rb`, `repository_source.rb`, `repository_patch.rb` | Importing and storing files (the entry point for redmine_kit_github) |
+| `lib/redmine_kit/issue_template/issue_patch.rb` (`issue_template_visibility`, the one place), `redmine_rules.rb`, `issue_template_defaults.rb`, `issue_template_answers.rb`, `linked_field.rb`, `body_composer.rb` | What a template does to a new issue: hidden, preset, linked and required fields, the template's values, the description from the answers, the files of upload fields |
+| `lib/redmine_kit/issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, refusing issues without a template; the request's parameters (permitted answers and uploads, preset values, what the request can't set) |
 | `app/controllers/issue_templates_controller.rb`, `app/views/issue_templates/` | The chooser, the settings tab, the file pages, a YAML form's part at the top of Redmine's form |
 | `app/helpers/issue_templates_helper.rb`, `issue_template_form_helper.rb` | The one Markdown helper and the fields' labels; the change to Redmine's `projects_for_select` |
 | `assets/stylesheets/issue_template.css`, `assets/javascripts/issue_template.js` | The plugin's CSS, each rule with its reason; the one script (dropping files on upload fields) |

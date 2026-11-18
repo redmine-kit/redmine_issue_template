@@ -12,7 +12,7 @@
 
 ## インストール
 
-プラグインを `plugins/redmine_issue_template` に置き、マイグレーションを実行して、Redmine を再起動します。マイグレーションは、`issue_template_files` と `issue_template_sources` の 2 つのテーブルを作ります。
+プラグインを `plugins/redmine_kit_issue_template` に置き、マイグレーションを実行して、Redmine を再起動します。マイグレーションは、`issue_template_files` と `issue_template_sources` の 2 つのテーブルを作ります。
 
 ```sh
 bin/rake redmine:plugins:migrate
@@ -27,24 +27,24 @@ bin/rake redmine:plugins:migrate
 ```ruby
 # Redmine の Gemfile.local
 source 'https://rubygems.pkg.github.com/redmine-kit' do
-  gem 'redmine_issue_template'
+  gem 'redmine_kit_issue_template'
 end
 ```
 
 ```sh
 bundle config set --global rubygems.pkg.github.com <ユーザー>:<トークン>   # または BUNDLE_RUBYGEMS__PKG__GITHUB__COM
 bundle install
-ln -s "$(bundle info --path redmine_issue_template)" plugins/redmine_issue_template
+ln -s "$(bundle info --path redmine_kit_issue_template)" plugins/redmine_kit_issue_template
 ```
 
 <a id="without-the-gem"></a>
 
 ### gem を使わないとき
 
-リポジトリを `plugins/redmine_issue_template` にクローンします。ほかの gem は要りません。
+リポジトリを `plugins/redmine_kit_issue_template` にクローンします。ほかの gem は要りません。
 
 ```sh
-git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redmine_issue_template
+git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redmine_kit_issue_template
 ```
 
 <a id="configuration"></a>

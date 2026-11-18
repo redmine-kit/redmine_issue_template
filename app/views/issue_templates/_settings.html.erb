@@ -1,7 +1,7 @@
 <%# Project settings › Issue templates, after the other settings tabs
     (projects/settings/_issue_categories). %>
 <%# What the tab shows comes from SettingsTab, as the new UI's (issue_templates.json). %>
-<% tab = RedmineIssueTemplate::SettingsTab.new(@project) %>
+<% tab = RedmineKit::IssueTemplate::SettingsTab.new(@project) %>
 <% source = tab.source %>
 <% manual = tab.manual? %>
 <% set = tab.set %>
@@ -12,7 +12,7 @@
   <%= link_to sprite_icon('add', l(:label_issue_template_file_new)), new_project_issue_template_path(@project), class: 'icon icon-add' if manual %>
   <%= link_to sprite_icon('import', l(:button_import)), project_sync_issue_templates_path(@project),
               method: :post, class: 'icon icon-import' if @project.repository %>
-  <%= link_to sprite_icon('help', l(:label_help)), "#{RedmineIssueTemplate::DOCS_URL}#{'ja/' if current_language.to_s == 'ja'}format",
+  <%= link_to sprite_icon('help', l(:label_help)), "#{RedmineKit::IssueTemplate::DOCS_URL}#{'ja/' if current_language.to_s == 'ja'}format",
               class: 'icon icon-help' %>
 </p>
 
@@ -68,7 +68,7 @@
 <%# The chooser's settings, kept in config.yml. Saved from here when the
     templates are edited in Redmine; shown only when they come from elsewhere. %>
 <% config = set.config %>
-<% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_issue_template' %><% end %>
+<% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_kit_issue_template' %><% end %>
 <%= form_tag project_issue_template_settings_path(@project), method: :patch do %>
 <fieldset class="box issue-template-chooser-settings">
   <legend><%= l(:label_issue_template_chooser) %></legend>

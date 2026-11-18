@@ -9,11 +9,11 @@ class IssueTemplateFile < ApplicationRecord
   belongs_to :project
 
   validates :path, presence: true, length: { maximum: 255 }, format: { with: PATH }, uniqueness: { scope: :project_id }
-  validates :content, length: { maximum: RedmineIssueTemplate::Parser::MAX_LENGTH }
+  validates :content, length: { maximum: RedmineKit::IssueTemplate::Parser::MAX_LENGTH }
   # Files saved in the project settings get the import's input check.
   validate :check_template, on: :settings
 
-  after_commit { RedmineIssueTemplate::TemplateSet.reset! }
+  after_commit { RedmineKit::IssueTemplate::TemplateSet.reset! }
 
   # The path is shown as Redmine's "File" (field_filename).
   def self.human_attribute_name(attribute, *)
@@ -25,7 +25,7 @@ class IssueTemplateFile < ApplicationRecord
   def parse_with_others
     files = IssueTemplateFile.where(project_id: project_id).where.not(id: id).pluck(:path, :content).to_h
     files[path] = content.to_s
-    RedmineIssueTemplate::Parser.parse(files)
+    RedmineKit::IssueTemplate::Parser.parse(files)
   end
 
   # This file's errors in a parsed set of files.

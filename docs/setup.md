@@ -8,7 +8,7 @@
 
 ## Installation
 
-Put the plugin in `plugins/redmine_issue_template`, run its migrations and restart Redmine. The migrations create the tables `issue_template_files` and `issue_template_sources`.
+Put the plugin in `plugins/redmine_kit_issue_template`, run its migrations and restart Redmine. The migrations create the tables `issue_template_files` and `issue_template_sources`.
 
 ```sh
 bin/rake redmine:plugins:migrate
@@ -21,22 +21,22 @@ Each version tag (`v*`) publishes the plugin as a gem to GitHub Packages (`https
 ```ruby
 # Redmine's Gemfile.local
 source 'https://rubygems.pkg.github.com/redmine-kit' do
-  gem 'redmine_issue_template'
+  gem 'redmine_kit_issue_template'
 end
 ```
 
 ```sh
 bundle config set --global rubygems.pkg.github.com <user>:<token>   # or BUNDLE_RUBYGEMS__PKG__GITHUB__COM
 bundle install
-ln -s "$(bundle info --path redmine_issue_template)" plugins/redmine_issue_template
+ln -s "$(bundle info --path redmine_kit_issue_template)" plugins/redmine_kit_issue_template
 ```
 
 ### Without the gem
 
-Clone the repository into `plugins/redmine_issue_template`. The plugin needs no other gems.
+Clone the repository into `plugins/redmine_kit_issue_template`. The plugin needs no other gems.
 
 ```sh
-git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redmine_issue_template
+git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redmine_kit_issue_template
 ```
 
 ## Configuration

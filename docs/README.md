@@ -1,6 +1,6 @@
-# Redmine Issue Template
+# Redmine Kit Issue Template
 
-Redmine Issue Template adds issue templates to Redmine. When a project has templates, "New issue" opens a template chooser. The chosen template fills in Redmine's issue form: the tracker (bug, feature…), the subject, the description, and the fields it sets. A YAML form shows its own fields and writes the answers into the description.
+Redmine Kit Issue Template adds issue templates to Redmine. When a project has templates, "New issue" opens a template chooser. The chosen template fills in Redmine's issue form: the tracker (bug, feature…), the subject, the description, and the fields it sets. A YAML form shows its own fields and writes the answers into the description.
 
 The templates are files in the project's repository. Redmine reads `.redmine/ISSUE_TEMPLATE/` (not `.github/ISSUE_TEMPLATE/`), and imports the files again when the repository changes. A project without a repository edits the same files in its settings.
 
@@ -10,7 +10,7 @@ The templates are files in the project's repository. Redmine reads `.redmine/ISS
 | --- | --- |
 | [Setup](setup.md) | Requirements, installation, configuration and tests |
 | [Template format](format.md) | Markdown templates, YAML forms, `config.yml`, Redmine's keys and the other keys |
-| [Import and sync](sync.md) | Where the templates come from, when they are imported, and Redmine GitHub |
+| [Import and sync](sync.md) | Where the templates come from, when they are imported, and Redmine Kit GitHub |
 | [Design](design.md) | Goals, decisions and what is not covered |
 
 ## Screens
@@ -37,4 +37,4 @@ A file of the project settings is edited as text. "Preview" shows the template's
 
 ## License
 
-Redmine Issue Template is released under the GNU General Public License, version 2 or (at your option) any later version. See [LICENSE](../LICENSE). An unofficial Redmine plugin.
+Redmine Kit Issue Template is released under the GNU General Public License, version 2 or (at your option) any later version. See [LICENSE](../LICENSE). An unofficial Redmine plugin.

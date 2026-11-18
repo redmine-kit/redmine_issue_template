@@ -1,4 +1,4 @@
-// Redmine Issue Template's module for Redmine Kit's new UI, built from frontend/src by `npm run build`
+// Redmine Kit Issue Template's module for Redmine Kit's new UI, built from frontend/src by `npm run build`
 // (frontend/vite.config.js). Edit the source, not this file. React and @redmine-kit/ui come from the app.
 import { ApiError, AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardHeaderActions, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, Drawer, DrawerActionsGroup, DrawerCloseButton, EmptyState, ErrorState, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, NewIssueFileField, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT } from "@redmine-kit/ui";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";

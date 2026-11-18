@@ -1,8 +1,8 @@
 {
-  "name": "redmine-issue-template-frontend",
+  "name": "redmine-kit-issue-template-frontend",
   "private": true,
   "type": "module",
-  "description": "The source of Redmine Issue Template's module for Redmine Kit's new UI (../assets/javascripts/kit/issue_template.js)",
+  "description": "The source of Redmine Kit Issue Template's module for Redmine Kit's new UI (../assets/javascripts/kit/issue_template.js)",
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit -p .",

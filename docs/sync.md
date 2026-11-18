@@ -5,7 +5,7 @@ A project's templates are stored in Redmine. The pages read the stored files and
 | Source | How the files arrive | Where they are edited |
 | --- | --- | --- |
 | Repository | Redmine's main repository of the project, after each fetch, or with "Import" | In the repository |
-| GitHub | [Redmine GitHub](https://github.com/redmine-kit/redmine_github), on a push to the default branch | On GitHub |
+| GitHub | [Redmine Kit GitHub](https://github.com/redmine-kit/redmine_github), on a push to the default branch | On GitHub |
 | Project settings | The file editor of the tab | In Redmine |
 
 ## The project's repository
@@ -16,12 +16,12 @@ When Redmine fetches the changesets of the project's main repository (when someo
 
 When the repository no longer has a template folder, the templates that came from it are removed. Templates edited in the project settings are kept.
 
-## Redmine GitHub
+## Redmine Kit GitHub
 
-[Redmine GitHub](https://github.com/redmine-kit/redmine_github) connects GitHub repositories through a GitHub App. When GitHub reports a push to the default branch that changes `.redmine/ISSUE_TEMPLATE/`, Redmine GitHub reads the folder and hands the files to this plugin (files of another folder, such as `.github/ISSUE_TEMPLATE/`, are refused with an `ArgumentError`):
+[Redmine Kit GitHub](https://github.com/redmine-kit/redmine_github) connects GitHub repositories through a GitHub App. When GitHub reports a push to the default branch that changes `.redmine/ISSUE_TEMPLATE/`, Redmine Kit GitHub reads the folder and hands the files to this plugin (files of another folder, such as `.github/ISSUE_TEMPLATE/`, are refused with an `ArgumentError`):
 
 ```ruby
-RedmineIssueTemplate::Importer.import(
+RedmineKit::IssueTemplate::Importer.import(
   project,
   files: { 'bug_report.yml' => '...', 'config.yml' => '...' },  # file names in the folder => content
   revision: 'c0ffee…',                                          # the commit

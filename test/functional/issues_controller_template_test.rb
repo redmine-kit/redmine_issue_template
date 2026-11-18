@@ -2,593 +2,609 @@
 
 require_relative '../test_helper'
 
-module RedmineIssueTemplate
-  class IssuesControllerTemplateTest < Redmine::ControllerTest
-    include RedmineIssueTemplate::TestHelper
+module RedmineKit
+  module IssueTemplate
+    class IssuesControllerTemplateTest < Redmine::ControllerTest
+      include RedmineKit::IssueTemplate::TestHelper
 
-    tests IssuesController
-    fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles, :trackers, :projects_trackers,
-             :enabled_modules, :issue_statuses, :enumerations, :custom_fields, :custom_fields_projects,
-             :custom_fields_trackers, :custom_values, :issue_categories, :versions, :workflows, :issues
+      tests IssuesController
+      fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles, :trackers, :projects_trackers,
+               :enabled_modules, :issue_statuses, :enumerations, :custom_fields, :custom_fields_projects,
+               :custom_fields_trackers, :custom_values, :issue_categories, :versions, :workflows, :issues
 
-    FEATURE = <<~MARKDOWN
-      ---
-      name: Feature request
-      about: Suggest an idea
-      title: "[Feature] "
-      type: Feature request
-      priority: High
-      category: Recipes
-      fields:
-        estimated_hours: hidden
-        due_date: required
-        Custom date: hidden
-      custom_fields:
-        Custom date: "2026-12-24"
-      ---
-      ## The idea
-    MARKDOWN
-
-    def setup
-      @project = enable_issue_templates
-      @request.session[:user_id] = 2
-      import('bug_report.yml' => github_fixture('bug_report.yml'), 'feature.md' => FEATURE,
-             'config.yml' => github_fixture('config.yml'))
-    end
-
-    test 'New issue opens the template chooser' do
-      get :new, params: { project_id: 'ecookbook' }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
-    end
-
-    test 'parameters of New issue go to the chooser' do
-      get :new, params: { project_id: 'ecookbook', issue: { parent_issue_id: '1' } }
-      assert_redirected_to '/projects/ecookbook/issues/templates?issue%5Bparent_issue_id%5D=1'
-    end
-
-    test 'without templates or without the module, New issue is Redmine\'s form' do
-      IssueTemplateFile.delete_all
-      RedmineIssueTemplate::TemplateSet.reset!
-      get :new, params: { project_id: 'ecookbook' }
-      assert_response :success
-
-      import('feature.md' => FEATURE)
-      @project.enabled_module_names = @project.enabled_module_names - ['issue_templates']
-      get :new, params: { project_id: 'ecookbook' }
-      assert_response :success
-    end
-
-    test 'copying an issue skips the chooser' do
-      get :new, params: { project_id: 'ecookbook', copy_from: 1 }
-      assert_response :success
-    end
-
-    test 'a Markdown template fills in the form' do
-      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
-      assert_response :success
-      assert_select 'input[name=issue_template][value=feature]'
-      # The values the template sets are text, not fields.
-      assert_select 'select#issue_tracker_id', 0
-      assert_select 'p', text: /Tracker\s+Feature request/
-      assert_select 'input#issue_subject[value=?]', '[Feature] '
-      assert_select 'textarea#issue_description', text: /\A## The idea/
-      assert_select 'select#issue_priority_id', 0
-      assert_select 'p', text: /Priority\s+High/
-      assert_select 'select#issue_category_id', 0
-      assert_select 'p', text: /Category\s+Recipes/
-      assert_select 'input#issue_estimated_hours', 0
-      assert_select 'label[for=issue_due_date] span.required'
-      assert_select '#issue_custom_field_values_8', 0
-    end
-
-    test 'creating from a Markdown template keeps hidden values and checks required fields' do
-      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
-                              issue: { tracker_id: '2', subject: 'More recipes', description: 'Text', priority_id: '6',
-                                       estimated_hours: '5' } }
-      assert_response :success
-      assert_select '#errorExplanation', text: /Due date/
-
-      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
-                              issue: { tracker_id: '2', subject: 'More recipes', description: 'Text', priority_id: '6',
-                                       due_date: '2026-12-01', estimated_hours: '5' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_nil issue.estimated_hours
-      assert_equal '2026-12-24', issue.custom_field_value(8)
-    end
-
-    test 'an issue form shows its fields instead of the description' do
-      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
-      assert_response :success
-      # The form's part, at the top of Redmine's form: the tracker as text, the
-      # subject and the fields, once each.
-      assert_select '#issue-form .issue-template-fields p', text: /Tracker\s+Bug/
-      assert_select '#issue-form p', text: /Tracker\s+Bug/, count: 1
-      assert_select '#issue-form .issue-template-fields input#issue_subject[value=?]', '[Bug]: '
-      assert_select '#issue-form input#issue_subject', 1
-      assert_select '#issue-form .issue-template-fields textarea[name=?]', 'issue_template_answers[what-happened]'
-      assert_select 'head link[rel=stylesheet][href^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-'
-      assert_select 'textarea#issue_description', 0
-      assert_select 'input[name=?]', 'issue_template_answers[contact]'
-      assert_select 'textarea[name=?]', 'issue_template_answers[what-happened]', text: 'A bug happened!'
-      assert_select 'select[name=?] option[selected=selected]', 'issue_template_answers[version]',
-                    text: '1.0.2 (Default)'
-      assert_select 'select[name=?][multiple=multiple]', 'issue_template_answers[browsers][]'
-      assert_select 'input[type=checkbox][name=?]', 'issue_template_answers[terms][]'
-      # A required option is marked on the option, not on the field.
-      assert_select 'p:has(input[name="issue_template_answers[terms][]"]) > label:not(.block) span.required', 0
-      assert_select 'p:has(input[name="issue_template_answers[terms][]"]) label.block span.required'
-      assert_select 'div.wiki', text: /Thanks for taking the time/
-      # Markdown in descriptions is rendered.
-      assert_select 'em.info a[href=?]', 'https://example.com', text: 'Code of Conduct'
-    end
-
-    test 'creating from an issue form writes the answers as the description' do
-      post :create, params: {
-        project_id: 'ecookbook', issue_template: 'bug_report',
-        issue: { tracker_id: '1', subject: '[Bug]: Crash' },
-        issue_template_answers: { 'what-happened' => 'It crashed', 'version' => '0', 'browsers' => ['', '1'],
-                                  'terms' => ['', '0'] }
-      }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      description = issue.description.gsub("\r\n", "\n")
-      assert_includes description, "### What happened?\n\nIt crashed"
-      assert_includes description, "### What browsers are you seeing the problem on?\n\nChrome"
-      assert_includes description, "- [X] I agree to follow this project's Code of Conduct"
-    end
-
-    test 'an issue form checks its required fields' do
-      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
-                              issue: { tracker_id: '1', subject: 'Crash' },
-                              issue_template_answers: { 'what-happened' => '', 'terms' => [''] } }
-      assert_response :success
-      assert_select '#errorExplanation li', text: /What happened\?/
-      assert_select '#errorExplanation li', text: /Code of Conduct/
-      assert_select 'textarea[name=?]', 'issue_template_answers[what-happened]', text: ''
-    end
-
-    test 'an upload field takes files, and its section lists them' do
-      set_tmp_attachments_directory
-      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
-      assert_select '.issue-template-fields input.file_selector.custom-field-filedrop[name=?]',
-                    'issue_template_uploads[screenshots][dummy][file]'
-
-      mine = upload('screen.png', 2)
-      other = upload('other.png', 3)
-      files = upload('log.txt', 2)
-      post :create, params: {
-        project_id: 'ecookbook', issue_template: 'bug_report',
-        issue: { tracker_id: '1', subject: 'Uploads' },
-        issue_template_answers: { 'what-happened' => 'It crashed', 'version' => '0', 'terms' => ['0'] },
-        issue_template_uploads: { 'screenshots' => { '1' => { 'token' => mine.token, 'description' => 'Crash' },
-                                                     '2' => { 'token' => other.token } } },
-        attachments: { '1' => { 'token' => files.token } }
-      }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      # The user's own upload and the file of Redmine's Files field; not another user's upload.
-      assert_equal %w[log.txt screen.png], issue.attachments.map(&:filename).sort
-      assert_equal 'Crash', mine.reload.description
-      assert_nil other.reload.container
-      assert issue.description.gsub("\r\n", "\n").end_with?("### Upload screenshots\n\nattachment:\"screen.png\"")
-    end
-
-    test 'uploaded files come back when the form is updated or not saved' do
-      set_tmp_attachments_directory
-      token = upload('screen.png', 2).token
-      uploads = { 'screenshots' => { '1' => { 'token' => token } } }
-      post :new, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_uploads: uploads,
-                           form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '1' } }, xhr: true
-      assert_include 'issue_template_uploads[screenshots][p0][token]', response.body
-      assert_include token, response.body
-
-      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_uploads: uploads,
-                              issue: { tracker_id: '1', subject: 'Not saved' } }
-      assert_response :success
-      assert_select 'input[name=?][value=?]', 'issue_template_uploads[screenshots][p0][token]', token
-      # Only in the form's field, not again in Redmine's Files field.
-      assert_select 'input[value=?]', token, count: 1
-    end
-
-    test 'an upload field takes only the extensions of accept' do
-      set_tmp_attachments_directory
-      accept = "\n      accept: \".png,.jpg\""
-      form = github_fixture('bug_report.yml').sub(/(type: upload.*?required: false)/m, "\\1#{accept}")
-      import('bug_report.yml' => form)
-      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
-      assert_select '.issue-template-fields em.info', text: 'Allowed extensions: .png, .jpg'
-
-      params = { project_id: 'ecookbook', issue_template: 'bug_report', issue: { tracker_id: '1', subject: 'Accept' },
-                 issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] } }
-      uploads = ->(name) { { 'screenshots' => { '1' => { 'token' => upload(name, 2).token } } } }
-      assert_no_difference 'Issue.count' do
-        post :create, params: params.merge(issue_template_uploads: uploads.call('notes.txt'))
-      end
-      assert_select '#errorExplanation li', text: 'Upload screenshots takes only these extensions: .png, .jpg'
-      assert_difference 'Issue.count' do
-        post :create, params: params.merge(issue_template_uploads: uploads.call('screen.PNG'))
-      end
-    end
-
-    test 'the script that sets up dropping files is only on forms with upload fields' do
-      get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
-      assert_select 'head script[src^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-'
-      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
-      assert_select 'head script[src^=?]', '/assets/plugin_assets/redmine_issue_template/issue_template-', count: 0
-    end
-
-    test 'a required upload field needs a file' do
-      form = github_fixture('bug_report.yml').sub(/(type: upload.*?required:) false/m, '\\1 true')
-      import('bug_report.yml' => form)
-      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
-                              issue: { tracker_id: '1', subject: 'No file' },
-                              issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] } }
-      assert_response :success
-      assert_select '#errorExplanation li', text: /Upload screenshots/
-    end
-
-    test 'updating the form keeps the template' do
-      post :new, params: { project_id: 'ecookbook', issue_template: 'bug_report',
-                           form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '3', subject: 'x' },
-                           issue_template_answers: { 'contact' => 'me@example.com' } }, xhr: true
-      assert_response :success
-      # The form's part is rendered again with what was typed.
-      assert_include 'issue_template_answers[contact]', response.body
-      assert_include 'me@example.com', response.body
-    end
-
-    test 'the project stays the one the template was chosen in' do
-      # Without a template, Redmine offers the subprojects.
-      get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
-      assert_select 'select#issue_project_id'
-
-      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
-      assert_response :success
-      assert_select 'select#issue_project_id', 0
-
-      post :new, params: { project_id: 'ecookbook', issue_template: 'feature',
-                           form_update_triggered_by: 'issue_project_id',
-                           issue: { project_id: '5', tracker_id: '2', subject: 'x' } }, xhr: true
-      assert_response :success
-      assert_not_include 'issue_project_id', response.body
-
-      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
-                              issue: { project_id: '5', tracker_id: '2', subject: 'More recipes', description: 'Text',
-                                       priority_id: '6', due_date: '2026-12-01' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_equal 1, issue.project_id
-    end
-
-    test 'a form without a tracker offers Redmine\'s trackers in its box' do
-      import('question.yml' => QUESTION)
-      get :new, params: { project_id: 'ecookbook', issue_template: 'question' }
-      assert_response :success
-      assert_select '.issue-template-fields select#issue_tracker_id[onchange*=updateIssueFrom]' do
-        assert_select 'option', Issue.new(project: @project).allowed_target_trackers(User.find(2)).count
-        assert_select 'option[selected=selected][value="1"]'
-      end
-      assert_select '#issue-form select#issue_tracker_id', 1
-
-      post :create, params: { project_id: 'ecookbook', issue_template: 'question',
-                              issue: { tracker_id: '3', subject: 'How?' }, issue_template_answers: { 'what' => 'x' } }
-      assert_equal 3, Issue.order(:id).last.tracker_id
-    end
-
-    # A form without a tracker.
-    QUESTION = <<~YAML
-      name: Question
-      description: Ask
-      body:
-        - type: input
-          id: what
-          attributes:
-            label: What
-    YAML
-
-    LINKED = <<~YAML
-      name: Linked form
-      description: Fields that set the issue's fields
-      type: Bug
-      body:
-        - id: version
-          link: fixed_version
-          attributes:
-            label: Version
-        - id: database
-          link: Database
-          attributes:
-            label: Database
-            options: [PostgreSQL, MySQL]
-        - id: due
-          link: due_date
-          attributes:
-            label: Due
-        - type: input
-          id: what
-          attributes:
-            label: What
-    YAML
-
-    test 'linked fields offer and set the issue\'s fields, outside the description' do
-      import('linked.yml' => LINKED)
-      get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
-      assert_response :success
-      versions = Issue.new(project: @project, tracker_id: 1).assignable_versions
-      own = versions.find { |version| version.project == @project && version.name == '2.0' }
-      assert_select 'select[name=?] option', 'issue_template_answers[version]', text: '2.0'
-      # Shared versions of other projects have the project's name, as in Redmine.
-      shared = versions.find { |version| version.project != @project }
-      assert_select 'select[name=?] option', 'issue_template_answers[version]', text: shared.to_s_with_project if shared
-      assert_select 'select[name=?] option', 'issue_template_answers[database]', text: 'PostgreSQL'
-      %w[fixed_version_id custom_field_values_1 due_date].each { |id| assert_select "#issue-form #issue_#{id}", 0 }
-
-      post :create, params: {
-        project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Linked', fixed_version_id: '' },
-        issue_template_answers: { 'version' => own.id.to_s, 'database' => 'PostgreSQL', 'due' => '2026-12-31',
-                                  'what' => 'x' }
-      }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_equal ['2.0', 'PostgreSQL', Date.new(2026, 12, 31)],
-                   [issue.fixed_version&.name, issue.custom_field_value(1), issue.due_date]
-      assert_equal "### What\n\nx", issue.description.gsub("\r\n", "\n")
-    end
-
-    test 'links follow Redmine\'s rules for the user, and a blank answer keeps the default' do
-      import('linked.yml' => LINKED)
-      CustomField.find(1).update!(default_value: 'MySQL')
-      WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'fixed_version_id',
-                                 rule: 'readonly')
-      get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
-      assert_response :success
-      # Read-only for the user: not linked, and without options nothing to choose.
-      assert_select 'select[name=?]', 'issue_template_answers[version]', 0
-      assert_select 'select[name=?]', 'issue_template_answers[database]'
-
-      post :create, params: { project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Blank' },
-                              issue_template_answers: { 'version' => '3', 'database' => '', 'what' => 'x' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_nil issue.fixed_version
-      assert_equal 'MySQL', issue.custom_field_value(1)
-    end
-
-    test 'parameters of unexpected shapes are ignored' do
-      get :new, params: { project_id: 'ecookbook', issue_template: 'feature', issue: { custom_field_values: 'x' } }
-      assert_response :success
-      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_answers: 'x',
-                              issue_template_uploads: { 'screenshots' => 'x', 'other' => { '1' => 'x' } },
-                              issue: { tracker_id: '1', subject: 'Shapes', custom_fields: ['x'] } }
-      assert_response :success
-      assert_select '#errorExplanation'
-    end
-
-    test 'the REST API\'s form of custom fields cannot change a hidden value' do
-      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
-                              issue: { tracker_id: '2', subject: 'API form', description: 'Text',
-                                       due_date: '2026-12-01', custom_fields: [{ id: '8', value: '2000-01-01' }] } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_equal '2026-12-24', issue.custom_field_value(8)
-    end
-
-    test 'the tracker field of a form\'s box applies the tracker\'s private default' do
-      import('question.yml' => QUESTION)
-      Tracker.find(3).update!(private_by_default: true)
-      post :new, params: { project_id: 'ecookbook', issue_template: 'question',
-                           form_update_triggered_by: 'issue_tracker_id',
-                           issue: { tracker_id: '3', is_private: '0', subject: 'x' } }, xhr: true
-      assert_response :success
-      assert @controller.instance_variable_get(:@issue).is_private?
-    end
-
-    test 'fields without an id and with Japanese labels keep their answers' do
-      import('ja.yml' => <<~YAML)
-        name: Japanese
-        description: d
-        body:
-          - type: input
-            attributes:
-              label: 何が起きましたか？
-          - type: input
-            attributes:
-              label: 環境
-      YAML
-      post :create, params: { project_id: 'ecookbook', issue_template: 'ja',
-                              issue: { tracker_id: '1', subject: 'J' },
-                              issue_template_answers: { 'field-0' => '落ちた', 'field-1' => 'Linux' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_equal "### 何が起きましたか？\n\n落ちた\n\n### 環境\n\nLinux", issue.description.gsub("\r\n", "\n")
-    end
-
-    test 'Redmine\'s rules still check linked fields, and the template only requires what the user can set' do
-      import('checks.yml' => <<~YAML)
-        name: Checks
-        description: d
+      FEATURE = <<~MARKDOWN
+        ---
+        name: Feature request
+        about: Suggest an idea
+        title: "[Feature] "
+        type: Feature request
+        priority: High
+        category: Recipes
         fields:
-          watchers: required
-        body:
-          - id: amount
-            link: Float field
-            attributes:
-              label: Amount
-      YAML
-      # Developers can't add watchers: the template can't require them.
-      @request.session[:user_id] = 3
-      Role.find(2).add_permission!(:add_issues)
-      post :create, params: { project_id: 'ecookbook', issue_template: 'checks',
-                              issue: { tracker_id: '1', subject: 'C' }, issue_template_answers: { 'amount' => 'abc' } }
-      assert_response :success
-      assert_select '#errorExplanation li', text: /Float field/
-      assert_select '#errorExplanation li', text: /Watchers/, count: 0
+          estimated_hours: hidden
+          due_date: required
+          Custom date: hidden
+        custom_fields:
+          Custom date: "2026-12-24"
+        ---
+        ## The idea
+      MARKDOWN
 
-      post :create, params: { project_id: 'ecookbook', issue_template: 'checks',
-                              issue: { tracker_id: '1', subject: 'C' }, issue_template_answers: { 'amount' => '1.5' } }
-      assert_equal '1.5', Issue.order(:id).last.custom_field_value(6)
-    end
-
-    test 'an answer beyond the options is ignored' do
-      post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
-                              issue: { tracker_id: '1', subject: 'X' },
-                              issue_template_answers: { 'what-happened' => 'x', 'version' => '9' * 20,
-                                                        'terms' => ['', '0'] } }
-      assert_response :success
-      assert_select '#errorExplanation li', text: /Version/
-    end
-
-    test 'a template whose tracker the user can\'t use is not offered' do
-      @request.session[:user_id] = 3
-      role = Role.find(2)
-      role.add_permission!(:add_issues)
-      role.set_permission_trackers(:add_issues, [1])
-      role.save!
-      get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
-    end
-
-    test 'images from other sites in a description become links' do
-      about = '![pixel](https://tracker.example/p.gif) <img src="/\\\\other.example/q.gif"> ![logo](/images/logo.png)'
-      import('pic.md' => "---\nname: Picture\nabout: '#{about}'\n---\nText\n")
-      get :new, params: { project_id: 'ecookbook', issue_template: 'pic' }
-      assert_response :success
-      assert_select '.issue-template-intro a[href=?]', 'https://tracker.example/p.gif', text: 'pixel'
-      assert_select '.issue-template-intro img', 1
-      assert_select '.issue-template-intro img[src=?]', '/images/logo.png'
-    end
-
-    test 'a hidden field that Redmine requires and the template leaves empty is shown' do
-      import('hidden.md' => "---\nname: Hidden date\nabout: h\ntracker: Bug\nfields:\n  due_date: hidden\n---\nText\n")
-      WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'due_date', rule: 'required')
-      get :new, params: { project_id: 'ecookbook', issue_template: 'hidden' }
-      assert_response :success
-      assert_select '#issue-form input#issue_due_date'
-
-      # What is typed in it is kept.
-      post :create, params: { project_id: 'ecookbook', issue_template: 'hidden',
-                              issue: { tracker_id: '1', subject: 'Dated', description: 'Text',
-                                       due_date: '2026-12-31' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_equal Date.new(2026, 12, 31), issue.due_date
-    end
-
-    test 'without a template the user can use, Redmine\'s form opens' do
-      @request.session[:user_id] = 3
-      role = Role.find(2)
-      role.add_permission!(:add_issues)
-      role.set_permission_trackers(:add_issues, [3])
-      role.save!
-      # The templates are for Bug and Feature request; blank issues are off.
-      get :new, params: { project_id: 'ecookbook' }
-      assert_response :success
-      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '3', subject: 'Support' } }
-      assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
-    end
-
-    test 'a hidden value needs the permission to set the field' do
-      import('secret.md' => "---\nname: Secret\nabout: s\nis_private: true\nfields:\n  is_private: hidden\n---\nText\n")
-      # Developers can add issues but can't make them private.
-      @request.session[:user_id] = 3
-      post :create, params: { project_id: 'ecookbook', issue_template: 'secret',
-                              issue: { tracker_id: '1', subject: 'Hidden', description: 'Text' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_not issue.is_private?
-    end
-
-    test 'the request cannot change the values the template sets' do
-      post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
-                              issue: { tracker_id: '1', subject: 'More recipes', description: 'Text', priority_id: '4',
-                                       category_id: '1', due_date: '2026-12-01' } }
-      issue = Issue.order(:id).last
-      assert_redirected_to "/issues/#{issue.id}"
-      assert_equal [2, 6, 2], [issue.tracker_id, issue.priority_id, issue.category_id]
-    end
-
-    test 'blank issues: off in config.yml, still offered to those who manage the templates' do
-      get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
-      assert_response :success
-
-      @request.session[:user_id] = 3
-      Role.find(2).add_permission!(:add_issues)
-      get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
-    end
-
-    test 'issues without a template: refused in the browser when blank issues are off' do
-      # config.yml has blank_issues_enabled: false; developers don't manage templates.
-      @request.session[:user_id] = 3
-      Role.find(2).add_permission!(:add_issues)
-      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'No template' } }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
-      assert_equal 'Choose a template to create an issue.', flash[:error]
-
-      # The REST API is left to Redmine.
-      with_settings(rest_api_enabled: '1') do
-        @request.session[:user_id] = nil
-        @request.env['HTTP_X_REDMINE_API_KEY'] = User.find(3).api_key
-        post :create, params: { project_id: 'ecookbook', format: 'json',
-                                issue: { tracker_id: '1', subject: 'Through the API' } }
-        assert_response :created
+      def setup
+        @project = enable_issue_templates
+        @request.session[:user_id] = 2
+        import('bug_report.yml' => github_fixture('bug_report.yml'), 'feature.md' => FEATURE,
+               'config.yml' => github_fixture('config.yml'))
       end
-    end
 
-    test 'issues without a template: the project they go to decides' do
-      @request.session[:user_id] = 3
-      Role.find(2).add_permission!(:add_issues)
-      # Redmine's New issue without a project, for the project of the templates.
-      post :create, params: { issue: { project_id: '1', tracker_id: '1', subject: 'Elsewhere' } }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
-    end
+      test 'New issue opens the template chooser' do
+        get :new, params: { project_id: 'ecookbook' }
+        assert_redirected_to '/projects/ecookbook/issues/templates'
+      end
 
-    test 'a template that can no longer be used keeps what was typed' do
-      @request.session[:user_id] = 3
-      Role.find(2).add_permission!(:add_issues)
-      post :create, params: { project_id: 'ecookbook', issue_template: 'removed',
-                              issue: { tracker_id: '1', subject: 'Typed' },
-                              issue_template_answers: { 'what' => 'It broke' } }
-      assert_response :success
-      assert_select '#errorExplanation', text: /The template can no longer be used/
-      assert_select 'input#issue_subject[value=Typed]'
-      assert_select 'textarea#issue_description', text: /### what\s+It broke/
-    end
+      test 'parameters of New issue go to the chooser' do
+        get :new, params: { project_id: 'ecookbook', issue: { parent_issue_id: '1' } }
+        assert_redirected_to '/projects/ecookbook/issues/templates?issue%5Bparent_issue_id%5D=1'
+      end
 
-    test 'a template that can no longer be used keeps what was typed when blank issues are allowed' do
-      import('feature.md' => FEATURE)
-      post :create, params: { project_id: 'ecookbook', issue_template: 'gone',
-                              issue: { tracker_id: '1', subject: 'Typed' } }
-      assert_response :success
-      assert_select '#errorExplanation', text: /The template can no longer be used/
-    end
+      test 'without templates or without the module, New issue is Redmine\'s form' do
+        IssueTemplateFile.delete_all
+        RedmineKit::IssueTemplate::TemplateSet.reset!
+        get :new, params: { project_id: 'ecookbook' }
+        assert_response :success
 
-    test 'issues without a template are allowed without config.yml' do
-      import('feature.md' => FEATURE)
-      @request.session[:user_id] = 3
-      Role.find(2).add_permission!(:add_issues)
-      post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'Allowed' } }
-      assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
-    end
+        import('feature.md' => FEATURE)
+        @project.enabled_module_names = @project.enabled_module_names - ['issue_templates']
+        get :new, params: { project_id: 'ecookbook' }
+        assert_response :success
+      end
 
-    test 'create and continue opens the same template again' do
-      post :create, params: { project_id: 'ecookbook', issue_template: 'feature', continue: 'Create and continue',
-                              issue: { tracker_id: '2', subject: 'Next', description: 'Text', due_date: '2026-12-01' } }
-      location = URI.parse(response.location)
-      assert_equal '/projects/ecookbook/issues/new', location.path
-      assert_equal 'feature', Rack::Utils.parse_nested_query(location.query)['issue_template']
-    end
+      test 'copying an issue skips the chooser' do
+        get :new, params: { project_id: 'ecookbook', copy_from: 1 }
+        assert_response :success
+      end
 
-    test 'an unknown template opens the chooser' do
-      get :new, params: { project_id: 'ecookbook', issue_template: 'nope' }
-      assert_redirected_to '/projects/ecookbook/issues/templates'
-    end
+      test 'a Markdown template fills in the form' do
+        get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+        assert_response :success
+        assert_select 'input[name=issue_template][value=feature]'
+        # The values the template sets are text, not fields.
+        assert_select 'select#issue_tracker_id', 0
+        assert_select 'p', text: /Tracker\s+Feature request/
+        assert_select 'input#issue_subject[value=?]', '[Feature] '
+        assert_select 'textarea#issue_description', text: /\A## The idea/
+        assert_select 'select#issue_priority_id', 0
+        assert_select 'p', text: /Priority\s+High/
+        assert_select 'select#issue_category_id', 0
+        assert_select 'p', text: /Category\s+Recipes/
+        assert_select 'input#issue_estimated_hours', 0
+        assert_select 'label[for=issue_due_date] span.required'
+        assert_select '#issue_custom_field_values_8', 0
+      end
 
-    private
+      test 'creating from a Markdown template keeps hidden values and checks required fields' do
+        post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                                issue: { tracker_id: '2', subject: 'More recipes', description: 'Text',
+                                         priority_id: '6',
+                                         estimated_hours: '5' } }
+        assert_response :success
+        assert_select '#errorExplanation', text: /Due date/
 
-    def upload(name, user_id)
-      Attachment.create!(file: uploaded_test_file('testfile.txt', 'text/plain'), filename: name, author_id: user_id)
+        post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                                issue: { tracker_id: '2', subject: 'More recipes', description: 'Text',
+                                         priority_id: '6',
+                                         due_date: '2026-12-01', estimated_hours: '5' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_nil issue.estimated_hours
+        assert_equal '2026-12-24', issue.custom_field_value(8)
+      end
+
+      test 'an issue form shows its fields instead of the description' do
+        get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+        assert_response :success
+        # The form's part, at the top of Redmine's form: the tracker as text, the
+        # subject and the fields, once each.
+        assert_select '#issue-form .issue-template-fields p', text: /Tracker\s+Bug/
+        assert_select '#issue-form p', text: /Tracker\s+Bug/, count: 1
+        assert_select '#issue-form .issue-template-fields input#issue_subject[value=?]', '[Bug]: '
+        assert_select '#issue-form input#issue_subject', 1
+        assert_select '#issue-form .issue-template-fields textarea[name=?]', 'issue_template_answers[what-happened]'
+        assert_select 'head link[rel=stylesheet][href^=?]',
+                      '/assets/plugin_assets/redmine_kit_issue_template/issue_template-'
+        assert_select 'textarea#issue_description', 0
+        assert_select 'input[name=?]', 'issue_template_answers[contact]'
+        assert_select 'textarea[name=?]', 'issue_template_answers[what-happened]', text: 'A bug happened!'
+        assert_select 'select[name=?] option[selected=selected]', 'issue_template_answers[version]',
+                      text: '1.0.2 (Default)'
+        assert_select 'select[name=?][multiple=multiple]', 'issue_template_answers[browsers][]'
+        assert_select 'input[type=checkbox][name=?]', 'issue_template_answers[terms][]'
+        # A required option is marked on the option, not on the field.
+        assert_select 'p:has(input[name="issue_template_answers[terms][]"]) > label:not(.block) span.required', 0
+        assert_select 'p:has(input[name="issue_template_answers[terms][]"]) label.block span.required'
+        assert_select 'div.wiki', text: /Thanks for taking the time/
+        # Markdown in descriptions is rendered.
+        assert_select 'em.info a[href=?]', 'https://example.com', text: 'Code of Conduct'
+      end
+
+      test 'creating from an issue form writes the answers as the description' do
+        post :create, params: {
+          project_id: 'ecookbook', issue_template: 'bug_report',
+          issue: { tracker_id: '1', subject: '[Bug]: Crash' },
+          issue_template_answers: { 'what-happened' => 'It crashed', 'version' => '0', 'browsers' => ['', '1'],
+                                    'terms' => ['', '0'] }
+        }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        description = issue.description.gsub("\r\n", "\n")
+        assert_includes description, "### What happened?\n\nIt crashed"
+        assert_includes description, "### What browsers are you seeing the problem on?\n\nChrome"
+        assert_includes description, "- [X] I agree to follow this project's Code of Conduct"
+      end
+
+      test 'an issue form checks its required fields' do
+        post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
+                                issue: { tracker_id: '1', subject: 'Crash' },
+                                issue_template_answers: { 'what-happened' => '', 'terms' => [''] } }
+        assert_response :success
+        assert_select '#errorExplanation li', text: /What happened\?/
+        assert_select '#errorExplanation li', text: /Code of Conduct/
+        assert_select 'textarea[name=?]', 'issue_template_answers[what-happened]', text: ''
+      end
+
+      test 'an upload field takes files, and its section lists them' do
+        set_tmp_attachments_directory
+        get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+        assert_select '.issue-template-fields input.file_selector.custom-field-filedrop[name=?]',
+                      'issue_template_uploads[screenshots][dummy][file]'
+
+        mine = upload('screen.png', 2)
+        other = upload('other.png', 3)
+        files = upload('log.txt', 2)
+        post :create, params: {
+          project_id: 'ecookbook', issue_template: 'bug_report',
+          issue: { tracker_id: '1', subject: 'Uploads' },
+          issue_template_answers: { 'what-happened' => 'It crashed', 'version' => '0', 'terms' => ['0'] },
+          issue_template_uploads: { 'screenshots' => { '1' => { 'token' => mine.token, 'description' => 'Crash' },
+                                                       '2' => { 'token' => other.token } } },
+          attachments: { '1' => { 'token' => files.token } }
+        }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        # The user's own upload and the file of Redmine's Files field; not another user's upload.
+        assert_equal %w[log.txt screen.png], issue.attachments.map(&:filename).sort
+        assert_equal 'Crash', mine.reload.description
+        assert_nil other.reload.container
+        assert issue.description.gsub("\r\n", "\n").end_with?("### Upload screenshots\n\nattachment:\"screen.png\"")
+      end
+
+      test 'uploaded files come back when the form is updated or not saved' do
+        set_tmp_attachments_directory
+        token = upload('screen.png', 2).token
+        uploads = { 'screenshots' => { '1' => { 'token' => token } } }
+        post :new, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_uploads: uploads,
+                             form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '1' } }, xhr: true
+        assert_include 'issue_template_uploads[screenshots][p0][token]', response.body
+        assert_include token, response.body
+
+        post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_uploads: uploads,
+                                issue: { tracker_id: '1', subject: 'Not saved' } }
+        assert_response :success
+        assert_select 'input[name=?][value=?]', 'issue_template_uploads[screenshots][p0][token]', token
+        # Only in the form's field, not again in Redmine's Files field.
+        assert_select 'input[value=?]', token, count: 1
+      end
+
+      test 'an upload field takes only the extensions of accept' do
+        set_tmp_attachments_directory
+        accept = "\n      accept: \".png,.jpg\""
+        form = github_fixture('bug_report.yml').sub(/(type: upload.*?required: false)/m, "\\1#{accept}")
+        import('bug_report.yml' => form)
+        get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+        assert_select '.issue-template-fields em.info', text: 'Allowed extensions: .png, .jpg'
+
+        params = { project_id: 'ecookbook', issue_template: 'bug_report', issue: { tracker_id: '1', subject: 'Accept' },
+                   issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] } }
+        uploads = ->(name) { { 'screenshots' => { '1' => { 'token' => upload(name, 2).token } } } }
+        assert_no_difference 'Issue.count' do
+          post :create, params: params.merge(issue_template_uploads: uploads.call('notes.txt'))
+        end
+        assert_select '#errorExplanation li', text: 'Upload screenshots takes only these extensions: .png, .jpg'
+        assert_difference 'Issue.count' do
+          post :create, params: params.merge(issue_template_uploads: uploads.call('screen.PNG'))
+        end
+      end
+
+      test 'the script that sets up dropping files is only on forms with upload fields' do
+        get :new, params: { project_id: 'ecookbook', issue_template: 'bug_report' }
+        assert_select 'head script[src^=?]', '/assets/plugin_assets/redmine_kit_issue_template/issue_template-'
+        get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+        assert_select 'head script[src^=?]', '/assets/plugin_assets/redmine_kit_issue_template/issue_template-',
+                      count: 0
+      end
+
+      test 'a required upload field needs a file' do
+        form = github_fixture('bug_report.yml').sub(/(type: upload.*?required:) false/m, '\\1 true')
+        import('bug_report.yml' => form)
+        post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
+                                issue: { tracker_id: '1', subject: 'No file' },
+                                issue_template_answers: { 'what-happened' => 'x', 'version' => '0', 'terms' => ['0'] } }
+        assert_response :success
+        assert_select '#errorExplanation li', text: /Upload screenshots/
+      end
+
+      test 'updating the form keeps the template' do
+        post :new, params: { project_id: 'ecookbook', issue_template: 'bug_report',
+                             form_update_triggered_by: 'issue_tracker_id', issue: { tracker_id: '3', subject: 'x' },
+                             issue_template_answers: { 'contact' => 'me@example.com' } }, xhr: true
+        assert_response :success
+        # The form's part is rendered again with what was typed.
+        assert_include 'issue_template_answers[contact]', response.body
+        assert_include 'me@example.com', response.body
+      end
+
+      test 'the project stays the one the template was chosen in' do
+        # Without a template, Redmine offers the subprojects.
+        get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
+        assert_select 'select#issue_project_id'
+
+        get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+        assert_response :success
+        assert_select 'select#issue_project_id', 0
+
+        post :new, params: { project_id: 'ecookbook', issue_template: 'feature',
+                             form_update_triggered_by: 'issue_project_id',
+                             issue: { project_id: '5', tracker_id: '2', subject: 'x' } }, xhr: true
+        assert_response :success
+        assert_not_include 'issue_project_id', response.body
+
+        post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                                issue: { project_id: '5', tracker_id: '2', subject: 'More recipes', description: 'Text',
+                                         priority_id: '6', due_date: '2026-12-01' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_equal 1, issue.project_id
+      end
+
+      test 'a form without a tracker offers Redmine\'s trackers in its box' do
+        import('question.yml' => QUESTION)
+        get :new, params: { project_id: 'ecookbook', issue_template: 'question' }
+        assert_response :success
+        assert_select '.issue-template-fields select#issue_tracker_id[onchange*=updateIssueFrom]' do
+          assert_select 'option', Issue.new(project: @project).allowed_target_trackers(User.find(2)).count
+          assert_select 'option[selected=selected][value="1"]'
+        end
+        assert_select '#issue-form select#issue_tracker_id', 1
+
+        post :create, params: { project_id: 'ecookbook', issue_template: 'question',
+                                issue: { tracker_id: '3', subject: 'How?' }, issue_template_answers: { 'what' => 'x' } }
+        assert_equal 3, Issue.order(:id).last.tracker_id
+      end
+
+      # A form without a tracker.
+      QUESTION = <<~YAML
+        name: Question
+        description: Ask
+        body:
+          - type: input
+            id: what
+            attributes:
+              label: What
+      YAML
+
+      LINKED = <<~YAML
+        name: Linked form
+        description: Fields that set the issue's fields
+        type: Bug
+        body:
+          - id: version
+            link: fixed_version
+            attributes:
+              label: Version
+          - id: database
+            link: Database
+            attributes:
+              label: Database
+              options: [PostgreSQL, MySQL]
+          - id: due
+            link: due_date
+            attributes:
+              label: Due
+          - type: input
+            id: what
+            attributes:
+              label: What
+      YAML
+
+      test 'linked fields offer and set the issue\'s fields, outside the description' do
+        import('linked.yml' => LINKED)
+        get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
+        assert_response :success
+        versions = Issue.new(project: @project, tracker_id: 1).assignable_versions
+        own = versions.find { |version| version.project == @project && version.name == '2.0' }
+        assert_select 'select[name=?] option', 'issue_template_answers[version]', text: '2.0'
+        # Shared versions of other projects have the project's name, as in Redmine.
+        shared = versions.find { |version| version.project != @project }
+        if shared
+          assert_select 'select[name=?] option', 'issue_template_answers[version]',
+                        text: shared.to_s_with_project
+        end
+        assert_select 'select[name=?] option', 'issue_template_answers[database]', text: 'PostgreSQL'
+        %w[fixed_version_id custom_field_values_1 due_date].each { |id| assert_select "#issue-form #issue_#{id}", 0 }
+
+        post :create, params: {
+          project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Linked', fixed_version_id: '' },
+          issue_template_answers: { 'version' => own.id.to_s, 'database' => 'PostgreSQL', 'due' => '2026-12-31',
+                                    'what' => 'x' }
+        }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_equal ['2.0', 'PostgreSQL', Date.new(2026, 12, 31)],
+                     [issue.fixed_version&.name, issue.custom_field_value(1), issue.due_date]
+        assert_equal "### What\n\nx", issue.description.gsub("\r\n", "\n")
+      end
+
+      test 'links follow Redmine\'s rules for the user, and a blank answer keeps the default' do
+        import('linked.yml' => LINKED)
+        CustomField.find(1).update!(default_value: 'MySQL')
+        WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'fixed_version_id',
+                                   rule: 'readonly')
+        get :new, params: { project_id: 'ecookbook', issue_template: 'linked' }
+        assert_response :success
+        # Read-only for the user: not linked, and without options nothing to choose.
+        assert_select 'select[name=?]', 'issue_template_answers[version]', 0
+        assert_select 'select[name=?]', 'issue_template_answers[database]'
+
+        post :create, params: { project_id: 'ecookbook', issue_template: 'linked', issue: { subject: 'Blank' },
+                                issue_template_answers: { 'version' => '3', 'database' => '', 'what' => 'x' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_nil issue.fixed_version
+        assert_equal 'MySQL', issue.custom_field_value(1)
+      end
+
+      test 'parameters of unexpected shapes are ignored' do
+        get :new, params: { project_id: 'ecookbook', issue_template: 'feature', issue: { custom_field_values: 'x' } }
+        assert_response :success
+        post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report', issue_template_answers: 'x',
+                                issue_template_uploads: { 'screenshots' => 'x', 'other' => { '1' => 'x' } },
+                                issue: { tracker_id: '1', subject: 'Shapes', custom_fields: ['x'] } }
+        assert_response :success
+        assert_select '#errorExplanation'
+      end
+
+      test 'the REST API\'s form of custom fields cannot change a hidden value' do
+        post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                                issue: { tracker_id: '2', subject: 'API form', description: 'Text',
+                                         due_date: '2026-12-01', custom_fields: [{ id: '8', value: '2000-01-01' }] } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_equal '2026-12-24', issue.custom_field_value(8)
+      end
+
+      test 'the tracker field of a form\'s box applies the tracker\'s private default' do
+        import('question.yml' => QUESTION)
+        Tracker.find(3).update!(private_by_default: true)
+        post :new, params: { project_id: 'ecookbook', issue_template: 'question',
+                             form_update_triggered_by: 'issue_tracker_id',
+                             issue: { tracker_id: '3', is_private: '0', subject: 'x' } }, xhr: true
+        assert_response :success
+        assert @controller.instance_variable_get(:@issue).is_private?
+      end
+
+      test 'fields without an id and with Japanese labels keep their answers' do
+        import('ja.yml' => <<~YAML)
+          name: Japanese
+          description: d
+          body:
+            - type: input
+              attributes:
+                label: 何が起きましたか？
+            - type: input
+              attributes:
+                label: 環境
+        YAML
+        post :create, params: { project_id: 'ecookbook', issue_template: 'ja',
+                                issue: { tracker_id: '1', subject: 'J' },
+                                issue_template_answers: { 'field-0' => '落ちた', 'field-1' => 'Linux' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_equal "### 何が起きましたか？\n\n落ちた\n\n### 環境\n\nLinux", issue.description.gsub("\r\n", "\n")
+      end
+
+      test 'Redmine\'s rules still check linked fields, and the template only requires what the user can set' do
+        import('checks.yml' => <<~YAML)
+          name: Checks
+          description: d
+          fields:
+            watchers: required
+          body:
+            - id: amount
+              link: Float field
+              attributes:
+                label: Amount
+        YAML
+        # Developers can't add watchers: the template can't require them.
+        @request.session[:user_id] = 3
+        Role.find(2).add_permission!(:add_issues)
+        post :create, params: { project_id: 'ecookbook', issue_template: 'checks',
+                                issue: { tracker_id: '1', subject: 'C' },
+                                issue_template_answers: { 'amount' => 'abc' } }
+        assert_response :success
+        assert_select '#errorExplanation li', text: /Float field/
+        assert_select '#errorExplanation li', text: /Watchers/, count: 0
+
+        post :create, params: { project_id: 'ecookbook', issue_template: 'checks',
+                                issue: { tracker_id: '1', subject: 'C' },
+                                issue_template_answers: { 'amount' => '1.5' } }
+        assert_equal '1.5', Issue.order(:id).last.custom_field_value(6)
+      end
+
+      test 'an answer beyond the options is ignored' do
+        post :create, params: { project_id: 'ecookbook', issue_template: 'bug_report',
+                                issue: { tracker_id: '1', subject: 'X' },
+                                issue_template_answers: { 'what-happened' => 'x', 'version' => '9' * 20,
+                                                          'terms' => ['', '0'] } }
+        assert_response :success
+        assert_select '#errorExplanation li', text: /Version/
+      end
+
+      test 'a template whose tracker the user can\'t use is not offered' do
+        @request.session[:user_id] = 3
+        role = Role.find(2)
+        role.add_permission!(:add_issues)
+        role.set_permission_trackers(:add_issues, [1])
+        role.save!
+        get :new, params: { project_id: 'ecookbook', issue_template: 'feature' }
+        assert_redirected_to '/projects/ecookbook/issues/templates'
+      end
+
+      test 'images from other sites in a description become links' do
+        about = '![pixel](https://tracker.example/p.gif) <img src="/\\\\other.example/q.gif"> ![logo](/images/logo.png)'
+        import('pic.md' => "---\nname: Picture\nabout: '#{about}'\n---\nText\n")
+        get :new, params: { project_id: 'ecookbook', issue_template: 'pic' }
+        assert_response :success
+        assert_select '.issue-template-intro a[href=?]', 'https://tracker.example/p.gif', text: 'pixel'
+        assert_select '.issue-template-intro img', 1
+        assert_select '.issue-template-intro img[src=?]', '/images/logo.png'
+      end
+
+      test 'a hidden field that Redmine requires and the template leaves empty is shown' do
+        import('hidden.md' => "---\nname: Hidden date\nabout: h\ntracker: Bug\n" \
+                              "fields:\n  due_date: hidden\n---\nText\n")
+        WorkflowPermission.create!(role_id: 1, tracker_id: 1, old_status_id: 1, field_name: 'due_date',
+                                   rule: 'required')
+        get :new, params: { project_id: 'ecookbook', issue_template: 'hidden' }
+        assert_response :success
+        assert_select '#issue-form input#issue_due_date'
+
+        # What is typed in it is kept.
+        post :create, params: { project_id: 'ecookbook', issue_template: 'hidden',
+                                issue: { tracker_id: '1', subject: 'Dated', description: 'Text',
+                                         due_date: '2026-12-31' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_equal Date.new(2026, 12, 31), issue.due_date
+      end
+
+      test 'without a template the user can use, Redmine\'s form opens' do
+        @request.session[:user_id] = 3
+        role = Role.find(2)
+        role.add_permission!(:add_issues)
+        role.set_permission_trackers(:add_issues, [3])
+        role.save!
+        # The templates are for Bug and Feature request; blank issues are off.
+        get :new, params: { project_id: 'ecookbook' }
+        assert_response :success
+        post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '3', subject: 'Support' } }
+        assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
+      end
+
+      test 'a hidden value needs the permission to set the field' do
+        import('secret.md' => "---\nname: Secret\nabout: s\nis_private: true\n" \
+                              "fields:\n  is_private: hidden\n---\nText\n")
+        # Developers can add issues but can't make them private.
+        @request.session[:user_id] = 3
+        post :create, params: { project_id: 'ecookbook', issue_template: 'secret',
+                                issue: { tracker_id: '1', subject: 'Hidden', description: 'Text' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_not issue.is_private?
+      end
+
+      test 'the request cannot change the values the template sets' do
+        post :create, params: { project_id: 'ecookbook', issue_template: 'feature',
+                                issue: { tracker_id: '1', subject: 'More recipes', description: 'Text',
+                                         priority_id: '4',
+                                         category_id: '1', due_date: '2026-12-01' } }
+        issue = Issue.order(:id).last
+        assert_redirected_to "/issues/#{issue.id}"
+        assert_equal [2, 6, 2], [issue.tracker_id, issue.priority_id, issue.category_id]
+      end
+
+      test 'blank issues: off in config.yml, still offered to those who manage the templates' do
+        get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
+        assert_response :success
+
+        @request.session[:user_id] = 3
+        Role.find(2).add_permission!(:add_issues)
+        get :new, params: { project_id: 'ecookbook', issue_template: 'blank' }
+        assert_redirected_to '/projects/ecookbook/issues/templates'
+      end
+
+      test 'issues without a template: refused in the browser when blank issues are off' do
+        # config.yml has blank_issues_enabled: false; developers don't manage templates.
+        @request.session[:user_id] = 3
+        Role.find(2).add_permission!(:add_issues)
+        post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'No template' } }
+        assert_redirected_to '/projects/ecookbook/issues/templates'
+        assert_equal 'Choose a template to create an issue.', flash[:error]
+
+        # The REST API is left to Redmine.
+        with_settings(rest_api_enabled: '1') do
+          @request.session[:user_id] = nil
+          @request.env['HTTP_X_REDMINE_API_KEY'] = User.find(3).api_key
+          post :create, params: { project_id: 'ecookbook', format: 'json',
+                                  issue: { tracker_id: '1', subject: 'Through the API' } }
+          assert_response :created
+        end
+      end
+
+      test 'issues without a template: the project they go to decides' do
+        @request.session[:user_id] = 3
+        Role.find(2).add_permission!(:add_issues)
+        # Redmine's New issue without a project, for the project of the templates.
+        post :create, params: { issue: { project_id: '1', tracker_id: '1', subject: 'Elsewhere' } }
+        assert_redirected_to '/projects/ecookbook/issues/templates'
+      end
+
+      test 'a template that can no longer be used keeps what was typed' do
+        @request.session[:user_id] = 3
+        Role.find(2).add_permission!(:add_issues)
+        post :create, params: { project_id: 'ecookbook', issue_template: 'removed',
+                                issue: { tracker_id: '1', subject: 'Typed' },
+                                issue_template_answers: { 'what' => 'It broke' } }
+        assert_response :success
+        assert_select '#errorExplanation', text: /The template can no longer be used/
+        assert_select 'input#issue_subject[value=Typed]'
+        assert_select 'textarea#issue_description', text: /### what\s+It broke/
+      end
+
+      test 'a template that can no longer be used keeps what was typed when blank issues are allowed' do
+        import('feature.md' => FEATURE)
+        post :create, params: { project_id: 'ecookbook', issue_template: 'gone',
+                                issue: { tracker_id: '1', subject: 'Typed' } }
+        assert_response :success
+        assert_select '#errorExplanation', text: /The template can no longer be used/
+      end
+
+      test 'issues without a template are allowed without config.yml' do
+        import('feature.md' => FEATURE)
+        @request.session[:user_id] = 3
+        Role.find(2).add_permission!(:add_issues)
+        post :create, params: { project_id: 'ecookbook', issue: { tracker_id: '1', subject: 'Allowed' } }
+        assert_redirected_to "/issues/#{Issue.order(:id).last.id}"
+      end
+
+      test 'create and continue opens the same template again' do
+        post :create, params: { project_id: 'ecookbook', issue_template: 'feature', continue: 'Create and continue',
+                                issue: { tracker_id: '2', subject: 'Next', description: 'Text',
+                                         due_date: '2026-12-01' } }
+        location = URI.parse(response.location)
+        assert_equal '/projects/ecookbook/issues/new', location.path
+        assert_equal 'feature', Rack::Utils.parse_nested_query(location.query)['issue_template']
+      end
+
+      test 'an unknown template opens the chooser' do
+        get :new, params: { project_id: 'ecookbook', issue_template: 'nope' }
+        assert_redirected_to '/projects/ecookbook/issues/templates'
+      end
+
+      private
+
+      def upload(name, user_id)
+        Attachment.create!(file: uploaded_test_file('testfile.txt', 'text/plain'), filename: name, author_id: user_id)
+      end
     end
   end
 end

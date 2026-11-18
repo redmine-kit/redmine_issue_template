@@ -1,10 +1,10 @@
-# Redmine Issue Template
+# Redmine Kit Issue Template
 
 [![CI](https://img.shields.io/github/actions/workflow/status/redmine-kit/redmine_issue_template/ci.yml?branch=main&label=CI)](https://github.com/redmine-kit/redmine_issue_template/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/redmine-kit/redmine_issue_template?label=Coverage)](https://codecov.io/gh/redmine-kit/redmine_issue_template)
 [![License](https://img.shields.io/github/license/redmine-kit/redmine_issue_template?label=License)](LICENSE)
 
-Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレートの Redmine プラグインです。「新しいチケット」を押すとテンプレート選択画面が開き、選んだテンプレートがチケットの入力画面を埋めます。テンプレートファイルはプロジェクトのリポジトリの `.redmine/ISSUE_TEMPLATE/` に置き、リポジトリが変わると Redmine が取り込みます。読むのは `.redmine/ISSUE_TEMPLATE/` だけで、`.github/ISSUE_TEMPLATE/` のファイルは読みません。
+Redmine Kit Issue Template(`redmine_kit_issue_template`)は、チケットテンプレートの Redmine プラグインです。「新しいチケット」を押すとテンプレート選択画面が開き、選んだテンプレートがチケットの入力画面を埋めます。テンプレートファイルはプロジェクトのリポジトリの `.redmine/ISSUE_TEMPLATE/` に置き、リポジトリが変わると Redmine が取り込みます。読むのは `.redmine/ISSUE_TEMPLATE/` だけで、`.github/ISSUE_TEMPLATE/` のファイルは読みません。
 
 [English](README.md)
 
@@ -12,7 +12,7 @@ Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレ�
 
 - Markdown テンプレート、YAML フォーム、選択画面の設定の `config.yml` を使います。トラッカー、優先度、カテゴリ、対象バージョン、カスタムフィールドも、同じファイルに書きます。
 - テンプレートごとに、チケットの入力欄を隠したり、必須にしたりできます。
-- リポジトリが変わると、Redmine がテンプレートを取り込みます。リポジトリのないプロジェクトは、プロジェクトの設定で編集します。[Redmine GitHub](https://github.com/redmine-kit/redmine_github) で、GitHub のリポジトリから取り込むこともできます。
+- リポジトリが変わると、Redmine がテンプレートを取り込みます。リポジトリのないプロジェクトは、プロジェクトの設定で編集します。[Redmine Kit GitHub](https://github.com/redmine-kit/redmine_github) で、GitHub のリポジトリから取り込むこともできます。
 
 <a id="documentation"></a>
 
@@ -36,4 +36,4 @@ Redmine Issue Template(`redmine_issue_template`)は、チケットテンプレ�
 
 ## ライセンス
 
-Redmine Issue Template は、GNU General Public License バージョン 2 またはそれ以降のバージョンで公開しています。[LICENSE](LICENSE) を参照してください。Redmine の非公式のプラグインです。
+Redmine Kit Issue Template は、GNU General Public License バージョン 2 またはそれ以降のバージョンで公開しています。[LICENSE](LICENSE) を参照してください。Redmine の非公式のプラグインです。

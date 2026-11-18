@@ -2,236 +2,239 @@
 
 require_relative '../test_helper'
 
-module RedmineIssueTemplate
-  class ImportTest < ActiveSupport::TestCase
-    include RedmineIssueTemplate::TestHelper
+module RedmineKit
+  module IssueTemplate
+    class ImportTest < ActiveSupport::TestCase
+      include RedmineKit::IssueTemplate::TestHelper
 
-    fixtures :projects, :users, :roles, :members, :member_roles, :trackers, :projects_trackers, :enabled_modules,
-             :issue_statuses, :enumerations, :custom_fields, :custom_fields_projects, :custom_fields_trackers,
-             :issue_categories, :versions
+      fixtures :projects, :users, :roles, :members, :member_roles, :trackers, :projects_trackers, :enabled_modules,
+               :issue_statuses, :enumerations, :custom_fields, :custom_fields_projects, :custom_fields_trackers,
+               :issue_categories, :versions
 
-    def setup
-      @project = enable_issue_templates
-    end
-
-    def teardown
-      remove_git_dirs
-    end
-
-    test 'import stores the files and the warnings for the project' do
-      source = import(github_files, @project, source: 'github')
-      assert_equal %w[bug.md bug_report.yml config.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
-      assert_equal 'github', source.kind
-      keys = IssueTemplateSource.messages_for(@project).map(&:key)
-      assert_includes keys, 'projects_ignored'
-      assert_includes keys, 'labels_ignored'
-      assert_includes keys, 'assignees_ignored'
-    end
-
-    test 'import replaces the files and drops what is not a template' do
-      import('a.md' => "---\nname: Alpha\nabout: a\n---\n")
-      import('b.md' => "---\nname: Beta\nabout: b\n---\n", 'README.txt' => 'x',
-             'sub/c.md' => "---\nname: C\nabout: c\n---\n")
-      assert_equal %w[b.md c.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
-    end
-
-    test 'import reads files in UTF-8 and leaves out names it can\'t store' do
-      latin1 = "---\nname: Caf\xE9\nabout: a\n---\n".b
-      import('cafe.md' => latin1, '.md' => 'x', 'feature.md' => "---\nname: Feature\nabout: f\n---\n")
-      files = IssueTemplateFile.where(project: @project).order(:path)
-      assert_equal %w[cafe.md feature.md], files.pluck(:path)
-      assert files.first.content.valid_encoding?
-    end
-
-    test 'errors and warnings come from the stored files and the project as it is now' do
-      long = "---\nname: Long\nabout: a\n---\n#{'x' * RedmineIssueTemplate::Parser::MAX_LENGTH}"
-      import('long.md' => long, 'feature.md' => "---\nname: Feature\nabout: f\ntracker: Bug\n---\n")
-      file = IssueTemplateFile.find_by(project: @project, path: 'long.md')
-      assert file.too_long
-      assert_equal '', file.content
-      # The project as a new request loads it.
-      keys = -> { IssueTemplateSource.messages_for(Project.find(@project.id)).map(&:key) }
-      assert_includes keys.call, 'file_too_long'
-      assert_not_includes keys.call, 'unknown_value'
-
-      Tracker.find(1).update!(name: 'Defect')
-      assert_includes keys.call, 'unknown_value'
-    end
-
-    test 'redmine options resolve against the project' do
-      content = <<~MARKDOWN
-        ---
-        name: Feature
-        about: Ask for a feature
-        tracker: Feature request
-        priority: High
-        category: Recipes
-        fixed_version: "2.0"
-        custom_fields:
-          Searchable field: value
-        fields:
-          assigned_to: hidden
-          due_date: required
-          Database: hidden
-          Nope: hidden
-        ---
-        Text
-      MARKDOWN
-      import('feature.md' => content)
-      template = RedmineIssueTemplate::TemplateSet.for(@project).find('feature')
-      assert_equal 'Feature request', template.tracker(@project).name
-      defaults = RedmineIssueTemplate::IssueTemplateDefaults.new(template, @project).attributes
-      expected = { 'tracker_id' => '2', 'description' => "Text\n", 'priority_id' => '6', 'category_id' => '2',
-                   'fixed_version_id' => '3', 'custom_field_values' => { '2' => 'value' } }
-      assert_equal expected, defaults.except('subject')
-      visibility = template.options.visibility(@project)
-      assert_equal({ hidden: %w[assigned_to_id 1], required: %w[due_date] }, visibility)
-      assert_equal %w[unknown_field], IssueTemplateSource.messages_for(@project).map(&:key).sort
-    end
-
-    test 'the tracker comes from type; labels are not used' do
-      by_type = "---\nname: By type\nabout: a\ntype: support request\n---\n"
-      by_label = "---\nname: By label\nabout: a\nlabels: [question, bug]\n---\n"
-      import('a.md' => by_type, 'b.md' => by_label)
-      set = RedmineIssueTemplate::TemplateSet.for(@project)
-      assert_equal 'Support request', set.find('a').tracker(@project).name
-      assert_nil set.find('b').tracker(@project)
-      warning = set.find('b').project_warnings(@project).detect { |m| m.key == 'labels_ignored' }
-      assert_equal 'question, bug', warning.params['labels']
-    end
-
-    test 'the assignee is the first user or group that can be assigned' do
-      Member.create!(principal: Group.find(10), project: @project, role_ids: [1])
-      import('a.md' => "---\nname: Assign\nabout: a\nassignees: [nobody, A Team, JSmith]\n---\n")
-      template = RedmineIssueTemplate::TemplateSet.for(@project).find('a')
-      # A project loaded for each setting: Project caches assignable_users.
-      ignored = ->(project) { template.project_warnings(project).detect { |m| m.key == 'assignees_ignored' }.params }
-      with_settings issue_group_assignment: '1' do
-        project = Project.find(@project.id)
-        assert_equal Group.find(10), template.assignee(project)
-        assert_equal 'nobody', ignored.call(project)['assignees']
+      def setup
+        @project = enable_issue_templates
       end
-      with_settings issue_group_assignment: '0' do
-        project = Project.find(@project.id)
-        assert_equal User.find(2), template.assignee(project)
-        assert_equal 'nobody, A Team', ignored.call(project)['assignees']
+
+      def teardown
+        remove_git_dirs
       end
-    end
 
-    test 'invalid redmine options are errors' do
-      content = "---\nname: Bad\nabout: a\nis_private: maybe\nfields:\n  assigned_to: invisible\n---\n"
-      import('bad.md' => content)
-      errors = IssueTemplateSource.messages_for(@project).select(&:error?)
-      assert_equal %w[redmine_invalid_value redmine_invalid_visibility], errors.map(&:key)
-      assert_not RedmineIssueTemplate::TemplateSet.for(@project).any?
-    end
-
-    test 'a template set is read again when the files change' do
-      import('a.md' => "---\nname: Alpha\nabout: a\n---\n")
-      assert_equal %w[a], RedmineIssueTemplate::TemplateSet.for(@project).usable.map(&:key)
-      IssueTemplateFile.create!(project: @project, path: 'b.md', content: "---\nname: Beta\nabout: b\n---\n")
-      assert_equal %w[a b], RedmineIssueTemplate::TemplateSet.for(@project).usable.map(&:key)
-    end
-
-    test 'sync imports the folder of the repository when it changes' do
-      repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
-      source = RedmineIssueTemplate::RepositorySource.sync(@project)
-      assert_equal 'repository', source.kind
-      assert_equal '.redmine/ISSUE_TEMPLATE', source.folder
-      assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
-
-      assert_nil RedmineIssueTemplate::RepositorySource.sync(@project), 'nothing changed'
-
-      commit_files(dir, '.redmine/ISSUE_TEMPLATE/feature.yml' => github_fixture('bug_report.yml'))
-      repository.fetch_changesets
-      assert_equal %w[bug.md feature.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
-      assert_equal 40, IssueTemplateSource.find_by(project: @project).revision.to_s.length
-    end
-
-    test 'only .redmine/ISSUE_TEMPLATE is read: the files of .github/ISSUE_TEMPLATE are not' do
-      _repository, dir = git_repository(@project, '.github/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
-      assert_nil RedmineIssueTemplate::RepositorySource.sync(@project)
-      assert_empty IssueTemplateFile.where(project: @project)
-
-      commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
-      RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
-      assert_equal %w[task.md], IssueTemplateFile.where(project: @project).pluck(:path)
-      assert_raises(ArgumentError) do
-        import({ 'bug.md' => github_fixture('bug.md') }, @project, folder: '.github/ISSUE_TEMPLATE')
+      test 'import stores the files and the warnings for the project' do
+        source = import(github_files, @project, source: 'github')
+        assert_equal %w[bug.md bug_report.yml config.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
+        assert_equal 'github', source.kind
+        keys = IssueTemplateSource.messages_for(@project).map(&:key)
+        assert_includes keys, 'projects_ignored'
+        assert_includes keys, 'labels_ignored'
+        assert_includes keys, 'assignees_ignored'
       end
-    end
 
-    # What the repository has => what the import stores: one bad file doesn't stop the others.
-    {
-      'YAML with an alias' => ["a: &a [1]\nb: *a\n", :error],
-      'YAML nested too deep' => ["#{'[' * 5000}#{']' * 5000}\n", :error],
-      'a file too long' => ['x' * (RedmineIssueTemplate::Parser::MAX_LENGTH + 1), :error]
-    }.each do |name, (content, level)|
-      test "an import of #{name}: the file's error, the other files usable" do
-        git_repository(@project, '.redmine/ISSUE_TEMPLATE/bad.yml' => content,
-                                 '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
-        RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
-        assert_equal %w[bad.yml task.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
-        messages = IssueTemplateSource.messages_for(@project).select { |message| message.path == 'bad.yml' }
-        assert(messages.any? { |message| message.error? == (level == :error) })
-        assert_equal %w[task], RedmineIssueTemplate::TemplateSet.for(@project).usable.map(&:key)
+      test 'import replaces the files and drops what is not a template' do
+        import('a.md' => "---\nname: Alpha\nabout: a\n---\n")
+        import('b.md' => "---\nname: Beta\nabout: b\n---\n", 'README.txt' => 'x',
+               'sub/c.md' => "---\nname: C\nabout: c\n---\n")
+        assert_equal %w[b.md c.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
       end
-    end
 
-    test 'an import reads at most RepositorySource::MAX_FILES files' do
-      files = (1..(RedmineIssueTemplate::RepositorySource::MAX_FILES + 3)).to_h do |i|
-        [format('.redmine/ISSUE_TEMPLATE/t%03d.md', i), "---\nname: T#{i}\nabout: a\n---\n"]
+      test 'import reads files in UTF-8 and leaves out names it can\'t store' do
+        latin1 = "---\nname: Caf\xE9\nabout: a\n---\n".b
+        import('cafe.md' => latin1, '.md' => 'x', 'feature.md' => "---\nname: Feature\nabout: f\n---\n")
+        files = IssueTemplateFile.where(project: @project).order(:path)
+        assert_equal %w[cafe.md feature.md], files.pluck(:path)
+        assert files.first.content.valid_encoding?
       end
-      git_repository(@project, files)
-      RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
-      assert_equal RedmineIssueTemplate::RepositorySource::MAX_FILES, IssueTemplateFile.where(project: @project).count
-    end
 
-    test "names a repository can't give a file are not stored (a folder, a name of another kind)" do
-      import({ '../x.md' => "---\nname: X\nabout: a\n---\n", 'a/b.md' => 'x', 'c.txt' => 'x' }, @project)
-      assert_equal %w[b.md x.md], IssueTemplateFile.where(project: @project).pluck(:path).sort,
-                   'the names in the folder'
-    end
+      test 'errors and warnings come from the stored files and the project as it is now' do
+        long = "---\nname: Long\nabout: a\n---\n#{'x' * RedmineKit::IssueTemplate::Parser::MAX_LENGTH}"
+        import('long.md' => long, 'feature.md' => "---\nname: Feature\nabout: f\ntracker: Bug\n---\n")
+        file = IssueTemplateFile.find_by(project: @project, path: 'long.md')
+        assert file.too_long
+        assert_equal '', file.content
+        # The project as a new request loads it.
+        keys = -> { IssueTemplateSource.messages_for(Project.find(@project.id)).map(&:key) }
+        assert_includes keys.call, 'file_too_long'
+        assert_not_includes keys.call, 'unknown_value'
 
-    test 'templates removed from the repository go away; manual ones stay' do
-      repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
-      RedmineIssueTemplate::RepositorySource.sync(@project)
-      commit_files(dir, '.redmine/ISSUE_TEMPLATE/bug.md' => nil, 'README' => 'x')
-      repository.fetch_changesets
-      assert_equal 'manual', IssueTemplateSource.find_by(project: @project).kind
-      assert_empty IssueTemplateFile.where(project: @project)
+        Tracker.find(1).update!(name: 'Defect')
+        assert_includes keys.call, 'unknown_value'
+      end
 
-      IssueTemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
-      commit_files(dir, 'README' => 'y')
-      repository.fetch_changesets
-      assert_equal %w[a.md], IssueTemplateFile.where(project: @project).pluck(:path)
-    end
+      test 'redmine options resolve against the project' do
+        content = <<~MARKDOWN
+          ---
+          name: Feature
+          about: Ask for a feature
+          tracker: Feature request
+          priority: High
+          category: Recipes
+          fixed_version: "2.0"
+          custom_fields:
+            Searchable field: value
+          fields:
+            assigned_to: hidden
+            due_date: required
+            Database: hidden
+            Nope: hidden
+          ---
+          Text
+        MARKDOWN
+        import('feature.md' => content)
+        template = RedmineKit::IssueTemplate::TemplateSet.for(@project).find('feature')
+        assert_equal 'Feature request', template.tracker(@project).name
+        defaults = RedmineKit::IssueTemplate::IssueTemplateDefaults.new(template, @project).attributes
+        expected = { 'tracker_id' => '2', 'description' => "Text\n", 'priority_id' => '6', 'category_id' => '2',
+                     'fixed_version_id' => '3', 'custom_field_values' => { '2' => 'value' } }
+        assert_equal expected, defaults.except('subject')
+        visibility = template.options.visibility(@project)
+        assert_equal({ hidden: %w[assigned_to_id 1], required: %w[due_date] }, visibility)
+        assert_equal %w[unknown_field], IssueTemplateSource.messages_for(@project).map(&:key).sort
+      end
 
-    test 'templates from GitHub are not replaced by a fetch unless forced' do
-      git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
-      import({ 'gh.md' => "---\nname: From GitHub\nabout: a\n---\n" }, @project, source: 'github')
-      assert_nil RedmineIssueTemplate::RepositorySource.sync(@project)
-      assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
-      RedmineIssueTemplate::RepositorySource.sync(@project, force: true)
-      assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
-    end
+      test 'the tracker comes from type; labels are not used' do
+        by_type = "---\nname: By type\nabout: a\ntype: support request\n---\n"
+        by_label = "---\nname: By label\nabout: a\nlabels: [question, bug]\n---\n"
+        import('a.md' => by_type, 'b.md' => by_label)
+        set = RedmineKit::IssueTemplate::TemplateSet.for(@project)
+        assert_equal 'Support request', set.find('a').tracker(@project).name
+        assert_nil set.find('b').tracker(@project)
+        warning = set.find('b').project_warnings(@project).detect { |m| m.key == 'labels_ignored' }
+        assert_equal 'question, bug', warning.params['labels']
+      end
 
-    test 'sync does nothing without the module' do
-      @project.enabled_module_names = @project.enabled_module_names - ['issue_templates']
-      git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
-      assert_nil RedmineIssueTemplate::RepositorySource.sync(@project)
-    end
+      test 'the assignee is the first user or group that can be assigned' do
+        Member.create!(principal: Group.find(10), project: @project, role_ids: [1])
+        import('a.md' => "---\nname: Assign\nabout: a\nassignees: [nobody, A Team, JSmith]\n---\n")
+        template = RedmineKit::IssueTemplate::TemplateSet.for(@project).find('a')
+        # A project loaded for each setting: Project caches assignable_users.
+        ignored = ->(project) { template.project_warnings(project).detect { |m| m.key == 'assignees_ignored' }.params }
+        with_settings issue_group_assignment: '1' do
+          project = Project.find(@project.id)
+          assert_equal Group.find(10), template.assignee(project)
+          assert_equal 'nobody', ignored.call(project)['assignees']
+        end
+        with_settings issue_group_assignment: '0' do
+          project = Project.find(@project.id)
+          assert_equal User.find(2), template.assignee(project)
+          assert_equal 'nobody, A Team', ignored.call(project)['assignees']
+        end
+      end
 
-    test 'an unknown source is refused' do
-      assert_raises(ArgumentError) { import({}, @project, source: 'svn') }
-    end
+      test 'invalid redmine options are errors' do
+        content = "---\nname: Bad\nabout: a\nis_private: maybe\nfields:\n  assigned_to: invisible\n---\n"
+        import('bad.md' => content)
+        errors = IssueTemplateSource.messages_for(@project).select(&:error?)
+        assert_equal %w[redmine_invalid_value redmine_invalid_visibility], errors.map(&:key)
+        assert_not RedmineKit::IssueTemplate::TemplateSet.for(@project).any?
+      end
 
-    test 'deleting the project deletes its templates' do
-      project = Project.generate!
-      import({ 'a.md' => "---\nname: Alpha\nabout: a\n---\n" }, project)
-      project.reload.destroy
-      assert_empty IssueTemplateFile.where(project_id: project.id)
-      assert_nil IssueTemplateSource.find_by(project_id: project.id)
+      test 'a template set is read again when the files change' do
+        import('a.md' => "---\nname: Alpha\nabout: a\n---\n")
+        assert_equal %w[a], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
+        IssueTemplateFile.create!(project: @project, path: 'b.md', content: "---\nname: Beta\nabout: b\n---\n")
+        assert_equal %w[a b], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
+      end
+
+      test 'sync imports the folder of the repository when it changes' do
+        repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        source = RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+        assert_equal 'repository', source.kind
+        assert_equal '.redmine/ISSUE_TEMPLATE', source.folder
+        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+
+        assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project), 'nothing changed'
+
+        commit_files(dir, '.redmine/ISSUE_TEMPLATE/feature.yml' => github_fixture('bug_report.yml'))
+        repository.fetch_changesets
+        assert_equal %w[bug.md feature.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
+        assert_equal 40, IssueTemplateSource.find_by(project: @project).revision.to_s.length
+      end
+
+      test 'only .redmine/ISSUE_TEMPLATE is read: the files of .github/ISSUE_TEMPLATE are not' do
+        _repository, dir = git_repository(@project, '.github/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+        assert_empty IssueTemplateFile.where(project: @project)
+
+        commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+        RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
+        assert_equal %w[task.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_raises(ArgumentError) do
+          import({ 'bug.md' => github_fixture('bug.md') }, @project, folder: '.github/ISSUE_TEMPLATE')
+        end
+      end
+
+      # What the repository has => what the import stores: one bad file doesn't stop the others.
+      {
+        'YAML with an alias' => ["a: &a [1]\nb: *a\n", :error],
+        'YAML nested too deep' => ["#{'[' * 5000}#{']' * 5000}\n", :error],
+        'a file too long' => ['x' * (RedmineKit::IssueTemplate::Parser::MAX_LENGTH + 1), :error]
+      }.each do |name, (content, level)|
+        test "an import of #{name}: the file's error, the other files usable" do
+          git_repository(@project, '.redmine/ISSUE_TEMPLATE/bad.yml' => content,
+                                   '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+          RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
+          assert_equal %w[bad.yml task.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
+          messages = IssueTemplateSource.messages_for(@project).select { |message| message.path == 'bad.yml' }
+          assert(messages.any? { |message| message.error? == (level == :error) })
+          assert_equal %w[task], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
+        end
+      end
+
+      test 'an import reads at most RepositorySource::MAX_FILES files' do
+        files = (1..(RedmineKit::IssueTemplate::RepositorySource::MAX_FILES + 3)).to_h do |i|
+          [format('.redmine/ISSUE_TEMPLATE/t%03d.md', i), "---\nname: T#{i}\nabout: a\n---\n"]
+        end
+        git_repository(@project, files)
+        RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
+        assert_equal RedmineKit::IssueTemplate::RepositorySource::MAX_FILES,
+                     IssueTemplateFile.where(project: @project).count
+      end
+
+      test "names a repository can't give a file are not stored (a folder, a name of another kind)" do
+        import({ '../x.md' => "---\nname: X\nabout: a\n---\n", 'a/b.md' => 'x', 'c.txt' => 'x' }, @project)
+        assert_equal %w[b.md x.md], IssueTemplateFile.where(project: @project).pluck(:path).sort,
+                     'the names in the folder'
+      end
+
+      test 'templates removed from the repository go away; manual ones stay' do
+        repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+        commit_files(dir, '.redmine/ISSUE_TEMPLATE/bug.md' => nil, 'README' => 'x')
+        repository.fetch_changesets
+        assert_equal 'manual', IssueTemplateSource.find_by(project: @project).kind
+        assert_empty IssueTemplateFile.where(project: @project)
+
+        IssueTemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
+        commit_files(dir, 'README' => 'y')
+        repository.fetch_changesets
+        assert_equal %w[a.md], IssueTemplateFile.where(project: @project).pluck(:path)
+      end
+
+      test 'templates from GitHub are not replaced by a fetch unless forced' do
+        git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        import({ 'gh.md' => "---\nname: From GitHub\nabout: a\n---\n" }, @project, source: 'github')
+        assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+        assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
+        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+      end
+
+      test 'sync does nothing without the module' do
+        @project.enabled_module_names = @project.enabled_module_names - ['issue_templates']
+        git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+      end
+
+      test 'an unknown source is refused' do
+        assert_raises(ArgumentError) { import({}, @project, source: 'svn') }
+      end
+
+      test 'deleting the project deletes its templates' do
+        project = Project.generate!
+        import({ 'a.md' => "---\nname: Alpha\nabout: a\n---\n" }, project)
+        project.reload.destroy
+        assert_empty IssueTemplateFile.where(project_id: project.id)
+        assert_nil IssueTemplateSource.find_by(project_id: project.id)
+      end
     end
   end
 end

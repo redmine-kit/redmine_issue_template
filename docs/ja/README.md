@@ -1,6 +1,6 @@
-# Redmine Issue Template
+# Redmine Kit Issue Template
 
-Redmine Issue Template は、Redmine にチケットテンプレートを加えるプラグインです。プロジェクトにテンプレートがあると、「新しいチケット」を押したときにテンプレート選択画面が開きます。選んだテンプレートは、チケットの入力画面に、トラッカー(バグ、機能など)、題名、説明、テンプレートで決めた項目を入れます。YAML フォームは自分の入力欄を出し、チケットを作るときに、その回答を説明に書きます。
+Redmine Kit Issue Template は、Redmine にチケットテンプレートを加えるプラグインです。プロジェクトにテンプレートがあると、「新しいチケット」を押したときにテンプレート選択画面が開きます。選んだテンプレートは、チケットの入力画面に、トラッカー(バグ、機能など)、題名、説明、テンプレートで決めた項目を入れます。YAML フォームは自分の入力欄を出し、チケットを作るときに、その回答を説明に書きます。
 
 テンプレートファイルは、プロジェクトのリポジトリに置きます。Redmine は `.redmine/ISSUE_TEMPLATE/` を読みます (`.github/ISSUE_TEMPLATE/` は読みません)。リポジトリが変わると、ファイルを取り込み直します。リポジトリのないプロジェクトは、同じファイルをプロジェクトの設定で編集します。
 
@@ -12,7 +12,7 @@ Redmine Issue Template は、Redmine にチケットテンプレートを加え�
 | --- | --- |
 | [導入](setup.md) | 動作環境、インストール、設定、テスト |
 | [テンプレートの形式](format.md) | Markdown テンプレート、YAML フォーム、`config.yml`、Redmine のキーとほかのキー |
-| [取り込みと同期](sync.md) | テンプレートの取得元、取り込むタイミング、Redmine GitHub との連携 |
+| [取り込みと同期](sync.md) | テンプレートの取得元、取り込むタイミング、Redmine Kit GitHub との連携 |
 | [設計](design.md) | 目的、決定事項、対象外 |
 
 <a id="screens"></a>
@@ -45,4 +45,4 @@ YAML フォームは、説明、トラッカー、題名、入力欄を、Redmin
 
 ## ライセンス
 
-Redmine Issue Template は、GNU General Public License バージョン 2 またはそれ以降のバージョンで公開しています。[LICENSE](../../LICENSE) を参照してください。Redmine の非公式のプラグインです。
+Redmine Kit Issue Template は、GNU General Public License バージョン 2 またはそれ以降のバージョンで公開しています。[LICENSE](../../LICENSE) を参照してください。Redmine の非公式のプラグインです。

@@ -2,7 +2,7 @@
 <table class="list issue-template-source">
   <tr>
     <td class="name"><%= source.kind == 'github' ? 'GitHub' : l(:label_repository) %></td>
-    <td><%= source.folder.presence || RedmineIssueTemplate::FOLDERS.first %></td>
+    <td><%= source.folder.presence || RedmineKit::IssueTemplate::FOLDERS.first %></td>
   </tr>
   <% if source.revision.present? %>
   <tr>

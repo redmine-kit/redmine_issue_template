@@ -1,7 +1,7 @@
 *
 !init.rb
 !Gemfile
-!redmine_issue_template.gemspec
+!redmine_kit_issue_template.gemspec
 !LICENSE
 !app/
 !assets/

@@ -5,7 +5,7 @@
 class IssueTemplateSource < ApplicationRecord
   belongs_to :project
 
-  validates :kind, inclusion: { in: RedmineIssueTemplate::SOURCES }
+  validates :kind, inclusion: { in: RedmineKit::IssueTemplate::SOURCES }
 
   def self.for(project)
     find_or_initialize_by(project_id: project.id)
@@ -15,7 +15,7 @@ class IssueTemplateSource < ApplicationRecord
   # the files' own, and those that depend on the project (names it doesn't
   # have).
   def self.messages_for(project)
-    set = RedmineIssueTemplate::TemplateSet.for(project)
+    set = RedmineKit::IssueTemplate::TemplateSet.for(project)
     set.messages + set.usable.flat_map { |template| template.project_warnings(project) }
   end
 

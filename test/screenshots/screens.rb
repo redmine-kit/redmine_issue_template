@@ -6,8 +6,8 @@ require_relative '../test_helper'
 # The screens of the docs: the example templates as the templates of the
 # eCookbook project, plus a file with an error for the settings tab and a
 # form with links.
-class RedmineIssueTemplateScreenshotsTest < ScreenshotCase
-  include RedmineIssueTemplate::TestHelper
+class RedmineKitIssueTemplateScreenshotsTest < ScreenshotCase
+  include RedmineKit::IssueTemplate::TestHelper
 
   FEATURE = <<~MARKDOWN
     ---
