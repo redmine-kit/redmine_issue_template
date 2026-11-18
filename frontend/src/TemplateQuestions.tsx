@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Checkbox, CheckboxGroup, FormRow, Input, NewIssueFileField, Prose, Select, Textarea, useT, type NewIssueFile } from '@redmine-kit/ui';
+import { Checkbox, CheckboxGroup, FormRow, Input, Prose, Select, Textarea } from '@redmine-kit/ui';
+import { NewIssueFileField, useT, type NewIssueFile } from '@redmine-kit/plugin';
 import type { Element, Field } from './api';
 
 // A YAML form's fields, after the subject of the new issue's form (the part's section `IssueTemplateFields`, and the

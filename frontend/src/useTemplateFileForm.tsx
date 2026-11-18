@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError, Button, CardSection, FormRow, Input, ListRow, Notice, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, kitApi, useT } from '@redmine-kit/ui';
+import { Button, CardSection, FormRow, Input, ListRow, Notice, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
+import { ApiError, kitApi, useT } from '@redmine-kit/plugin';
 import { filePath, previewPath, settingsPath, type FileData, type PreviewData } from './api';
 import { TemplatePreview } from './TemplatePreview';
 

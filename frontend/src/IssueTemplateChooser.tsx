@@ -1,4 +1,4 @@
-import { useNewIssueExtension } from '@redmine-kit/ui';
+import { useNewIssueExtension } from '@redmine-kit/plugin';
 import type { ChooserData } from './api';
 import { ChooserList } from './ChooserList';
 

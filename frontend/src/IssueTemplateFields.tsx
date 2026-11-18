@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNewIssueExtension, type NewIssueParamValue } from '@redmine-kit/ui';
+import { useNewIssueExtension, type NewIssueParamValue } from '@redmine-kit/plugin';
 import type { SectionData } from './api';
 import { TemplateQuestions, type AnswerField, type Answers } from './TemplateQuestions';
 

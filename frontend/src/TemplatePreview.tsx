@@ -1,4 +1,5 @@
-import { CardSection, EmptyState, FormRow, Input, ListRow, SectionHeading, Textarea, useT } from '@redmine-kit/ui';
+import { CardSection, EmptyState, FormRow, Input, ListRow, SectionHeading, Textarea } from '@redmine-kit/ui';
+import { useT } from '@redmine-kit/plugin';
 import type { Preview } from './api';
 import { ChooserList } from './ChooserList';
 import { TemplateQuestions } from './TemplateQuestions';

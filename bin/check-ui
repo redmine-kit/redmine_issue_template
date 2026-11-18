@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-// Checks that a Kit-aware plugin's modules draw only with the app's components (redmine_kit_ui's docs/plugins-kit.md
-// "Design", ui-mock's docs/components/usage.md): the same rule the app's own screens follow (ui-mock
-// scripts/check-components.mjs). A plugin's screen that styles itself looks unlike the app and breaks in dark mode, right
+// A copy of @redmine-kit/plugin's kit-check-ui (ui-mock's packages/plugin/bin/kit-check-ui.mjs; frontend/'s
+// `npm run check:ui` runs the package's own), for bin/lint and CI, which run without the frontend's packages: the
+// package is private until it is published. Keep it the same as the package's.
+// kit-check-ui (@redmine-kit/plugin's bin): checks that a Kit-aware plugin's modules draw only with the app's components
+// (redmine_kit_ui's docs/plugins-kit.md "Design", @redmine-kit/ui's docs/components/usage.md): the same rule the app's
+// own screens follow. A plugin's screen that styles itself looks unlike the app and breaks in dark mode, right
 // to left or another density; one that injects HTML or evaluates code is a security hole.
 //
-//   bin/check-ui [files…]     (default: assets/javascripts/**/*.js, the built module, and frontend/src/**/*.{js,jsx,ts,tsx},
-//                              its source)
+//   bin/check-ui [--root <plugin>] [files…]   (kit-check-ui)
+//     --root   the plugin's folder (default: the current folder if it has init.rb, else its parent: npm runs a frontend's
+//              scripts in frontend/)
+//     files    default: assets/javascripts/kit/**/*.js, the built module (not the classic pages' scripts), and
+//              frontend/src/**/*.{js,jsx,ts,tsx}, its source
 //
 // It reports, with the file and line:
 // - raw elements the app has components for: <button>, <input>, <select>, <textarea>, <table>, <a> (createElement('button') …);
@@ -13,12 +19,14 @@
 //   (bg-…, text-[…], w-[…]): use the components' props and the theme's tokens;
 // - dangerouslySetInnerHTML, innerHTML, eval, new Function, import() of a URL, fetch/XMLHttpRequest (use kitApi);
 // - in the built module (not its source, whose other imports the build bundles): imports other than react,
-//   react/jsx-runtime and @redmine-kit/ui (a module is one file; the app gives these).
+//   react/jsx-runtime, @redmine-kit/ui and @redmine-kit/plugin (a module is one file; the app gives these).
 // A line may opt out with a comment saying why: // check-ui-ok: <reason>
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 
-const root = new URL('..', import.meta.url).pathname;
+const args = process.argv.slice(2);
+const rootAt = args.indexOf('--root');
+const root = resolve(rootAt >= 0 ? args.splice(rootAt, 2)[1] : existsSync('init.rb') ? '.' : '..');
 const RULES = [
   [/\b(?:createElement|h|jsxs?)\(\s*['"](button|input|select|textarea|table|a)['"]|<(button|input|select|textarea|table|a)[\s>]/, 'a raw element: use the app component (Button, Input, Select, Textarea, DataTable, a link prop)'],
   [/\bstyle\s*[:=]/, 'an inline style: use the components and the theme'],
@@ -31,8 +39,8 @@ const RULES = [
   [/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/, 'a request of its own: use kitApi / useKitQuery (the session, CSRF and errors as the app’s)'],
 ];
 const IMPORT_RULE = [
-  /^\s*import\b[^'"]*['"](?!react['"]|react\/jsx-runtime['"]|@redmine-kit\/ui['"])[^'"]+['"]/,
-  'an import the app doesn’t give: only react, react/jsx-runtime and @redmine-kit/ui',
+  /^\s*import\b[^'"]*['"](?!react['"]|react\/jsx-runtime['"]|@redmine-kit\/ui['"]|@redmine-kit\/plugin['"])[^'"]+['"]/,
+  'an import the app doesn’t give: only react, react/jsx-runtime, @redmine-kit/ui and @redmine-kit/plugin',
 ];
 const SOURCE = /\.(?:jsx?|tsx?)$/;
 
@@ -45,7 +53,7 @@ const walk = (dir, pattern) =>
         return statSync(path).isDirectory() ? walk(path, pattern) : pattern.test(path) ? [path] : [];
       });
 
-const files = process.argv.length > 2 ? process.argv.slice(2) : [...walk(join(root, 'assets/javascripts'), /\.js$/), ...walk(join(root, 'frontend/src'), SOURCE)];
+const files = args.length ? args : [...walk(join(root, 'assets/javascripts/kit'), /\.js$/), ...walk(join(root, 'frontend/src'), SOURCE)];
 let problems = 0;
 const sourceDir = join(root, 'frontend') + sep;
 for (const file of files) {
@@ -68,4 +76,4 @@ if (problems) {
   console.log(`\n${problems} problem${problems === 1 ? '' : 's'}`);
   process.exit(1);
 }
-console.log(`check-ui: ${files.length} file${files.length === 1 ? '' : 's'}, no problems`);
+console.log(`kit-check-ui: ${files.length} file${files.length === 1 ? '' : 's'}, no problems`);

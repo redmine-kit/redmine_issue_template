@@ -1,4 +1,4 @@
-import { useNewIssueExtension } from '@redmine-kit/ui';
+import { useNewIssueExtension } from '@redmine-kit/plugin';
 import type { SectionData } from './api';
 import { TemplateSummary } from './TemplateSummary';
 

@@ -1,4 +1,5 @@
-import { CardSection, Icon, ListRow, SectionHeading, useT } from '@redmine-kit/ui';
+import { CardSection, Icon, ListRow, SectionHeading } from '@redmine-kit/ui';
+import { useT } from '@redmine-kit/plugin';
 import { webUrl, type ChooserData } from './api';
 
 // The template chooser's rows (the new issue's step, and the settings' preview of config.yml): one row per template with

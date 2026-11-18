@@ -1,4 +1,5 @@
-import { AttrGrid, Button, Icon, Prose, useT } from '@redmine-kit/ui';
+import { AttrGrid, Button, Icon, Prose } from '@redmine-kit/ui';
+import { useT } from '@redmine-kit/plugin';
 import type { SectionData } from './api';
 
 // The template's line at the top of the new issue's form (the part's section, and the settings' preview): its kind, its

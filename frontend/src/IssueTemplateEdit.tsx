@@ -1,7 +1,5 @@
-import {
-  ApiError, Button, Card, CardBody, CardHeader, ErrorState, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton,
-  SkeletonRegion, Tabs, useExtensionContext, useKitNavigate, useKitQuery, useT,
-} from '@redmine-kit/ui';
+import { Button, Card, CardBody, CardHeader, ErrorState, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
+import { ApiError, useExtensionContext, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { DOCS, filePath, tabPage, type FileData } from './api';
 import { useTemplateFileForm } from './useTemplateFileForm';
 

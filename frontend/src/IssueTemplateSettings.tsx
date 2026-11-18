@@ -1,9 +1,6 @@
 import { useState } from 'react';
-import {
-  ApiError, AttrGrid, Badge, Button, CardHeaderActions, Checkbox, ConfirmDialog, EmptyState, FormActions, FormRow, Icon, IconButton, Input, ListRow,
-  Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, kitApi, useExtensionContext, useKitInvalidate, useKitQuery,
-  useT,
-} from '@redmine-kit/ui';
+import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
+import { ApiError, CardHeaderActions, kitApi, useExtensionContext, useKitInvalidate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { ChooserList } from './ChooserList';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
 import { TemplatePreview } from './TemplatePreview';

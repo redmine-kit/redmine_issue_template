@@ -6,14 +6,15 @@
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc --noEmit -p .",
-    "check:ui": "node ../bin/check-ui",
+    "check:ui": "kit-check-ui",
     "check": "npm run typecheck && npm run build && npm run check:ui"
   },
   "peerDependencies": {
     "react": "19.3.1"
   },
   "devDependencies": {
-    "@redmine-kit/ui": "file:../../redmine_kit_ui/types/redmine-kit-ui",
+    "@redmine-kit/plugin": "file:../../ui-mock/packages/plugin",
+    "@redmine-kit/ui": "file:../../ui-mock/packages/ui",
     "@types/react": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
     "react": "19.3.1",
