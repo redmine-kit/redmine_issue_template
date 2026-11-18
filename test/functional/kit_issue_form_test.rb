@@ -152,6 +152,47 @@ module RedmineIssueTemplate
       assert_equal [I18n.t(:error_issue_template_required)], response.parsed_body['errors']
     end
 
+    # "New issue" outside a project (the app's step that picks the project, Redmine's /issues/new): the project is
+    # issue[project_id], as Redmine's build_new_issue_from_params reads it, and its templates apply.
+    { 'an id' => '1', 'an identifier' => 'ecookbook' }.each do |name, project_id|
+      test "a template outside a project's URL, the project given as #{name}: its part, in that project" do
+        @request.session[:user_id] = 2
+        get :new, params: { issue_template: 'feature', issue: { project_id: project_id } }
+        issue = @controller.instance_variable_get(:@issue)
+        assert_equal @project, issue.project
+        assert issue.issue_template_active?, 'the chosen template applies'
+        part = answer(issue)
+        assert_not part[:step], 'the form, not the chooser again'
+        assert_equal 'Feature request', part[:data][:template][:name]
+        assert_equal '[Feature] ', issue.subject
+      end
+    end
+
+    test "the new UI's create outside a project's URL with a template: in the template's project, with the answers" do
+      as_kit_user(User.find(3))
+      assert_difference 'Issue.count' do
+        post :create, params: { format: 'json', issue_template: 'bug_report',
+                                issue: { project_id: '1', subject: 'Crash' },
+                                issue_template_answers: { 'what-happened' => 'It crashed', 'version' => '0',
+                                                          'terms' => ['0'] } }
+      end
+      assert_response :created
+      issue = Issue.last
+      assert_equal @project, issue.project
+      assert_includes issue.description.gsub("\r\n", "\n"), "### What happened?\n\nIt crashed"
+    end
+
+    test "outside a project's URL, a project the user may not add issues to: none of its templates applies" do
+      other = enable_issue_templates(Project.find(2))
+      import({ 'store.md' => FEATURE }, other)
+      @request.session[:user_id] = 3 # not a member of onlinestore (private)
+      get :new, params: { issue_template: 'store', issue: { project_id: '2' } }
+      issue = @controller.instance_variable_get(:@issue)
+      assert_equal @project, issue.project, "Redmine's choice: the first project the user may add issues to"
+      assert_nil issue.issue_template, "the other project's template"
+      assert_equal '[Feature] ', TemplateSet.for(other).templates.first.title, 'the template is there'
+    end
+
     test "the new UI's create with a template that no longer applies: 422" do
       as_kit_user(User.find(3))
       post :create, params: { project_id: 'ecookbook', format: 'json', issue_template: 'gone',

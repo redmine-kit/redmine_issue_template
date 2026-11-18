@@ -47,19 +47,19 @@ module RedmineIssueTemplate
     end
 
     def issue_template_set
-      return nil unless @project&.module_enabled?(:issue_templates)
+      return nil unless issue_template_project&.module_enabled?(:issue_templates)
 
-      @issue_template_set ||= TemplateSet.for(@project)
+      @issue_template_set ||= TemplateSet.for(issue_template_project)
     end
 
     # The templates the user can use in the project, once per request.
     def usable_issue_templates
-      @usable_issue_templates ||= issue_template_set&.usable_for(@project) || []
+      @usable_issue_templates ||= issue_template_set&.usable_for(issue_template_project) || []
     end
 
     # The template's values, resolved once per request.
     def issue_template_defaults(template)
-      @issue_template_defaults ||= IssueTemplateDefaults.new(template, @project)
+      @issue_template_defaults ||= IssueTemplateDefaults.new(template, issue_template_project)
     end
 
     # The template the request names: nil for none and for "blank".
@@ -150,12 +150,12 @@ module RedmineIssueTemplate
       render json: { errors: [message] }, status: :unprocessable_content
     end
 
-    def issue_without_template_allowed?(project = @project)
+    def issue_without_template_allowed?(project = issue_template_project)
       return true unless project.module_enabled?(:issue_templates)
       return true if User.current.allowed_to?(:manage_issue_templates, project)
 
-      set = project == @project ? issue_template_set : TemplateSet.for(project)
-      set.config.blank_issues_enabled? || (project == @project ? usable_issue_templates : set.usable_for(project)).none?
+      set = TemplateSet.for(project) # cached by the database's key: once a request anyway
+      set.config.blank_issues_enabled? || set.usable_for(project).none?
     end
   end
 end
