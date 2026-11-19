@@ -1,48 +1,184 @@
 #!/usr/bin/env node
 // A copy of @redmine-kit/plugin's kit-check-ui (ui-mock's packages/plugin/bin/kit-check-ui.mjs; frontend/'s
 // `npm run check:ui` runs the package's own), for bin/lint and CI, which run without the frontend's packages: the
-// package is private until it is published. Keep it the same as the package's.
+// package is private until it is published. Keep it the same as the package's, with the package's shared-exports.json
+// (the names the app's import map gives) beside it.
 // kit-check-ui (@redmine-kit/plugin's bin): checks that a Kit-aware plugin's modules draw only with the app's components
-// (redmine_kit_ui's docs/plugins-kit.md "Design", @redmine-kit/ui's docs/components/usage.md): the same rule the app's
+// (redmine_kit_ui's docs/plugins-kit.md "Checking it", @redmine-kit/ui's docs/components/usage.md): the same rule the app's
 // own screens follow. A plugin's screen that styles itself looks unlike the app and breaks in dark mode, right
 // to left or another density; one that injects HTML or evaluates code is a security hole.
 //
-//   bin/check-ui [--root <plugin>] [files…]   (kit-check-ui)
+//   kit-check-ui [--root <plugin>] [files…]
 //     --root   the plugin's folder (default: the current folder if it has init.rb, else its parent: npm runs a frontend's
 //              scripts in frontend/)
-//     files    default: assets/javascripts/kit/**/*.js, the built module (not the classic pages' scripts), and
-//              frontend/src/**/*.{js,jsx,ts,tsx}, its source
+//     files    default: frontend/src/**/*.{js,jsx,ts,tsx,css}, the plugin's source, assets/javascripts/kit/**/*.js, the
+//              built module (not the classic pages' scripts), and assets/stylesheets/kit/**/*.css, its built stylesheet
+//
+// What it reads where. The rules about what the code draws and does (below, to the stylesheet's) run on the plugin's
+// source: the code its author writes, where a line's opt-out comment is. A built module's lines are the bundler's: it
+// drops the comments, so an opt-out would be lost there and the same line reported again. The built module gets the
+// checks only it can answer: its imports, the specifiers and the names, against what the app's import map gives
+// (shared-exports.json, written from the app's app/src/extensions/shared/*.ts by its test, so the list can't drift).
+// A file given on the command line is a source file when it is under the plugin's frontend/ (the docs' examples
+// too), else a built module.
 //
 // It reports, with the file and line:
 // - raw elements the app has components for: <button>, <input>, <select>, <textarea>, <table>, <a> (createElement('button') …);
 // - inline styles (style:), colors written out (#fff, rgb(), hsl()) and Tailwind color or size utilities in className
 //   (bg-…, text-[…], w-[…]): use the components' props and the theme's tokens;
 // - dangerouslySetInnerHTML, innerHTML, eval, new Function, import() of a URL, fetch/XMLHttpRequest (use kitApi);
+// - a Sidebar drawn by the component itself (a screen's sidebar is ScreenSidebar's: the app's column and drawer);
+// - a way out of the server other than ExternalLink (@redmine-kit/ui: an https URL of another site, a new tab, rel
+//   noopener noreferrer): a URL with a scheme or "//" written in an href, to or src (but in ExternalLink's props or
+//   through externalHref), window.open or a write of location, and a new tab (target "_blank") on a part whose
+//   href doesn't go through externalHref(…) (a URL from data could be javascript: or http:), unless the part is AppLink
+//   (a file of this server in a new tab: it checks the path when it draws) or its href is a path of this server written
+//   out ("/…", not "//", no backslash, not "/${…}", which could be "//host");
 // - in the built module (not its source, whose other imports the build bundles): imports other than react,
-//   react/jsx-runtime, @redmine-kit/ui and @redmine-kit/plugin (a module is one file; the app gives these).
-// A line may opt out with a comment saying why: // check-ui-ok: <reason>
+//   react/jsx-runtime, @redmine-kit/ui and @redmine-kit/plugin (a module is one file; the app gives these);
+// - in the source and the built module: a name imported from one of those four that the app's import map doesn't give
+//   (a part of @redmine-kit/ui the app keeps to itself type-checks, then the module fails to load), and a namespace
+//   import of them (import * as …: its names can't be checked);
+// - in a stylesheet (redmine_kit_ui's docs/plugins-kit.md "The stylesheet": utilities only, after the app's): Preflight or
+//   base rules, a theme variable (--color-*, --spacing …) or @theme (the app's tokens and theme are the only ones), and a
+//   global selector (one without a class: html, body, *, a, :root with the tokens …), which would restyle the app's own
+//   screens. Tailwind's own fallback of its properties (*, :before, :after, ::backdrop in @layer properties) is let
+//   through.
+// A line may opt out with a comment saying why: // check-ui-ok: <reason> (/* check-ui-ok: <reason> */ in CSS)
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { join, relative, resolve, sep } from 'node:path';
 
 const args = process.argv.slice(2);
 const rootAt = args.indexOf('--root');
 const root = resolve(rootAt >= 0 ? args.splice(rootAt, 2)[1] : existsSync('init.rb') ? '.' : '..');
 const RULES = [
-  [/\b(?:createElement|h|jsxs?)\(\s*['"](button|input|select|textarea|table|a)['"]|<(button|input|select|textarea|table|a)[\s>]/, 'a raw element: use the app component (Button, Input, Select, Textarea, DataTable, a link prop)'],
+  [/\b(?:createElement|h|jsxs?)\(\s*['"](button|input|select|textarea|table|a)['"]|<(button|input|select|textarea|table|a)[\s>]/, 'a raw element: use the app component (Button, Input, Select, Textarea, DataTable, a link prop, AppLink, ExternalLink)'],
   [/\bstyle\s*[:=]/, 'an inline style: use the components and the theme'],
   [/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/, 'a color written out: use a component tone or the theme'],
   [/className\s*[:=][^\n]*\b(?:bg|text|border|ring|fill|stroke)-(?:\[|[a-z]+-\d)/, 'a color utility: use a component tone'],
   [/className\s*[:=][^\n]*\b(?:w|h|p[xytrbl]?|m[xytrbl]?|text|gap)-\[/, 'an arbitrary size: use the components’ sizes and the spacing tokens'],
   [/dangerouslySetInnerHTML|\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML/, 'HTML from a string: render text (the app sanitizes Redmine’s formatted text itself)'],
   [/\beval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*['"]/, 'code from a string'],
+  [/\bwindow\.open\s*\(|\blocation\.(?:assign|replace)\s*\(|\blocation(?:\.href)?\s*=(?!=)/, 'a move or a window of its own: ExternalLink for another site, AppLink or useKitNavigate for this server'],
   [/\bimport\s*\(/, 'a dynamic import: a plugin’s module is one file'],
   [/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/, 'a request of its own: use kitApi / useKitQuery (the session, CSRF and errors as the app’s)'],
+  [/<Sidebar[\s/>]|\bjsxs?\(\s*Sidebar\b/, 'a sidebar inside the screen: give its props to ScreenSidebar (the app’s sidebar column, a drawer on narrow widths)'],
 ];
 const IMPORT_RULE = [
   /^\s*import\b[^'"]*['"](?!react['"]|react\/jsx-runtime['"]|@redmine-kit\/ui['"]|@redmine-kit\/plugin['"])[^'"]+['"]/,
   'an import the app doesn’t give: only react, react/jsx-runtime, @redmine-kit/ui and @redmine-kit/plugin',
 ];
-const SOURCE = /\.(?:jsx?|tsx?)$/;
+const SOURCE = /\.(?:jsx?|tsx?|css)$/;
+// the names the import map gives, by specifier
+const SHARED = JSON.parse(readFileSync(fileURLToPath(new URL('./shared-exports.json', import.meta.url)), 'utf8'));
+// import { a, b as c } from '…' / export { a } from '…' / import x from '…' / import * as x from '…' (one statement, maybe
+// on several lines)
+const STATEMENT = /\b(import|export)\s+(type\s+)?([^'";]*?)\s*from\s*['"]([^'"]+)['"]/g;
+const lineOf = (text, index) => text.slice(0, index).split('\n').length - 1;
+/** The names a statement's clause takes from its module: [name, line offset]; '*' for a namespace import. */
+function importedNames(clause) {
+  const names = [];
+  const braces = /\{([^}]*)\}/.exec(clause);
+  const outside = clause.replace(/\{[^}]*\}/, '').replace(/,/g, ' ').trim();
+  if (/^\*\s+as\s+\w+/.test(outside)) names.push('*');
+  else if (/^[\w$]+$/.test(outside)) names.push('default');
+  if (braces)
+    for (const part of braces[1].split(',')) {
+      const spec = part.trim();
+      if (!spec || /^type\s/.test(spec)) continue;
+      names.push(spec.split(/\s+as\s+/)[0].trim());
+    }
+  return names;
+}
+/** Imports of the app's modules that the import map doesn't give: [line, message, statement]. */
+function sharedImportProblems(text) {
+  const problems = [];
+  for (const match of text.matchAll(STATEMENT)) {
+    const [statement, , typeOnly, clause, specifier] = match;
+    const given = SHARED[specifier];
+    if (!given || typeOnly) continue;
+    for (const name of importedNames(clause)) {
+      if (name === '*') problems.push([lineOf(text, match.index), `a namespace import of ${specifier}: import the names (they are checked against the app's import map)`, statement]);
+      else if (!given.includes(name)) problems.push([lineOf(text, match.index), `${name} isn't given by the app's import map (${specifier}): the module would fail to load; ask for it in @redmine-kit/plugin's docs, or bundle a part of your own`, statement]);
+    }
+  }
+  return problems;
+}
+// a new tab (target "_blank") on a part whose href doesn't go through externalHref(…): the part's opening tag (or, outside
+// a tag, its lines around it: its props, a few lines up and down) has an href and no externalHref; AppLink (a file of this
+// server: it checks the path when it draws) and an href that is a path of this server written out are let through
+const NEW_TAB = /\btarget\s*[=:]\s*\{?\s*['"]_blank['"]/g;
+// a path of this server written out: "/…", not "//host", no backslash or white space, and not "/${…}" (a template whose
+// value could make "//host")
+const SERVER_PATH = /^\/(?![/\\]|\$\{)[^\\\s]*$/;
+// an href and its value when it is written out ('…', "…", `…`, in braces or not); an expression has no value
+const HREF_VALUE = /\bhref\s*[=:]\s*(?:\{\s*)?(?:(['"`])((?:(?!\1)[^\n])*)\1)?/g;
+/** The JSX opening tag that holds `index`: its name and text, or null (the index isn't in a tag's props). */
+function openingTag(text, index) {
+  let start = -1;
+  let name = '';
+  for (const match of text.slice(0, index).matchAll(/<([A-Za-z][\w.]*)(?=[\s/>])/g)) [start, name] = [match.index, match[1]];
+  if (start < 0) return null;
+  // the tag's end: the first ">" outside braces and quotes (an arrow function's "=>" is inside braces)
+  let depth = 0;
+  let quote = '';
+  for (let i = start + 1; i < text.length; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === quote) quote = '';
+    } else if (c === '"' || c === "'" || c === '`') quote = c;
+    else if (c === '{') depth++;
+    else if (c === '}') depth--;
+    else if (c === '>' && depth === 0) return index < i ? { name, text: text.slice(start, i + 1) } : null;
+  }
+  return null;
+}
+// a URL with a scheme or "//" written in an href, to or src, but in ExternalLink's own props (its tag a few lines up) or
+// through externalHref(…)
+const LITERAL_URL = /\b(?:href|to|src|action|formAction)\s*[=:]\s*\{?\s*['"`](?:[a-zA-Z][\w+.-]*:|\/\/)/g;
+function literalUrlProblems(text) {
+  const problems = [];
+  const lines = text.split('\n');
+  for (const match of text.matchAll(LITERAL_URL)) {
+    const line = lineOf(text, match.index);
+    const part = lines.slice(Math.max(0, line - 3), line + 1).join('\n');
+    if (!/<ExternalLink\b|\bexternalHref\(/.test(part)) problems.push([line, 'a URL of another site or scheme: ExternalLink for another site (https only), AppLink for a path of this server']);
+  }
+  return problems;
+}
+function newTabProblems(text) {
+  const problems = [];
+  const lines = text.split('\n');
+  const report = (line) =>
+    problems.push([line, 'a new tab to an address that isn’t checked: ExternalLink, or href={externalHref(url)} (https of another site only) for a part that draws the link; AppLink target="_blank" for a file of this server']);
+  for (const match of text.matchAll(NEW_TAB)) {
+    const line = lineOf(text, match.index);
+    const tag = openingTag(text, match.index);
+    if (tag && /\bhref\b/.test(tag.text)) {
+      if (tag.name === 'AppLink' || /\bexternalHref\(/.test(tag.text)) continue;
+      const hrefs = [...tag.text.matchAll(HREF_VALUE)];
+      if (!hrefs.every((href) => href[2] !== undefined && SERVER_PATH.test(href[2]))) report(line);
+      continue;
+    }
+    const part = lines.slice(Math.max(0, line - 6), line + 7).join('\n');
+    if (/\bhref\b/.test(part) && !/\bexternalHref\(/.test(part)) report(line);
+  }
+  return problems;
+}
+const CSS_RULES = [
+  [/box-sizing:\s*border-box|::file-selector-button|-webkit-text-size-adjust|@layer base\s*\{|@import\s+['"]tailwindcss['"]/, 'Preflight or base rules: the app’s stylesheet has them (build the stylesheet with @redmine-kit/plugin/vite)'],
+  [/@theme\b|^\s*--(?:color|spacing|text|font|leading|tracking|radius|shadow|breakpoint|container|ease|animate)\b[\w-]*\s*:/, 'a theme variable: the app’s tokens and theme are the only ones (use their names)'],
+];
+// a selector (the line before {) without a class: it would restyle the app's own elements
+const GLOBAL_SELECTOR = /^(?!@|&|from\b|to\b|\d)([^{}]*)\{$/;
+const TAILWIND_PROPERTIES = /^\*,\s*:?:before,\s*:?:after,\s*::backdrop$/;
+const globalSelector = (line) => {
+  const selector = GLOBAL_SELECTOR.exec(line.trim())?.[1].trim();
+  return !!selector && !selector.includes('.') && !TAILWIND_PROPERTIES.test(selector);
+};
+// comments out of a stylesheet, each line kept (the line numbers stay); an opt-out's comment stays
+const uncomment = (css) => css.replace(/\/\*[\s\S]*?\*\//g, (comment) => (/check-ui-ok:/.test(comment) ? comment : comment.replace(/[^\n]/g, ' ')));
 
 const walk = (dir, pattern) =>
   !existsSync(dir)
@@ -53,23 +189,31 @@ const walk = (dir, pattern) =>
         return statSync(path).isDirectory() ? walk(path, pattern) : pattern.test(path) ? [path] : [];
       });
 
-const files = args.length ? args : [...walk(join(root, 'assets/javascripts/kit'), /\.js$/), ...walk(join(root, 'frontend/src'), SOURCE)];
+const files = args.length
+  ? args
+  : [...walk(join(root, 'frontend/src'), SOURCE), ...walk(join(root, 'assets/javascripts/kit'), /\.js$/), ...walk(join(root, 'assets/stylesheets/kit'), /\.css$/)];
 let problems = 0;
 const sourceDir = join(root, 'frontend') + sep;
 for (const file of files) {
-  // a source file of the frontend (src/, the docs' examples): its imports are bundled by the build, the built module's
-  // are checked
-  const rules = resolve(file).startsWith(sourceDir) ? RULES : [...RULES, IMPORT_RULE];
-  readFileSync(file, 'utf8')
+  // a source file of the frontend (src/, the docs' examples): the rules, its names from the app's modules (its other
+  // imports are bundled by the build); a built module: its imports only (see above)
+  const css = file.endsWith('.css');
+  const source = resolve(file).startsWith(sourceDir);
+  const rules = css ? CSS_RULES : source ? RULES : [IMPORT_RULE];
+  const report = (i, message, line) => {
+    problems++;
+    console.log(`${relative(process.cwd(), file)}:${i + 1}: ${message}\n  ${line.trim()}`);
+  };
+  const text = readFileSync(file, 'utf8');
+  const lines = text.split('\n');
+  if (!css) for (const [i, message] of sharedImportProblems(text)) if (!/check-ui-ok:/.test(lines[i])) report(i, message, lines[i]);
+  if (!css && source) for (const [i, message] of [...literalUrlProblems(text), ...newTabProblems(text)]) if (!/check-ui-ok:/.test(lines[i]) && !/^\s*\/\//.test(lines[i])) report(i, message, lines[i]);
+  (css ? uncomment(text) : text)
     .split('\n')
     .forEach((line, i) => {
-      if (/^\s*\/\//.test(line) || /check-ui-ok:/.test(line)) return;
-      for (const [re, message] of rules) {
-        if (re.test(line)) {
-          problems++;
-          console.log(`${relative(process.cwd(), file)}:${i + 1}: ${message}\n  ${line.trim()}`);
-        }
-      }
+      if ((!css && /^\s*\/\//.test(line)) || /check-ui-ok:/.test(line)) return;
+      for (const [re, message] of rules) if (re.test(line)) report(i, message, line);
+      if (css && globalSelector(line)) report(i, 'a global selector: a stylesheet has utilities (classes) only, or it restyles the app', line);
     });
 }
 if (problems) {
