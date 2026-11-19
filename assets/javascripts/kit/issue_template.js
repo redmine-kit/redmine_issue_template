@@ -1,9 +1,45 @@
 // Redmine Kit Issue Template: the plugin's module for the new UI, built from frontend/src by `npm run build` (frontend/vite.config.js).
 // Edit the source, not this file. React, @redmine-kit/ui and @redmine-kit/plugin come from the app (the shell's import map).
-import { ApiError, CardHeaderActions, NewIssueFileField, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT } from "@redmine-kit/plugin";
-import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, Drawer, DrawerActionsGroup, DrawerCloseButton, EmptyState, ErrorState, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
+import { ApiError, CardHeaderActions, NewIssueFileField, ScreenSidebar, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT } from "@redmine-kit/plugin";
+import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerActionsGroup, DrawerCloseButton, EmptyState, ErrorState, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+// src/answers.ts
+var partState = (state) => {
+	const drafts = state?.drafts;
+	return { drafts: drafts && typeof drafts === "object" ? drafts : {} };
+};
+/** The answers the form starts with (the template's values and defaults). */
+var startingAnswers = (elements) => Object.fromEntries(elements.flatMap((element) => element.type !== "markdown" && element.type !== "upload" && "value" in element && element.value != null ? [[element.ref, element.value]] : []));
+var same = (a, b) => JSON.stringify(Object.entries(a).sort()) === JSON.stringify(Object.entries(b).sort());
+/** The state after leaving a template: its answers kept when the user changed something, else none. */
+function keepDraft(state, key, answers, elements) {
+	const { drafts } = partState(state);
+	const { [key]: _old, ...others } = drafts;
+	return { drafts: answers && !same(answers, startingAnswers(elements)) ? {
+		...others,
+		[key]: answers
+	} : others };
+}
+var empty = (value) => Array.isArray(value) ? value.length === 0 : !value?.trim();
+/** What the answers still need, as the server's check words it (IssueTemplateAnswers: the field's label, the plugin's
+*  separator, Redmine's message): each required field left empty, a required checkbox unchecked, by the field's ref.
+*  Upload fields are the server's to check (their files arrive with the create). */
+function answerErrors(elements, answers, t) {
+	const message = (label, key) => `${label}${t("issue_template_error_separator")}${t(key)}`;
+	const errors = {};
+	elements.forEach((element) => {
+		if (element.type === "markdown" || element.type === "upload") return;
+		const value = answers[element.ref];
+		if (element.type === "checkboxes") {
+			const checked = Array.isArray(value) ? value : [];
+			if (element.options.some((option) => option.required && !checked.includes(option.value))) errors[element.ref] = message(element.label, "issue_template_error_unchecked");
+			return;
+		}
+		if (element.required && empty(value)) errors[element.ref] = message(element.label, "activerecord.errors.messages.blank");
+	});
+	return errors;
+}
 // src/api.ts
 var base = (project) => `/projects/${encodeURIComponent(project.identifier)}/issue_templates`;
 var settingsPath = (project) => `${base(project)}.json`;
@@ -21,7 +57,7 @@ var DOCS = "https://redmine-kit.github.io/redmine_issue_template/format";
 var webUrl = (url) => /^https?:\/\//i.test(url) ? url : void 0;
 // src/ChooserList.tsx
 var hostOf = (url) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
-function ChooserList({ data, onChoose }) {
+function ChooserList({ data, onChoose, badgeFor }) {
 	const t = useT();
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex min-w-0 flex-col",
@@ -37,6 +73,7 @@ function ChooserList({ data, onChoose }) {
 					id: template.key,
 					icon: template.kind === "form" ? "grid" : "document",
 					title: template.name,
+					badge: badgeFor?.(template.key),
 					sub: template.about || void 0,
 					onSelect: onChoose,
 					inset: 24,
@@ -45,11 +82,13 @@ function ChooserList({ data, onChoose }) {
 					cols: [{
 						content: template.tracker ?? "",
 						kind: "text",
-						width: 88
+						width: 88,
+						optional: true
 					}, {
 						content: template.kind === "form" ? t("label_issue_template_form") : "Markdown",
 						kind: "muted",
-						width: 72
+						width: 72,
+						optional: true
 					}],
 					cta: onChoose ? t("label_issue_template_start") : void 0
 				}, template.key)), data.blank && /* @__PURE__ */ jsx(ListRow, {
@@ -94,18 +133,21 @@ function ChooserList({ data, onChoose }) {
 }
 // src/IssueTemplateChooser.tsx
 function IssueTemplateChooser() {
-	const { data, setParams } = useNewIssueExtension();
+	const t = useT();
+	const { data, setParams, state } = useNewIssueExtension();
+	const { drafts } = partState(state);
 	return /* @__PURE__ */ jsx(ChooserList, {
 		data,
+		badgeFor: (key) => drafts[key] ? t("label_issue_template_draft") : void 0,
 		onChoose: (key) => setParams({
 			issue_template: key,
-			issue_template_answers: null,
+			issue_template_answers: drafts[key] ?? null,
 			issue_template_uploads: null
 		})
 	});
 }
 // src/TemplateSummary.tsx
-function TemplateSummary({ data, onChange }) {
+function TemplateSummary({ data, onBack }) {
 	const t = useT();
 	const template = data.template;
 	return /* @__PURE__ */ jsxs("div", {
@@ -114,29 +156,31 @@ function TemplateSummary({ data, onChange }) {
 			/* @__PURE__ */ jsxs("div", {
 				className: "flex min-h-8 min-w-0 items-center gap-2.5",
 				children: [
+					onBack && /* @__PURE__ */ jsx(IconButton, {
+						icon: "chevron-left",
+						size: 28,
+						"aria-label": t("label_issue_template_back_to_chooser"),
+						onClick: onBack,
+						className: "-ms-1.5 flex-none"
+					}),
 					/* @__PURE__ */ jsx(Icon, {
 						name: data.blank ? "plus" : template?.kind === "form" ? "grid" : "document",
-						size: 16
+						size: 16,
+						className: "flex-none text-text-muted"
 					}),
 					/* @__PURE__ */ jsx("span", {
 						className: "min-w-0 truncate font-medium",
+						title: data.blank ? void 0 : template?.name,
 						children: data.blank ? t("label_issue_template_blank") : template?.name
 					}),
 					template && /* @__PURE__ */ jsx("span", {
 						className: "flex-none text-meta text-text-muted",
 						children: template.kind === "form" ? t("label_issue_template_form") : "Markdown"
-					}),
-					/* @__PURE__ */ jsx("span", { className: "flex-1" }),
-					onChange && /* @__PURE__ */ jsx(Button, {
-						size: 28,
-						variant: "ghost",
-						onClick: onChange,
-						children: t("button_change")
 					})
 				]
 			}),
 			template?.about && /* @__PURE__ */ jsx(Prose, { text: template.about }),
-			data.preset && data.preset.length > 0 && /* @__PURE__ */ jsx(AttrGrid, { items: data.preset.map((item) => ({
+			!onBack && data.preset && data.preset.length > 0 && /* @__PURE__ */ jsx(AttrGrid, { items: data.preset.map((item) => ({
 				label: item.label,
 				value: item.value
 			})) })
@@ -145,24 +189,29 @@ function TemplateSummary({ data, onChange }) {
 }
 // src/IssueTemplateSection.tsx
 function IssueTemplateSection() {
-	const { data, setParams } = useNewIssueExtension();
-	return /* @__PURE__ */ jsx(TemplateSummary, {
-		data,
-		onChange: () => setParams({
+	const { data, params, setParams, state, setState } = useNewIssueExtension();
+	const back = () => {
+		if (data.template) setState(keepDraft(state, data.template.key, params.issue_template_answers, data.elements ?? []));
+		setParams({
 			issue_template: null,
 			issue_template_answers: null,
 			issue_template_uploads: null
-		})
+		});
+	};
+	return /* @__PURE__ */ jsx(TemplateSummary, {
+		data,
+		onBack: back
 	});
 }
 // src/TemplateQuestions.tsx
-function TemplateQuestions({ elements, answers, onAnswer, onFiles }) {
+function TemplateQuestions({ elements, answers, onAnswer, onFiles, errors = {} }) {
 	if (elements.length === 0) return null;
 	return /* @__PURE__ */ jsx("div", {
 		className: "flex min-w-0 flex-col gap-4",
 		children: elements.map((element, index) => element.type === "markdown" ? /* @__PURE__ */ jsx(Prose, { text: element.text }, `markdown-${index}`) : /* @__PURE__ */ jsx(FieldRow, {
 			field: element,
 			value: answers[element.ref],
+			error: errors[element.ref],
 			onChange: (value) => onAnswer?.(element.ref, value),
 			onFiles: (files) => onFiles?.(element.ref, files)
 		}, element.ref))
@@ -171,37 +220,52 @@ function TemplateQuestions({ elements, answers, onAnswer, onFiles }) {
 var asList = (value) => Array.isArray(value) ? value : value ? [value] : [];
 var asText = (value) => typeof value === "string" ? value : "";
 /** One field of a YAML form, with the app's form parts. */
-function FieldRow({ field, value, onChange, onFiles }) {
+function FieldRow({ field, value, error, onChange, onFiles }) {
 	const t = useT();
-	const row = (control) => /* @__PURE__ */ jsx(FormRow, {
+	const note = field.type === "textarea" && field.render ? t("text_issue_template_code_block", { lang: field.render }) : field.type === "link" && field.field ? t("text_issue_template_sets_field", { field: field.field }) : void 0;
+	const row = (control, group = false) => /* @__PURE__ */ jsx(FormRow, {
 		layout: "stack",
 		label: field.label,
 		required: field.required,
-		hint: hint(field),
+		hint: hint(field, note),
+		error,
+		group,
 		children: control
 	});
 	const blank = {
 		value: "",
 		label: t("actionview_instancetag_blank_option")
 	};
+	const placeholder = field.placeholder || void 0;
 	switch (field.type) {
 		case "input": return row(/* @__PURE__ */ jsx(Input, {
 			value: asText(value),
-			placeholder: field.placeholder || void 0,
+			placeholder,
 			onChange: (event) => onChange(event.target.value)
 		}));
-		case "textarea": return row(/* @__PURE__ */ jsx(Textarea, {
-			rows: 4,
-			mono: field.render,
+		case "textarea": return row(field.render ? /* @__PURE__ */ jsx(Textarea, {
+			rows: 3,
+			mono: true,
 			value: asText(value),
-			placeholder: field.placeholder || void 0,
+			placeholder,
 			onChange: (event) => onChange(event.target.value)
+		}) : /* @__PURE__ */ jsx(MarkdownEditor, {
+			density: "compact",
+			label: field.label,
+			rows: 3,
+			maxRows: 14,
+			value: asText(value),
+			placeholder,
+			onChange
 		}));
-		case "dropdown": return field.multiple ? row(/* @__PURE__ */ jsx(Choices, {
+		case "dropdown": return field.multiple ? row(/* @__PURE__ */ jsx(MultiSelect, {
+			className: "max-w-80",
 			options: field.options,
 			value: asList(value),
-			onChange
+			placeholder: blank.label,
+			onValueChange: onChange
 		})) : row(/* @__PURE__ */ jsx(Select, {
+			className: "max-w-80",
 			label: field.label,
 			options: [...field.blank ? [blank] : [], ...field.options],
 			value: asText(value),
@@ -211,35 +275,41 @@ function FieldRow({ field, value, onChange, onFiles }) {
 			options: field.options,
 			value: asList(value),
 			onChange
-		}));
+		}), true);
 		case "link":
-			if (field.kind === "select") return field.multiple ? row(/* @__PURE__ */ jsx(Choices, {
+			if (field.kind === "select") return field.multiple ? row(/* @__PURE__ */ jsx(MultiSelect, {
+				className: "max-w-80",
 				options: field.options ?? [],
 				value: asList(value),
-				onChange
+				placeholder: blank.label,
+				onValueChange: onChange
 			})) : row(/* @__PURE__ */ jsx(Select, {
+				className: "max-w-80",
 				label: field.label,
 				options: [blank, ...field.options ?? []],
 				value: asText(value),
 				onValueChange: (next) => onChange(next)
 			}));
+			if (field.kind === "date") return row(/* @__PURE__ */ jsx(DateInput, {
+				value: asText(value),
+				onChange: (event) => onChange(event.target.value)
+			}));
 			if (field.kind === "textarea") return row(/* @__PURE__ */ jsx(Textarea, {
 				rows: 4,
 				value: asText(value),
-				placeholder: field.placeholder || void 0,
+				placeholder,
 				onChange: (event) => onChange(event.target.value)
 			}));
 			return row(/* @__PURE__ */ jsx(Input, {
-				type: field.kind === "date" ? "date" : "text",
 				value: asText(value),
-				placeholder: field.placeholder || void 0,
+				placeholder,
 				onChange: (event) => onChange(event.target.value)
 			}));
 		case "upload": return row(/* @__PURE__ */ jsx(NewIssueFileField, {
 			name: field.ref,
 			accept: field.accept.length ? field.accept.map((ext) => ext.startsWith(".") ? ext : `.${ext}`) : void 0,
 			onChange: onFiles
-		}));
+		}), true);
 	}
 }
 /** Checkboxes for the options of a field with several answers. */
@@ -250,22 +320,26 @@ function Choices({ options, value, onChange }) {
 		onCheckedChange: (checked) => onChange(checked === true ? [...value, option.value] : value.filter((item) => item !== option.value))
 	}, option.value)) });
 }
-/** A field's description, as written (Markdown: a link in it is a link), under the field; the upload field's extensions are
-*  the file field's own. */
-function hint(field) {
-	return field.description ? /* @__PURE__ */ jsx(Prose, {
+/** A field's description, as written (Markdown: a link in it is a link), and the form's note on what the answer becomes,
+*  under the field. */
+function hint(field, note) {
+	if (!field.description && !note) return void 0;
+	return /* @__PURE__ */ jsxs(Fragment, { children: [field.description && /* @__PURE__ */ jsx(Prose, {
 		text: field.description,
 		className: "text-meta text-text-muted"
-	}) : void 0;
+	}), note && /* @__PURE__ */ jsx("span", {
+		className: "text-meta text-text-muted",
+		children: note
+	})] });
 }
 // src/IssueTemplateFields.tsx
 function IssueTemplateFields() {
-	const { data, params, setParams } = useNewIssueExtension();
+	const t = useT();
+	const { data, params, setParams, setMissing, showErrors } = useNewIssueExtension();
 	const elements = data.elements ?? [];
 	const answers = params.issue_template_answers ?? {};
 	const uploads = params.issue_template_uploads ?? {};
-	const fields = elements.filter((element) => element.type !== "markdown");
-	const starting = JSON.stringify(Object.fromEntries(fields.flatMap((field) => "value" in field && field.value != null ? [[field.ref, field.value]] : [])));
+	const starting = JSON.stringify(startingAnswers(elements));
 	useEffect(() => {
 		if (params.issue_template_answers === void 0 && starting !== "{}") setParams({ issue_template_answers: JSON.parse(starting) });
 	}, [
@@ -273,9 +347,22 @@ function IssueTemplateFields() {
 		params.issue_template_answers,
 		setParams
 	]);
+	const errors = answerErrors(elements, answers, t);
+	const messages = JSON.stringify(Object.values(errors));
+	const tell = useRef(setMissing);
+	useEffect(() => {
+		tell.current = setMissing;
+	});
+	useEffect(() => {
+		tell.current(JSON.parse(messages));
+	}, [messages]);
+	useEffect(() => () => {
+		tell.current([]);
+	}, []);
 	return /* @__PURE__ */ jsx(TemplateQuestions, {
 		elements,
 		answers,
+		errors: showErrors ? errors : void 0,
 		onAnswer: (ref, value) => setParams({ issue_template_answers: {
 			...answers,
 			[ref]: value
@@ -348,7 +435,7 @@ function TemplatePreview({ preview }) {
 						}),
 						/* @__PURE__ */ jsx(TemplateQuestions, {
 							elements: preview.section.elements ?? [],
-							answers: answersOf(preview)
+							answers: startingAnswers(preview.section.elements ?? [])
 						}),
 						preview.issue.description != null && /* @__PURE__ */ jsx(FormRow, {
 							layout: "stack",
@@ -365,10 +452,6 @@ function TemplatePreview({ preview }) {
 			})
 		]
 	});
-}
-/** The answers a YAML form starts with (the template's values and defaults). */
-function answersOf(preview) {
-	return Object.fromEntries((preview.section.elements ?? []).flatMap((element) => element.type !== "markdown" && "value" in element && element.value != null ? [[element.ref, element.value]] : []));
 }
 // src/useTemplateFileForm.tsx
 function useTemplateFileForm({ project, file, onSaved, onCancel }) {
@@ -609,6 +692,33 @@ function IssueTemplateFileDrawer({ project, file, onClose, onSaved }) {
 		]
 	});
 }
+// src/source.ts
+function sourceRows(source, t) {
+	if (!source) return [{
+		key: "source",
+		label: t("label_issue_template_source"),
+		value: t("label_issue_template_project_settings")
+	}];
+	return [
+		{
+			key: "source",
+			label: source.kind === "github" ? "GitHub" : t("label_repository"),
+			value: source.folder,
+			href: source.folder_path
+		},
+		...source.revision ? [{
+			key: "revision",
+			label: t("label_revision"),
+			value: source.revision,
+			href: source.revision_path ?? void 0
+		}] : [],
+		...source.synced_at_text ? [{
+			key: "updated",
+			label: t("field_updated_on"),
+			value: source.synced_at_text
+		}] : []
+	];
+}
 // src/IssueTemplateSettings.tsx
 function IssueTemplateSettings() {
 	const t = useT();
@@ -670,6 +780,7 @@ function IssueTemplateSettings() {
 			}),
 			data.has_repository && /* @__PURE__ */ jsx(Button, {
 				icon: "import",
+				tip: t("text_issue_template_import_tip"),
 				onClick: () => data.manual && data.files.length > 0 ? setImporting(true) : void sync(),
 				children: t("button_import")
 			}),
@@ -705,30 +816,20 @@ function IssueTemplateSettings() {
 				"aria-label": t("label_issue_template_plural"),
 				className: "pb-6",
 				children: [
-					data.source && /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(SectionHeading, {
-						heading: t("label_repository"),
+					/* @__PURE__ */ jsx(SectionHeading, {
+						heading: t("label_issue_template_source"),
 						inset: 24,
 						className: "mt-section"
-					}), /* @__PURE__ */ jsx(AttrGrid, {
+					}),
+					/* @__PURE__ */ jsx(AttrGrid, {
 						columns: 1,
 						className: "px-gutter",
-						items: [
-							{
-								label: data.source.kind === "github" ? "GitHub" : t("label_repository"),
-								value: data.source.folder,
-								href: data.source.folder_path
-							},
-							...data.source.revision ? [{
-								label: t("label_revision"),
-								value: data.source.revision,
-								href: data.source.revision_path ?? void 0
-							}] : [],
-							...data.source.synced_at_text ? [{
-								label: t("field_updated_on"),
-								value: data.source.synced_at_text
-							}] : []
-						]
-					})] }),
+						items: sourceRows(data.source, t).map(({ label, value, href }) => ({
+							label,
+							value,
+							href
+						}))
+					}),
 					/* @__PURE__ */ jsx(SectionHeading, {
 						heading: t("label_issue_template_plural"),
 						count: templates.length,
@@ -823,6 +924,17 @@ function IssueTemplateSettings() {
 		})
 	] });
 }
+/** A file's error or warning, with its heading (エラー / 警告) and Redmine's sentence. */
+function MessageNotice({ message }) {
+	const t = useT();
+	const error = message.level === "error";
+	return /* @__PURE__ */ jsx(Notice, {
+		tone: error ? "danger" : "warning",
+		heading: error ? t("label_issue_template_error") : t("label_alert_warning"),
+		wrap: true,
+		text: message.text
+	});
+}
 /** A file's state, as Redmine's tab marks it: its errors (not usable), its warnings, or usable. */
 function FileState({ file }) {
 	const t = useT();
@@ -891,11 +1003,7 @@ function FilePane({ id, manual, files, onEdit, onDelete }) {
 			onEdit: () => onEdit(file),
 			onDelete: row ? () => onDelete(row) : void 0
 		}),
-		file.messages.map((message) => /* @__PURE__ */ jsx(Notice, {
-			tone: message.level === "error" ? "danger" : "warning",
-			wrap: true,
-			text: message.text
-		}, message.text)),
+		file.messages.map((message) => /* @__PURE__ */ jsx(MessageNotice, { message }, message.text)),
 		/* @__PURE__ */ jsxs(Tabs, {
 			"aria-label": file.path,
 			items: [{
@@ -945,11 +1053,7 @@ function ConfigPane({ data, file, onEdit, onSaved, onError }) {
 			elsewhere: !data.manual,
 			onEdit: loaded ? () => onEdit(loaded) : void 0
 		}),
-		loaded?.messages.map((message) => /* @__PURE__ */ jsx(Notice, {
-			tone: message.level === "error" ? "danger" : "warning",
-			wrap: true,
-			text: message.text
-		}, message.text)),
+		loaded?.messages.map((message) => /* @__PURE__ */ jsx(MessageNotice, { message }, message.text)),
 		/* @__PURE__ */ jsxs(Tabs, {
 			"aria-label": data.config.path,
 			items: [
@@ -1023,6 +1127,7 @@ function ChooserSettings({ data, onSaved, onError }) {
 				className: "flex flex-col gap-3 px-gutter pt-section",
 				children: /* @__PURE__ */ jsx(Checkbox, {
 					label: t("label_issue_template_blank_issues_enabled"),
+					description: t("text_issue_template_blank_issues_info"),
 					checked: blank,
 					disabled: readOnly,
 					onCheckedChange: (checked) => setBlank(checked === true)
@@ -1097,6 +1202,7 @@ function ChooserSettings({ data, onSaved, onError }) {
 				placement: "sticky",
 				edge: true,
 				dirty,
+				note: t("text_issue_template_config_rewrite"),
 				children: [/* @__PURE__ */ jsx(Button, {
 					variant: "ghost",
 					disabled: !dirty || saving,
@@ -1184,6 +1290,23 @@ function SettingsSkeleton() {
 				"aria-label": t("label_issue_template_plural"),
 				className: "pb-6",
 				children: [
+					/* @__PURE__ */ jsx(SectionHeading, {
+						heading: t("label_issue_template_source"),
+						inset: 24,
+						className: "mt-section"
+					}),
+					/* @__PURE__ */ jsx(AttrGrid, {
+						columns: 1,
+						className: "px-gutter",
+						items: [{
+							label: t("label_issue_template_source"),
+							value: /* @__PURE__ */ jsx(Skeleton, {
+								width: 120,
+								height: 12,
+								className: "inline-block align-middle"
+							})
+						}]
+					}),
 					/* @__PURE__ */ jsx(SectionHeading, {
 						heading: t("label_issue_template_plural"),
 						inset: 24,
@@ -1384,4 +1507,61 @@ function EditSkeleton() {
 		]
 	});
 }
-export { IssueTemplateChooser, IssueTemplateEdit, IssueTemplateFields, IssueTemplateSection, IssueTemplateSettings };
+// src/IssueTemplateSidebar.tsx
+function issueTemplateSidebarBlocks(sidebar, t) {
+	const source = sourceRows(sidebar.source, t).map((row) => ({
+		kind: "text",
+		key: row.key,
+		over: row.label,
+		label: row.value,
+		href: row.href
+	}));
+	const file = sidebar.path ? [{
+		kind: "text",
+		key: "file",
+		over: t("field_filename"),
+		label: sidebar.path
+	}] : [];
+	return [
+		{
+			key: "source",
+			label: t("label_issue_template_plural"),
+			rows: [
+				...source.slice(0, 1),
+				...file,
+				...source.slice(1)
+			]
+		},
+		...sidebar.hidden.length ? [{
+			key: "hidden",
+			label: t("label_issue_template_hidden_fields"),
+			count: sidebar.hidden.length,
+			rows: sidebar.hidden.map((label) => ({
+				kind: "text",
+				key: label,
+				label,
+				icon: "eye-off",
+				muted: true
+			}))
+		}] : [],
+		...sidebar.settings_path ? [{
+			key: "settings",
+			rows: [{
+				key: "settings",
+				label: t("label_issue_template_settings_link"),
+				icon: "settings",
+				href: sidebar.settings_path
+			}]
+		}] : []
+	];
+}
+function IssueTemplateSidebar() {
+	const t = useT();
+	const { data } = useNewIssueExtension();
+	if (!data.sidebar || data.blank) return null;
+	return /* @__PURE__ */ jsx(ScreenSidebar, {
+		label: t("kit.new_issue.sidebar"),
+		groups: issueTemplateSidebarBlocks(data.sidebar, t)
+	});
+}
+export { IssueTemplateChooser, IssueTemplateEdit, IssueTemplateFields, IssueTemplateSection, IssueTemplateSettings, IssueTemplateSidebar };

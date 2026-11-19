@@ -68,15 +68,10 @@ module RedmineKit
           messages: messages_for(file).map { |found| message(found) } }
       end
 
-      private
-
-      def message(message)
-        { level: message.error? ? 'error' : 'warning', text: message.text }
-      end
-
       # Where the files come from: the repository's folder and the revision
       # they were imported from, with Redmine's pages of them (paths built by
-      # Redmine's routes), and when, in the user's format.
+      # Redmine's routes), and when, in the user's format; nil when they are
+      # edited here. The tab's and the new issue's sidebar (KitForm).
       def source_data
         return nil if manual?
 
@@ -84,6 +79,12 @@ module RedmineKit
         { kind: source.kind, folder: folder, revision: source.revision&.first(8),
           synced_at: source.synced_at&.iso8601, synced_at_text: source.synced_at && format_time(source.synced_at),
           **repository_paths(folder) }
+      end
+
+      private
+
+      def message(message)
+        { level: message.error? ? 'error' : 'warning', text: message.text }
       end
 
       # The repository's folder and revision pages, for a source that is the

@@ -105,6 +105,62 @@ module RedmineKit
         assert_not_includes issue.safe_attribute_names(User.find(2)), 'priority_id'
       end
 
+      test "a template's part asks the app to show the values it sets at their places, read-only" do
+        part = answer(built({ issue_template: 'feature' }))
+        assert_equal 'Read-only (set by the template)', part[:locked][:reason]
+        assert_equal [{ field: 'priority_id', label: 'Priority', value: 'High' },
+                      { field: 'category_id', label: 'Category', value: 'Recipes' }], part[:locked][:fields]
+        assert_not part[:fold_attributes], "a Markdown template's form is Redmine's, unfolded"
+        assert(part[:locked][:fields].all? { |field| issue_not_settable?(field[:field]) })
+      end
+
+      test "a form's part folds the form's other fields" do
+        assert answer(built({ issue_template: 'bug_report' }))[:fold_attributes]
+      end
+
+      test "the sidebar: where the templates come from, the template's file, the settings tab for its managers" do
+        part = answer(built({ issue_template: 'feature' }))
+        sidebar = part[:data][:sidebar]
+        assert_equal 'feature.md', sidebar[:path]
+        assert_equal '/projects/ecookbook/settings/issue_templates', sidebar[:settings_path]
+        # a user who may only add issues: no settings link; the chooser has the sidebar too
+        user = User.find(3)
+        assert_nil answer(new_issue(user), {}, user: user)[:data][:sidebar][:settings_path]
+      end
+
+      test "the sidebar lists the fields the template hides, by Redmine's labels" do
+        import('hidden.md' => <<~MARKDOWN)
+          ---
+          name: Hidden
+          about: Hides fields
+          fields:
+            due_date: hidden
+            estimated_hours: hidden
+          ---
+          Text
+        MARKDOWN
+        sidebar = answer(built({ issue_template: 'hidden' }))[:data][:sidebar]
+        assert_equal ['Due date', 'Estimated time'], sidebar[:hidden]
+      end
+
+      test "a field with a link names the issue's field it sets" do
+        import('regression.yml' => <<~YAML)
+          name: Regression
+          description: Report something that broke in a version.
+          body:
+            - id: version
+              link: fixed_version
+              attributes:
+                label: Broken in version
+            - type: textarea
+              id: what
+              attributes:
+                label: What broke?
+        YAML
+        elements = answer(built({ issue_template: 'regression' }))[:data][:elements]
+        assert_equal 'Target version', elements.detect { |element| element[:type] == 'link' }[:field]
+      end
+
       test "a form: its fields with what the form starts with; the tracker and the subject are the app's fields" do
         issue = built({ issue_template: 'bug_report' })
         assert_not_includes issue.safe_attribute_names(User.find(2)), 'subject', "Redmine's form: in the form's part"
@@ -311,6 +367,10 @@ module RedmineKit
       end
 
       private
+
+      def issue_not_settable?(attribute)
+        !built({ issue_template: 'feature' }).safe_attribute_names(User.find(2)).include?(attribute)
+      end
 
       def upload(name, user_id)
         Attachment.create!(file: uploaded_test_file('testfile.txt', 'text/plain'), filename: name, author_id: user_id)

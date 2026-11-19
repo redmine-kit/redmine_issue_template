@@ -32,13 +32,17 @@ ActiveSupport.on_load(:redmine_kit_ui) do
     api_version 1
     module_path 'kit/issue_template.js'
     # New issue: the chooser as a step before the form, then the template's
-    # part: its line and the values it sets at the form's top, a YAML form's
-    # fields after the subject (KitForm answers which applies). The upload
-    # fields' files go with Redmine's own uploads; the part names them by id.
+    # part: its line at the form's top, a YAML form's fields after the
+    # subject, the page's sidebar (where the templates come from, the fields
+    # the template hides); KitForm answers which applies, and has the app show
+    # the values the template sets at their fields and fold a form's other
+    # fields. The upload fields' files go with Redmine's own uploads; the part
+    # names them by id.
     new_issue :template, permission: :add_issues,
                          params: %i[issue_template issue_template_answers issue_template_uploads],
                          chooser: 'IssueTemplateChooser', section: 'IssueTemplateSection',
-                         sections: [{ component: 'IssueTemplateFields', after: :subject }]
+                         sections: [{ component: 'IssueTemplateFields', after: :subject }],
+                         sidebar: 'IssueTemplateSidebar'
     # Project settings › Issue templates, and the file forms it opens (in a
     # drawer from the tab; these screens for their URLs, beside the tabs)
     project_settings :issue_templates, label: :label_issue_template_plural, permission: :manage_issue_templates,

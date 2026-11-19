@@ -19,6 +19,12 @@ module RedmineKit
     #   them, BodyComposer#value);
     # - a blank issue the user may create: the line that offers the chooser again.
     #
+    # Both have the sidebar's data (where the templates come from, the fields
+    # the template hides, the settings tab for a user who manages them). A
+    # template's part also asks the app to fold a form's other fields under
+    # 「そのほかの項目」 (fold_attributes) and to show the values it sets at their
+    # places, read-only (locked: the same values as `preset`).
+    #
     # Nothing where the module is off or no template is usable: the app shows
     # Redmine's form alone. Texts are as written (Markdown): the app draws them
     # from the text.
@@ -64,18 +70,48 @@ module RedmineKit
       # No template yet: the chooser, or a blank issue the user may create.
       def chooser_part(templates)
         return if templates.empty?
-        return part(step: false, blank: true) if @params[:issue_template] == 'blank' && blank?
+        return part(step: false, blank: true, sidebar: sidebar) if @params[:issue_template] == 'blank' && blank?
 
         part(step: true, templates: templates.map { |template| chooser_row(template) }, blank: blank?,
-             contact_links: set.config.contact_links.map { |link| link.to_h.transform_values(&:to_s) })
+             contact_links: set.config.contact_links.map { |link| link.to_h.transform_values(&:to_s) },
+             sidebar: sidebar)
       end
 
       def set
         @set ||= TemplateSet.for(@project)
       end
 
-      def part(step:, **data)
-        { plugin: PLUGIN, name: NAME, step: step, data: data }
+      def part(step:, answer: {}, **data)
+        { plugin: PLUGIN, name: NAME, step: step, data: data, **answer }
+      end
+
+      # The sidebar of "New issue": where the templates come from (the file of
+      # the template, when one applies), the fields it hides, and the settings
+      # tab for a user who manages the templates.
+      def sidebar(template = nil)
+        { source: SettingsTab.new(@project).source_data, path: template&.path, hidden: hidden_labels(template),
+          settings_path: (settings_path if @user.allowed_to?(:manage_issue_templates, @project)) }
+      end
+
+      def settings_path
+        Rails.application.routes.url_helpers.settings_project_path(@project, tab: 'issue_templates')
+      end
+
+      # The fields the template hides, by Redmine's labels (a form's
+      # description is its answers, not hidden).
+      def hidden_labels(template)
+        return [] unless template
+
+        (@issue.issue_template_visibility[:hidden] - ['description']).filter_map { |attribute| field_label(attribute) }
+      end
+
+      # Redmine's label of an issue's field (field_*), a custom field's name.
+      def field_label(attribute)
+        return ::I18n.t(:label_issue_watchers) if attribute == 'watcher_user_ids'
+        return ::I18n.t("field_#{attribute.delete_suffix('_id')}") unless attribute.match?(/\A\d+\z/)
+
+        field = @issue.available_custom_fields.find { |custom| custom.id.to_s == attribute }
+        field.name if field&.visible_by?(@project, @user)
       end
 
       # The chooser offers a blank issue as IssueTemplatesController#index does.
@@ -91,8 +127,12 @@ module RedmineKit
         template = @issue.issue_template
         # the tracker and the subject are the new UI's own fields (IssuePatch)
         @issue.issue_template_host_fields = true
+        preset = preset_values
         part(step: false, template: chooser_row(template).merge(tracker: @issue.tracker&.name),
-             preset: preset_values, elements: template.form? ? elements : [])
+             preset: preset.map { |value| value.except(:field) }, elements: template.form? ? elements : [],
+             sidebar: sidebar(template),
+             answer: { fold_attributes: template.form?,
+                       locked: { reason: ::I18n.t(:label_issue_template_readonly), fields: preset } })
       end
 
       # The values the template sets, as text (issue_templates/_preset_values).
@@ -102,13 +142,14 @@ module RedmineKit
         core = LABELS.filter_map do |name, label|
           next unless preset.include?(name)
 
-          { label: ::I18n.t(label), value: core_value(name) }
+          { field: name, label: ::I18n.t(label), value: core_value(name) }
         end
         core + @issue.custom_field_values.filter_map do |value|
           field = value.custom_field
           next unless preset.include?(field.id.to_s) && field.visible_by?(@project, @user)
 
-          { label: field.name, value: field.format.formatted_custom_value(nil, value, false).to_s }
+          { field: field.id.to_s, label: field.name,
+            value: field.format.formatted_custom_value(nil, value, false).to_s }
         end
       end
 
@@ -143,7 +184,7 @@ module RedmineKit
         when 'checkboxes' then { options: checkbox_options(element), value: Array(value).map(&:to_s) }
         when 'upload' then { accept: element.accept }
         when 'link' then link(element, value)
-        else { value: value.to_s, render: element.attributes['render'].present? }
+        else { value: value.to_s, render: element.attributes['render'].to_s }
         end
       end
 
@@ -157,12 +198,19 @@ module RedmineKit
         end
       end
 
+      # The label of the issue's field a link sets (none for a link that can't
+      # apply).
+      def linked_label(linked)
+        linked && field_label(linked.attribute)
+      end
+
       # A field with a link (issue_templates/_linked_field): the kind of the
       # issue's field it sets, and its choices.
       def link(element, value)
         linked = @issue.issue_template_links.find { |candidate| candidate.element.equal?(element) }
         kind = linked ? linked.kind(@issue) : :select
-        data = { kind: kind.to_s, multiple: linked&.multiple?(@issue) || false, value: value }
+        data = { kind: kind.to_s, multiple: linked&.multiple?(@issue) || false, value: value,
+                 field: linked_label(linked) }
         return data unless kind == :select
 
         choices = linked ? linked.choices(@issue) : element.options.map { |option| [option.to_s, option.to_s] }

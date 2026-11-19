@@ -4,11 +4,11 @@ import { webUrl, type ChooserData } from './api';
 
 // The template chooser's rows (the new issue's step, and the settings' preview of config.yml): one row per template with
 // its tracker, its kind and 「作成を始める」, a blank issue when it is allowed, then config.yml's contact links. Without
-// `onChoose` the rows are shown only (a preview).
+// `onChoose` the rows are shown only (a preview). `badgeFor` marks a template's row after its name (「入力中」).
 
 const hostOf = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-export function ChooserList({ data, onChoose }: { data: ChooserData; onChoose?: (key: string) => void }) {
+export function ChooserList({ data, onChoose, badgeFor }: { data: ChooserData; onChoose?: (key: string) => void; badgeFor?: (key: string) => string | undefined }) {
   const t = useT();
   return (
     <div className="flex min-w-0 flex-col">
@@ -20,14 +20,16 @@ export function ChooserList({ data, onChoose }: { data: ChooserData; onChoose?: 
             id={template.key}
             icon={template.kind === 'form' ? 'grid' : 'document'}
             title={template.name}
+            badge={badgeFor?.(template.key)}
             sub={template.about || undefined}
             onSelect={onChoose}
             inset={24}
             size={44}
             divider
+            // the tracker and the kind go on a phone's width (optional), so that the name keeps its room
             cols={[
-              { content: template.tracker ?? '', kind: 'text', width: 88 },
-              { content: template.kind === 'form' ? t('label_issue_template_form') : 'Markdown', kind: 'muted', width: 72 },
+              { content: template.tracker ?? '', kind: 'text', width: 88, optional: true },
+              { content: template.kind === 'form' ? t('label_issue_template_form') : 'Markdown', kind: 'muted', width: 72, optional: true },
             ]}
             cta={onChoose ? t('label_issue_template_start') : undefined}
           />

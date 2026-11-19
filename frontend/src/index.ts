@@ -6,3 +6,4 @@ export { IssueTemplateSection } from './IssueTemplateSection';
 export { IssueTemplateFields } from './IssueTemplateFields';
 export { IssueTemplateSettings } from './IssueTemplateSettings';
 export { IssueTemplateEdit } from './IssueTemplateEdit';
+export { IssueTemplateSidebar } from './IssueTemplateSidebar';

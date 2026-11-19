@@ -51,23 +51,35 @@ With [Redmine Kit UI](https://github.com/redmine-kit/redmine_kit_ui) installed, 
 through its extension API (`kit_ui` in `init.rb`; nothing to set up):
 
 - **New issue** shows the template chooser as a step of the new UI's form. The chosen template is at the form's top
-  (its name with 変更, its description and the values it sets), and a form's fields come after the subject, where the
-  description would be. The rules are the same as in Redmine's form (hidden, preset, linked and required fields; the
-  answers in the description; blank issues as `config.yml` says), decided by the plugin on the server.
+  (‹ back to the chooser before its name, then its description), and a form's fields come after the subject, where the
+  description would be: a text area is the compact Markdown editor (with `render`, a plain text area whose note says
+  the answer is recorded as a code block), a dropdown with `multiple` a list of several choices, and a field with `link`
+  notes the issue's field it sets. The values the template sets are shown at their fields, read-only
+  (読み取り専用 (テンプレート)), and a form folds the issue's other fields under そのほかの項目, with a summary (the
+  required ones stay out). 作成 waits for the form's required answers and names the first one; a click on it shows
+  each field's message. What was typed into a template stays while the form is open: going back marks it 入力中 in the
+  chooser, and choosing it again continues it. The page's sidebar shows where the templates come from (the template's
+  file), the fields it hides and, for users who manage templates, a link to 設定 › チケットテンプレート. The rules are
+  the same as in Redmine's form (hidden, preset, linked and required fields; the answers in the description; blank
+  issues as `config.yml` says), decided by the plugin on the server.
 - **Upload fields** are the new UI's own file field: the new UI uploads the files with Redmine's limits (size,
   extensions, the field's `accept`) and sends them with Redmine's own uploads, and the form names them by attachment id;
   the server takes only files of that request that the user uploaded.
 - **Project settings › Issue templates** has two panes: the files with their state (errors, warnings), then
   テンプレートの選択画面 (`config.yml`); and the chosen file with 編集 and 削除, its messages, プレビュー (the chooser's row and
   the new issue's form with it, as users see them), 内容, and for `config.yml` 設定 (blank issues and contact links).
-  The header has ヘルプ, インポート (with a repository) and 新しいテンプレート. A new file and 編集 open the file's form in a
+  取得元 says where the files come from (the repository's folder, revision and date, or プロジェクトの設定 when they are
+  edited there); a file's messages are headed エラー or 警告; 設定 explains 空白のチケットを許可 and notes that saving
+  rewrites `config.yml`.
+  The header has ヘルプ, インポート (with a repository; its tooltip says it reads the folder now) and 新しいテンプレート. A new file and 編集 open the file's form in a
   drawer, with プレビュー of the text as typed; the form's URL (`/projects/<id>/issue_templates/new`,
   `…/<file>/edit`) shows the same form as a page, beside the settings' tabs, with 形式のヘルプ.
 
 The new UI's module is `assets/javascripts/kit/issue_template.js`, built from `frontend/` (React and TypeScript):
 `bin/setup` builds the app's packages it is built against (`@redmine-kit/ui`, `@redmine-kit/plugin`) in the ui-mock
 checkout next to this repository and installs the frontend's packages; then `cd frontend && npm run check` type-checks
-it, builds it and runs `kit-check-ui`. Commit the built file with the source.
+it, runs its tests (`npm test`: Vitest and Testing Library, with `@redmine-kit/plugin/testing`), builds it and runs
+`kit-check-ui`. Commit the built file with the source.
 
 ## Tests
 

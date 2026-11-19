@@ -4,6 +4,7 @@ import type { Preview } from './api';
 import { ChooserList } from './ChooserList';
 import { TemplateQuestions } from './TemplateQuestions';
 import { TemplateSummary } from './TemplateSummary';
+import { startingAnswers } from './answers';
 
 // What users see with a file (the settings' プレビュー and the file form's), shown but not usable (inert), as the server
 // gives it (KitPreview), drawn with the same components as the new issue's form: config.yml's chooser (ChooserList); a
@@ -37,7 +38,7 @@ export function TemplatePreview({ preview }: { preview: Preview | null }) {
           <FormRow layout="stack" label={t('field_subject')} required>
             <Input readOnly value={preview.issue.subject} />
           </FormRow>
-          <TemplateQuestions elements={preview.section.elements ?? []} answers={answersOf(preview)} />
+          <TemplateQuestions elements={preview.section.elements ?? []} answers={startingAnswers(preview.section.elements ?? [])} />
           {preview.issue.description != null && (
             <FormRow layout="stack" label={t('field_description')}>
               <Textarea readOnly rows={6} maxRows={20} value={preview.issue.description} />
@@ -49,9 +50,3 @@ export function TemplatePreview({ preview }: { preview: Preview | null }) {
   );
 }
 
-/** The answers a YAML form starts with (the template's values and defaults). */
-function answersOf(preview: Extract<Preview, { kind: 'template' }>) {
-  return Object.fromEntries(
-    (preview.section.elements ?? []).flatMap((element) => (element.type !== 'markdown' && 'value' in element && element.value != null ? [[element.ref, element.value]] : [])),
-  ) as Record<string, string | string[]>;
-}

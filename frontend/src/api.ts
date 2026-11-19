@@ -23,6 +23,26 @@ export interface ChooserData {
   templates: TemplateRow[];
   blank: boolean;
   contact_links: ContactLink[];
+  sidebar?: SidebarData;
+}
+
+/** Where the templates come from (SettingsTab#source_data): none when they are edited in the project's settings. */
+export interface Source {
+  kind: 'repository' | 'github';
+  folder: string;
+  revision: string | null;
+  synced_at: string | null;
+  synced_at_text: string | null;
+  folder_path?: string;
+  revision_path?: string | null;
+}
+
+/** The new issue's sidebar (KitForm#sidebar): the source, the template's file, the fields it hides, the settings tab. */
+export interface SidebarData {
+  source: Source | null;
+  path: string | null;
+  hidden: string[];
+  settings_path: string | null;
 }
 
 export interface Option {
@@ -34,11 +54,12 @@ export interface Option {
 /** A form's element, with what the form starts with (KitForm#elements). */
 export type Element =
   | { type: 'markdown'; text: string }
-  | (Field & { type: 'input' | 'textarea'; value: string; render: boolean })
+  /** a textarea's `render`: the language of the code block its answer is recorded as ('' for Markdown) */
+  | (Field & { type: 'input' | 'textarea'; value: string; render: string })
   | (Field & { type: 'dropdown'; multiple: boolean; blank: boolean; options: Option[]; value: string | string[] | null })
   | (Field & { type: 'checkboxes'; options: Option[]; value: string[] })
   | (Field & { type: 'upload'; accept: string[] })
-  | (Field & { type: 'link'; kind: 'select' | 'date' | 'textarea' | 'text'; multiple: boolean; options?: Option[]; value: string | string[] | null });
+  | (Field & { type: 'link'; kind: 'select' | 'date' | 'textarea' | 'text'; multiple: boolean; options?: Option[]; value: string | string[] | null; field: string | null });
 
 export interface Field {
   ref: string;
@@ -55,6 +76,7 @@ export interface SectionData {
   preset?: { label: string; value: string }[];
   elements?: Element[];
   blank?: boolean;
+  sidebar?: SidebarData;
 }
 
 /** The settings tab (GET /projects/:id/issue_templates.json). */
@@ -62,15 +84,7 @@ export interface SettingsData {
   manual: boolean;
   has_repository: boolean;
   /** where the files come from (none: edited here): the folder, the revision, when (in the user's format), Redmine's pages */
-  source: {
-    kind: 'repository' | 'github';
-    folder: string;
-    revision: string | null;
-    synced_at: string | null;
-    synced_at_text: string | null;
-    folder_path?: string;
-    revision_path?: string | null;
-  } | null;
+  source: Source | null;
   errors: boolean;
   /** the name of CommonMark when the text formatting is another */
   text_formatting: string | null;

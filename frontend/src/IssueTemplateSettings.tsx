@@ -5,14 +5,18 @@ import { ChooserList } from './ChooserList';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
 import { TemplatePreview } from './TemplatePreview';
 import { PreviewSkeleton } from './useTemplateFileForm';
-import { DOCS, chooserSettingsPath, filePath, settingsPath, syncPath, type ContactLink, type FileData, type FileRow, type SettingsData } from './api';
+import { sourceRows } from './source';
+import { DOCS, chooserSettingsPath, filePath, settingsPath, syncPath, type ContactLink, type FileData, type FileRow, type Message, type SettingsData } from './api';
 
 // Project settings › Issue templates (the manifest's project_settings tab), as Redmine's tab has it (SettingsTab), in two
-// panes: the files at the start (where they come from, each template with its state: errors, warnings, or usable; then
+// panes: the files at the start (取得元: where they come from, the repository's folder or プロジェクトの設定 for files edited
+// here, as the new issue's sidebar says it: sourceRows; each template with its state: errors, warnings, or usable; then
 // テンプレートの選択画面, config.yml), the chosen one at the end: its name with 編集 and 削除, its errors and warnings, and
 // its tabs: プレビュー (what users see with it, KitPreview, with the new issue form's components), 内容 (the text), and for
 // config.yml 設定 (blank_issues_enabled and contact_links, saved into config.yml). Below 1024px the panes stack.
-// The card's header has ヘルプ, インポート (the project's repository) and 新しいテンプレート (CardHeaderActions). A new file and
+// A file's messages are headed エラー / 警告. 設定 explains 空白のチケットを許可 and notes that saving rewrites config.yml.
+// The card's header has ヘルプ, インポート (the project's repository; its tip says it reads the folder now) and
+// 新しいテンプレート (CardHeaderActions). A new file and
 // 編集 open the file's form in a drawer (IssueTemplateFileDrawer; its URL is the file's page); 削除 asks first. Templates
 // from elsewhere are read-only here: no 新しいテンプレート, 編集 or 削除, and the chooser's settings can't be changed.
 
@@ -68,7 +72,7 @@ export function IssueTemplateSettings() {
         </Button>
         {data.has_repository && (
           // over templates edited here, the import replaces them: it asks first
-          <Button icon="import" onClick={() => (data.manual && data.files.length > 0 ? setImporting(true) : void sync())}>
+          <Button icon="import" tip={t('text_issue_template_import_tip')} onClick={() => (data.manual && data.files.length > 0 ? setImporting(true) : void sync())}>
             {t('button_import')}
           </Button>
         )}
@@ -84,20 +88,9 @@ export function IssueTemplateSettings() {
 
       <Panes dividers stacked>
         <Pane as="nav" width={320} aria-label={t('label_issue_template_plural')} className="pb-6">
-          {data.source && (
-            <>
-              <SectionHeading heading={t('label_repository')} inset={24} className="mt-section" />
-              <AttrGrid
-                columns={1}
-                className="px-gutter"
-                items={[
-                  { label: data.source.kind === 'github' ? 'GitHub' : t('label_repository'), value: data.source.folder, href: data.source.folder_path },
-                  ...(data.source.revision ? [{ label: t('label_revision'), value: data.source.revision, href: data.source.revision_path ?? undefined }] : []),
-                  ...(data.source.synced_at_text ? [{ label: t('field_updated_on'), value: data.source.synced_at_text }] : []),
-                ]}
-              />
-            </>
-          )}
+          {/* where the templates come from: the repository's folder, or the project's settings (edited here) */}
+          <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
+          <AttrGrid columns={1} className="px-gutter" items={sourceRows(data.source, t).map(({ label, value, href }) => ({ label, value, href }))} />
           <SectionHeading heading={t('label_issue_template_plural')} count={templates.length} inset={24} className="mt-section" />
           {templates.length === 0 && <EmptyState variant="block" text={t('label_no_data')} />}
           {templates.map((file) => (
@@ -156,6 +149,13 @@ export function IssueTemplateSettings() {
   );
 }
 
+/** A file's error or warning, with its heading (エラー / 警告) and Redmine's sentence. */
+function MessageNotice({ message }: { message: Message }) {
+  const t = useT();
+  const error = message.level === 'error';
+  return <Notice tone={error ? 'danger' : 'warning'} heading={error ? t('label_issue_template_error') : t('label_alert_warning')} wrap text={message.text} />;
+}
+
 /** A file's state, as Redmine's tab marks it: its errors (not usable), its warnings, or usable. */
 function FileState({ file }: { file: FileRow }) {
   const t = useT();
@@ -212,7 +212,7 @@ function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual:
     <>
       <FileHeading path={file.path} elsewhere={!manual} onEdit={() => onEdit(file)} onDelete={row ? () => onDelete(row) : undefined} />
       {file.messages.map((message) => (
-        <Notice key={message.text} tone={message.level === 'error' ? 'danger' : 'warning'} wrap text={message.text} />
+        <MessageNotice key={message.text} message={message} />
       ))}
       <Tabs aria-label={file.path} items={[{ value: 'preview', label: t('label_preview') }, { value: 'content', label: t('field_content') }]} value={tab} onValueChange={setTab} className="flex min-w-0 flex-col">
         <TabsContent value="preview">
@@ -246,7 +246,7 @@ function ConfigPane({ data, file, onEdit, onSaved, onError }: { data: SettingsDa
     <>
       <FileHeading path={data.config.path} elsewhere={!data.manual} onEdit={loaded ? () => onEdit(loaded) : undefined} />
       {loaded?.messages.map((message) => (
-        <Notice key={message.text} tone={message.level === 'error' ? 'danger' : 'warning'} wrap text={message.text} />
+        <MessageNotice key={message.text} message={message} />
       ))}
       <Tabs
         aria-label={data.config.path}
@@ -292,7 +292,13 @@ function ChooserSettings({ data, onSaved, onError }: { data: SettingsData; onSav
   return (
     <div className="flex min-w-0 flex-col">
       <div className="flex flex-col gap-3 px-gutter pt-section">
-        <Checkbox label={t('label_issue_template_blank_issues_enabled')} checked={blank} disabled={readOnly} onCheckedChange={(checked) => setBlank(checked === true)} />
+        <Checkbox
+          label={t('label_issue_template_blank_issues_enabled')}
+          description={t('text_issue_template_blank_issues_info')}
+          checked={blank}
+          disabled={readOnly}
+          onCheckedChange={(checked) => setBlank(checked === true)}
+        />
       </div>
       <SectionHeading
         heading={t('label_issue_template_contact_links')}
@@ -323,7 +329,7 @@ function ChooserSettings({ data, onSaved, onError }: { data: SettingsData; onSav
       {readOnly ? (
         <p className="px-gutter pt-3 pb-6 text-meta text-text-muted">{t('text_issue_template_chooser_elsewhere')}</p>
       ) : (
-        <FormActions placement="sticky" edge dirty={dirty}>
+        <FormActions placement="sticky" edge dirty={dirty} note={t('text_issue_template_config_rewrite')}>
           <Button
             variant="ghost"
             disabled={!dirty || saving}
@@ -382,6 +388,9 @@ function SettingsSkeleton() {
       </CardHeaderActions>
       <Panes dividers stacked>
         <Pane as="nav" width={320} aria-label={t('label_issue_template_plural')} className="pb-6">
+          {/* 取得元 with its first row (the source's other rows follow it when it is a repository) */}
+          <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
+          <AttrGrid columns={1} className="px-gutter" items={[{ label: t('label_issue_template_source'), value: <Skeleton width={120} height={12} className="inline-block align-middle" /> }]} />
           <SectionHeading heading={t('label_issue_template_plural')} inset={24} className="mt-section" />
           <RowSkeleton id="1" width={120} />
           <RowSkeleton id="2" width={96} />
