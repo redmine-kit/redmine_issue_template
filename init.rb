@@ -31,6 +31,8 @@ ActiveSupport.on_load(:redmine_kit_ui) do
   kit_ui :redmine_kit_issue_template do
     api_version 1
     module_path 'kit/issue_template.js'
+    # assets/stylesheets/kit/issue_template.css: the utilities the module's source uses (built with it)
+    stylesheet 'kit/issue_template.css'
     # New issue: the chooser as a step before the form, then the template's
     # part: its line at the form's top, a YAML form's fields after the
     # subject, the page's sidebar (where the templates come from, the fields
