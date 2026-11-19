@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { CardHeaderActionsContext } from '@redmine-kit/plugin/host';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import type { FileData, SettingsData } from './api';
+import { DOCS, type FileData, type SettingsData } from './api';
 import { IssueTemplateSettings } from './IssueTemplateSettings';
 import { renderKit } from './test/render';
 
@@ -58,6 +58,20 @@ describe('the settings tab', () => {
     expect(screen.getAllByText('取得元').length).toBeGreaterThan(0);
     await userEvent.hover(screen.getByRole('button', { name: 'インポート' }));
     expect((await screen.findAllByText('取得を待たずに、リポジトリのテンプレートフォルダーを読み込みます')).length).toBeGreaterThan(0);
+  });
+
+  it("ヘルプ in the card's header: a link to the format's documentation in a new tab, drawn as the button", async () => {
+    renderKit(<InCard />, { context, responses: responses(settings()) });
+    const header = screen.getByRole('toolbar', { name: 'header' });
+    const help = await within(header).findByRole('link', { name: /^ヘルプ/ });
+    expect(help).toHaveAttribute('href', DOCS);
+    expect(help).toHaveAttribute('target', '_blank');
+    expect(help).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(help).toHaveTextContent('新しいタブで開く');
+    // Button asChild: the button's look and its glyph on the link, no button of its own
+    expect(help.className).toMatch(/\binline-flex\b/);
+    expect(help.querySelector('svg')).not.toBeNull();
+    expect(within(header).queryByRole('button', { name: /^ヘルプ/ })).toBeNull();
   });
 
   it("a file's messages with their headings: エラー and 警告", async () => {

@@ -1,4 +1,4 @@
-import { Button, Card, CardBody, CardHeader, ErrorState, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
+import { Button, Card, CardBody, CardHeader, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
 import { ApiError, useExtensionContext, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { DOCS, filePath, tabPage, type FileData } from './api';
 import { useTemplateFileForm } from './useTemplateFileForm';
@@ -70,8 +70,10 @@ function FormatHelp() {
       <SectionHeading heading={t('label_issue_template_format_help')} inset={24} className="mt-section" />
       <div className="flex flex-col gap-3 px-gutter">
         <Prose text={t('text_issue_template_format_help')} />
-        <Button variant="plain" size={28} iconEnd="external" className="self-start" onClick={() => window.open(DOCS, '_blank', 'noopener,noreferrer')}>
-          {t('label_help')}
+        <Button asChild variant="plain" size={28} iconEnd="external" className="self-start">
+          <ExternalLink variant="plain" href={DOCS}>
+            {t('label_help')}
+          </ExternalLink>
         </Button>
       </div>
     </>

@@ -1,7 +1,7 @@
 // Redmine Kit Issue Template: the plugin's module for the new UI, built from frontend/src by `npm run build` (frontend/vite.config.js).
 // Edit the source, not this file. React, @redmine-kit/ui and @redmine-kit/plugin come from the app (the shell's import map).
 import { ApiError, CardHeaderActions, NewIssueFileField, ScreenSidebar, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT } from "@redmine-kit/plugin";
-import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerActionsGroup, DrawerCloseButton, EmptyState, ErrorState, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
+import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerActionsGroup, DrawerCloseButton, EmptyState, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { useEffect, useRef, useState } from "react";
 // src/answers.ts
@@ -773,10 +773,14 @@ function IssueTemplateSettings() {
 	return /* @__PURE__ */ jsxs(Fragment, { children: [
 		/* @__PURE__ */ jsxs(CardHeaderActions, { children: [
 			/* @__PURE__ */ jsx(Button, {
+				asChild: true,
 				variant: "ghost",
 				icon: "help",
-				onClick: () => window.open(DOCS, "_blank", "noopener,noreferrer"),
-				children: t("label_help")
+				children: /* @__PURE__ */ jsx(ExternalLink, {
+					variant: "plain",
+					href: DOCS,
+					children: t("label_help")
+				})
 			}),
 			data.has_repository && /* @__PURE__ */ jsx(Button, {
 				icon: "import",
@@ -1424,12 +1428,16 @@ function FormatHelp() {
 	}), /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-3 px-gutter",
 		children: [/* @__PURE__ */ jsx(Prose, { text: t("text_issue_template_format_help") }), /* @__PURE__ */ jsx(Button, {
+			asChild: true,
 			variant: "plain",
 			size: 28,
 			iconEnd: "external",
 			className: "self-start",
-			onClick: () => window.open(DOCS, "_blank", "noopener,noreferrer"),
-			children: t("label_help")
+			children: /* @__PURE__ */ jsx(ExternalLink, {
+				variant: "plain",
+				href: DOCS,
+				children: t("label_help")
+			})
 		})]
 	})] });
 }

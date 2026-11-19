@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
+import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, ExternalLink, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
 import { ApiError, CardHeaderActions, kitApi, useExtensionContext, useKitInvalidate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { ChooserList } from './ChooserList';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
@@ -67,8 +67,10 @@ export function IssueTemplateSettings() {
   return (
     <>
       <CardHeaderActions>
-        <Button variant="ghost" icon="help" onClick={() => window.open(DOCS, '_blank', 'noopener,noreferrer')}>
-          {t('label_help')}
+        <Button asChild variant="ghost" icon="help">
+          <ExternalLink variant="plain" href={DOCS}>
+            {t('label_help')}
+          </ExternalLink>
         </Button>
         {data.has_repository && (
           // over templates edited here, the import replaces them: it asks first
