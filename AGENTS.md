@@ -50,7 +50,7 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 
 ### Tests
 
-- **Commands.** `bin/test` runs the plugin's tests and Redmine's tests of the issue form in Docker with PostgreSQL ([setup.md](docs/setup.md#tests)); `bin/lint` runs RuboCop and Brakeman; `bin/screenshots` makes the docs' images. Run all three before pushing.
+- **Commands.** `bin/test` runs the plugin's tests and Redmine's tests of the issue form in a container (Apple container, else Docker) with PostgreSQL ([setup.md](docs/setup.md#tests)); `bin/lint` runs RuboCop and Brakeman; `bin/screenshots` makes the docs' images. Run all three before pushing.
 - The example templates in `test/fixtures/github/` are tested as they are.
 - A change to what a template does to an issue has a functional test that creates the issue and checks the saved values.
 
@@ -68,3 +68,9 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 - One purpose per commit.
 - Do not rewrite pushed history.
 - No secrets in the repository.
+
+## Development environment
+
+- **Apple container first, Docker too** (a public repository). Scripts (`bin/test`, databases, emulators) use Apple container (`container`) when it is installed and running, else Docker (other machines, CI); `CONTAINER_CLI=docker|container` chooses. Docs give both, Apple container first. Images are built from the `Dockerfile` with either tool.
+- **Libraries at their latest versions.** Dependencies are kept at their latest stable releases, pinned exactly in the lockfiles; a version held back has its reason next to the pin.
+- Both are the organization's rules (`../AGENTS.md`, "Development environment").
