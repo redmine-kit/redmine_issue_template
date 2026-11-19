@@ -14,15 +14,15 @@ if [[ "$cli" == docker ]]; then
   "${compose[@]}" up -d --wait postgres
   exit 0
 fi
-# Apple container: the same service as test/compose.yml.
-network=redmine-kit-issue-template-test
+# Apple container: the same service as test/compose.yml, on the network the
+# tests of every repository share (bin/container_cli), which stays.
+network=$kit_test_network
 postgres=redmine-kit-issue-template-test-postgres
 if [[ "${1:-}" == "--down" ]]; then
   container rm -f "$postgres" >/dev/null 2>&1 || true
-  container network rm "$network" >/dev/null 2>&1 || true
   exit 0
 fi
-container network inspect "$network" >/dev/null 2>&1 || container network create "$network" >/dev/null
+ensure_shared_network "$network"
 if ! container inspect "$postgres" 2>/dev/null | grep -q '"state" : "running"'; then
   container rm -f "$postgres" >/dev/null 2>&1 || true
   container run -d --name "$postgres" --network "$network" -m 1G --progress none \

@@ -21,7 +21,7 @@ else
   # Apple container (bin/services): PostgreSQL by its address, since containers
   # don't find each other by name on a network of their own, and more memory
   # than the 1 GB a container gets by default, for the parallel workers.
-  network=redmine-kit-issue-template-test
+  network=$kit_test_network
   opts=(-m 4G -e TEST_DATABASE_HOST="$(container inspect redmine-kit-issue-template-test-postgres |
     sed -n 's/.*"ipv4Address" : "\([0-9.]*\)\/.*/\1/p' | head -1)")
   # The build's log only when it fails (`container build -q` doesn't return).
