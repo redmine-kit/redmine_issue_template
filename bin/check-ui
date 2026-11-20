@@ -6,7 +6,8 @@
 // kit-check-ui (@redmine-kit/plugin's bin): checks that a Kit-aware plugin's modules draw only with the app's components
 // (redmine_kit_ui's docs/plugins-kit.md "Checking it", @redmine-kit/ui's docs/components/usage.md): the same rule the app's
 // own screens follow. A plugin's screen that styles itself looks unlike the app and breaks in dark mode, right
-// to left or another density; one that injects HTML or evaluates code is a security hole.
+// to left or another density. HTML or code from a string, a request or a way out of the server of its own gets a notice
+// with the recommended way.
 //
 //   kit-check-ui [--root <plugin>] [files…]
 //     --root   the plugin's folder (default: the current folder if it has init.rb, else its parent: npm runs a frontend's
@@ -22,18 +23,12 @@
 // A file given on the command line is a source file when it is under the plugin's frontend/ (the docs' examples
 // too), else a built module.
 //
-// It reports, with the file and line:
+// It reports, with the file and line, problems (the check fails: exit status 1):
 // - raw elements the app has components for: <button>, <input>, <select>, <textarea>, <table>, <a> (createElement('button') …);
 // - inline styles (style:), colors written out (#fff, rgb(), hsl()) and Tailwind color or size utilities in className
 //   (bg-…, text-[…], w-[…]): use the components' props and the theme's tokens;
-// - dangerouslySetInnerHTML, innerHTML, eval, new Function, import() of a URL, fetch/XMLHttpRequest (use kitApi);
+// - import() of a URL or a chunk (a plugin's module is one file);
 // - a Sidebar drawn by the component itself (a screen's sidebar is ScreenSidebar's: the app's column and drawer);
-// - a way out of the server other than ExternalLink (@redmine-kit/ui: an https URL of another site, a new tab, rel
-//   noopener noreferrer): a URL with a scheme or "//" written in an href, to or src (but in ExternalLink's props or
-//   through externalHref), window.open or a write of location, and a new tab (target "_blank") on a part whose
-//   href doesn't go through externalHref(…) (a URL from data could be javascript: or http:), unless the part is AppLink
-//   (a file of this server in a new tab: it checks the path when it draws) or its href is a path of this server written
-//   out ("/…", not "//", no backslash, not "/${…}", which could be "//host");
 // - in the built module (not its source, whose other imports the build bundles): imports other than react,
 //   react/jsx-runtime, @redmine-kit/ui and @redmine-kit/plugin (a module is one file; the app gives these);
 // - in the source and the built module: a name imported from one of those four that the app's import map doesn't give
@@ -44,6 +39,16 @@
 //   global selector (one without a class: html, body, *, a, :root with the tokens …), which would restyle the app's own
 //   screens. Tailwind's own fallback of its properties (*, :before, :after, ::backdrop in @layer properties) is let
 //   through.
+// And notices, in the source: printed with the recommended way, without changing the exit status (the user, 2026-11-20:
+// these are recommendations, not prohibitions):
+// - dangerouslySetInnerHTML, innerHTML, eval, new Function, fetch/XMLHttpRequest (kitApi is recommended; a request of
+//   the plugin's own sends csrfToken() on writes);
+// - a way out of the server other than ExternalLink (@redmine-kit/ui: a new tab, rel noopener noreferrer, the external
+//   glyph, as the app's links out): a URL with a scheme or "//" written in an href, to or src (but in ExternalLink's
+//   props or through externalHref), window.open or a write of location, and a new tab (target "_blank") on a part whose
+//   href doesn't go through externalHref(…), unless the part is AppLink (a file of this server in a new tab: it checks
+//   the path when it draws) or its href is a path of this server written out ("/…", not "//", no backslash, not "/${…}",
+//   which could be "//host").
 // A line may opt out with a comment saying why: // check-ui-ok: <reason> (/* check-ui-ok: <reason> */ in CSS)
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -53,17 +58,21 @@ const args = process.argv.slice(2);
 const rootAt = args.indexOf('--root');
 const root = resolve(rootAt >= 0 ? args.splice(rootAt, 2)[1] : existsSync('init.rb') ? '.' : '..');
 const RULES = [
+  // problems
   [/\b(?:createElement|h|jsxs?)\(\s*['"](button|input|select|textarea|table|a)['"]|<(button|input|select|textarea|table|a)[\s>]/, 'a raw element: use the app component (Button, Input, Select, Textarea, DataTable, a link prop, AppLink, ExternalLink)'],
   [/\bstyle\s*[:=]/, 'an inline style: use the components and the theme'],
   [/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/, 'a color written out: use a component tone or the theme'],
   [/className\s*[:=][^\n]*\b(?:bg|text|border|ring|fill|stroke)-(?:\[|[a-z]+-\d)/, 'a color utility: use a component tone'],
   [/className\s*[:=][^\n]*\b(?:w|h|p[xytrbl]?|m[xytrbl]?|text|gap)-\[/, 'an arbitrary size: use the components’ sizes and the spacing tokens'],
-  [/dangerouslySetInnerHTML|\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML/, 'HTML from a string: render text (the app sanitizes Redmine’s formatted text itself)'],
-  [/\beval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*['"]/, 'code from a string'],
-  [/\bwindow\.open\s*\(|\blocation\.(?:assign|replace)\s*\(|\blocation(?:\.href)?\s*=(?!=)/, 'a move or a window of its own: ExternalLink for another site, AppLink or useKitNavigate for this server'],
   [/\bimport\s*\(/, 'a dynamic import: a plugin’s module is one file'],
-  [/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/, 'a request of its own: use kitApi / useKitQuery (the session, CSRF and errors as the app’s)'],
   [/<Sidebar[\s/>]|\bjsxs?\(\s*Sidebar\b/, 'a sidebar inside the screen: give its props to ScreenSidebar (the app’s sidebar column, a drawer on narrow widths)'],
+];
+// notices: printed with the recommended way; they don't fail the check
+const NOTICES = [
+  [/dangerouslySetInnerHTML|\.innerHTML\b|\.outerHTML\b|insertAdjacentHTML/, 'HTML from a string: rendering text is recommended (the app sanitizes Redmine’s formatted text itself)'],
+  [/\beval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*['"]/, 'code from a string: code in the module is recommended'],
+  [/\bwindow\.open\s*\(|\blocation\.(?:assign|replace)\s*\(|\blocation(?:\.href)?\s*=(?!=)/, 'a move or a window of its own: ExternalLink for another site, AppLink or useKitNavigate for this server are recommended'],
+  [/\bfetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/, 'a request of its own: kitApi / useKitQuery / useKitMutation are recommended (the session, the CSRF token, sudo mode and errors as the app’s); a request of its own sends csrfToken() as X-CSRF-Token on writes'],
 ];
 const IMPORT_RULE = [
   /^\s*import\b[^'"]*['"](?!react['"]|react\/jsx-runtime['"]|@redmine-kit\/ui['"]|@redmine-kit\/plugin['"])[^'"]+['"]/,
@@ -143,7 +152,7 @@ function literalUrlProblems(text) {
   for (const match of text.matchAll(LITERAL_URL)) {
     const line = lineOf(text, match.index);
     const part = lines.slice(Math.max(0, line - 3), line + 1).join('\n');
-    if (!/<ExternalLink\b|\bexternalHref\(/.test(part)) problems.push([line, 'a URL of another site or scheme: ExternalLink for another site (https only), AppLink for a path of this server']);
+    if (!/<ExternalLink\b|\bexternalHref\(/.test(part)) problems.push([line, 'a URL written out: ExternalLink for another site, AppLink for a path of this server are recommended']);
   }
   return problems;
 }
@@ -151,7 +160,7 @@ function newTabProblems(text) {
   const problems = [];
   const lines = text.split('\n');
   const report = (line) =>
-    problems.push([line, 'a new tab to an address that isn’t checked: ExternalLink, or href={externalHref(url)} (https of another site only) for a part that draws the link; AppLink target="_blank" for a file of this server']);
+    problems.push([line, 'a new tab of its own: ExternalLink, or href={externalHref(url)} for a part that draws the link (rel noopener noreferrer, as the app’s links out), and AppLink target="_blank" for a file of this server are recommended']);
   for (const match of text.matchAll(NEW_TAB)) {
     const line = lineOf(text, match.index);
     const tag = openingTag(text, match.index);
@@ -193,6 +202,7 @@ const files = args.length
   ? args
   : [...walk(join(root, 'frontend/src'), SOURCE), ...walk(join(root, 'assets/javascripts/kit'), /\.js$/), ...walk(join(root, 'assets/stylesheets/kit'), /\.css$/)];
 let problems = 0;
+let notices = 0;
 const sourceDir = join(root, 'frontend') + sep;
 for (const file of files) {
   // a source file of the frontend (src/, the docs' examples): the rules, its names from the app's modules (its other
@@ -204,20 +214,26 @@ for (const file of files) {
     problems++;
     console.log(`${relative(process.cwd(), file)}:${i + 1}: ${message}\n  ${line.trim()}`);
   };
+  const notice = (i, message, line) => {
+    notices++;
+    console.log(`${relative(process.cwd(), file)}:${i + 1}: notice: ${message}\n  ${line.trim()}`);
+  };
   const text = readFileSync(file, 'utf8');
   const lines = text.split('\n');
   if (!css) for (const [i, message] of sharedImportProblems(text)) if (!/check-ui-ok:/.test(lines[i])) report(i, message, lines[i]);
-  if (!css && source) for (const [i, message] of [...literalUrlProblems(text), ...newTabProblems(text)]) if (!/check-ui-ok:/.test(lines[i]) && !/^\s*\/\//.test(lines[i])) report(i, message, lines[i]);
+  if (!css && source) for (const [i, message] of [...literalUrlProblems(text), ...newTabProblems(text)]) if (!/check-ui-ok:/.test(lines[i]) && !/^\s*\/\//.test(lines[i])) notice(i, message, lines[i]);
   (css ? uncomment(text) : text)
     .split('\n')
     .forEach((line, i) => {
       if ((!css && /^\s*\/\//.test(line)) || /check-ui-ok:/.test(line)) return;
       for (const [re, message] of rules) if (re.test(line)) report(i, message, line);
+      if (!css && source) for (const [re, message] of NOTICES) if (re.test(line)) notice(i, message, line);
       if (css && globalSelector(line)) report(i, 'a global selector: a stylesheet has utilities (classes) only, or it restyles the app', line);
     });
 }
+const noticed = notices ? `, ${notices} notice${notices === 1 ? '' : 's'}` : '';
 if (problems) {
-  console.log(`\n${problems} problem${problems === 1 ? '' : 's'}`);
+  console.log(`\n${problems} problem${problems === 1 ? '' : 's'}${noticed}`);
   process.exit(1);
 }
-console.log(`kit-check-ui: ${files.length} file${files.length === 1 ? '' : 's'}, no problems`);
+console.log(`${notices ? '\n' : ''}kit-check-ui: ${files.length} file${files.length === 1 ? '' : 's'}, no problems${noticed}`);
