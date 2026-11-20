@@ -76,7 +76,7 @@ through its extension API (`kit_ui` in `init.rb`; nothing to set up):
   `…/<file>/edit`) shows the same form as a page, beside the settings' tabs, with 形式のヘルプ.
 
 The new UI's module is `assets/javascripts/kit/issue_template.js`, built from `frontend/` (React and TypeScript):
-`bin/setup` builds the app's packages it is built against (`@redmine-kit/ui`, `@redmine-kit/plugin`) in the ui-mock
+`bin/setup` builds the app's packages it is built against (`@redmine-kit/ui`, `@redmine-kit/plugin`) in the ui
 checkout next to this repository and installs the frontend's packages; then `cd frontend && npm run check` type-checks
 it, runs its tests (`npm test`: Vitest and Testing Library, with `@redmine-kit/plugin/testing`), builds it and runs
 `kit-check-ui`. Commit the built file with the source.

@@ -89,7 +89,7 @@ git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redm
   形式のヘルプ と一緒に表示します。
 
 新しい UI のモジュールは `assets/javascripts/kit/issue_template.js` で、`frontend/` (React と TypeScript) から
-ビルドします。`bin/setup` が、このリポジトリの隣の ui-mock のチェックアウトで、ビルドに使うアプリのパッケージ
+ビルドします。`bin/setup` が、このリポジトリの隣の ui のチェックアウトで、ビルドに使うアプリのパッケージ
 (`@redmine-kit/ui`、`@redmine-kit/plugin`) をビルドし、フロントエンドのパッケージをインストールします。そのあと
 `cd frontend && npm run check` で型チェック、テスト (`npm test`。Vitest と Testing Library、`@redmine-kit/plugin/testing`)、ビルド、`kit-check-ui` を実行します。ビルドしたファイルはソースと一緒に
 コミットします。

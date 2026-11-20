@@ -14,8 +14,8 @@
     "react": "19.3.1"
   },
   "devDependencies": {
-    "@redmine-kit/plugin": "file:../../ui-mock/packages/plugin",
-    "@redmine-kit/ui": "file:../../ui-mock/packages/ui",
+    "@redmine-kit/plugin": "file:../../ui/packages/plugin",
+    "@redmine-kit/ui": "file:../../ui/packages/ui",
     "@tanstack/react-query": "5.107.1",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",

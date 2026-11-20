@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Sets up the module's frontend (frontend/): the app's packages it is built against, @redmine-kit/ui and
-# @redmine-kit/plugin, come from the ui-mock checkout next to this repository (../ui-mock) (frontend/package.json's file: dependencies). They are
+# @redmine-kit/plugin, come from the ui checkout next to this repository (../ui) (frontend/package.json's file: dependencies). They are
 # built there first: npm installs a file: dependency as a copy of the built package (its dist/), and ignore-scripts=true
 # keeps npm from building it. Then the frontend's own packages (npm ci).
 #   bin/setup
 set -euo pipefail
 here=$(cd "$(dirname "$0")/.." && pwd)
-ui=$(cd "$here/.." && pwd)/ui-mock
+ui=$(cd "$here/.." && pwd)/ui
 if [[ ! -f "$ui/packages/plugin/package.json" ]]; then
-  echo "bin/setup: no ui-mock checkout at $ui (the app's repository, next to this one)" >&2
+  echo "bin/setup: no ui checkout at $ui (the app's repository, next to this one)" >&2
   exit 1
 fi
 [[ -d "$ui/node_modules" ]] || (cd "$ui" && npm ci)

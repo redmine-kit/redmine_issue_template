@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// A copy of @redmine-kit/plugin's kit-check-ui (ui-mock's packages/plugin/bin/kit-check-ui.mjs; frontend/'s
+// A copy of @redmine-kit/plugin's kit-check-ui (ui's packages/plugin/bin/kit-check-ui.mjs; frontend/'s
 // `npm run check:ui` runs the package's own), for bin/lint and CI, which run without the frontend's packages: the
 // package is private until it is published. Keep it the same as the package's, with the package's shared-exports.json
 // (the names the app's import map gives) beside it.
