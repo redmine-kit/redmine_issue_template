@@ -1,4 +1,7 @@
 ja:
+  # The plugin's name and description (Administration › Plugins; redmine_kit_ui's docs/plugin-names.md)
+  plugin_name_redmine_kit_issue_template: Redmine Kit Issue Template
+  plugin_description_redmine_kit_issue_template: チケットテンプレート
   project_module_issue_templates: チケットテンプレート
   permission_manage_issue_templates: チケットテンプレートの管理
   label_issue_template_plural: チケットテンプレート

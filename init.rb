@@ -5,7 +5,7 @@ require_relative 'lib/redmine_kit/issue_template'
 Redmine::Plugin.register :redmine_kit_issue_template do
   name 'Redmine Kit Issue Template'
   author 'Redmine Kit'
-  description 'Issue templates: a template chooser for New issue, Markdown templates and YAML forms'
+  description 'Issue templates'
   version RedmineKit::IssueTemplate::VERSION
   url 'https://github.com/redmine-kit/redmine_issue_template'
   author_url 'https://github.com/redmine-kit'
