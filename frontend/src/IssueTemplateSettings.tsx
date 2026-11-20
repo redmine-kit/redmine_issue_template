@@ -205,7 +205,6 @@ function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual:
   const t = useT();
   const { project } = useExtensionContext();
   const query = useKitQuery<{ issue_template_file: FileData }>(project && filePath(project, id));
-  const [tab, setTab] = useState('preview');
   const row = files.find((file) => file.id === id);
   if (query.isPending) return <FilePaneSkeleton path={row?.path} />;
   if (query.isError) return <Notice tone="warning" text={t('kit.error.load_failed')} />;
@@ -213,6 +212,18 @@ function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual:
   return (
     <>
       <FileHeading path={file.path} elsewhere={!manual} onEdit={() => onEdit(file)} onDelete={row ? () => onDelete(row) : undefined} />
+      <FileBody file={file} />
+    </>
+  );
+}
+
+/** What a template file shows under its name, in the tab's pane and on the file's page (IssueTemplateFile): its messages,
+ *  then プレビュー and 内容. */
+export function FileBody({ file }: { file: FileData }) {
+  const t = useT();
+  const [tab, setTab] = useState('preview');
+  return (
+    <>
       {file.messages.map((message) => (
         <MessageNotice key={message.text} message={message} />
       ))}
@@ -225,6 +236,16 @@ function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual:
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+/** FileBody while the file comes: its tabs and the preview's skeleton. */
+export function FileBodySkeleton({ path }: { path?: string }) {
+  const t = useT();
+  return (
+    <Tabs aria-label={path ?? t('label_loading')} items={[{ value: 'preview', label: t('label_preview') }, { value: 'content', label: t('field_content') }]} value="preview" className="flex min-w-0 flex-col">
+      <PreviewSkeleton />
+    </Tabs>
   );
 }
 
@@ -357,9 +378,7 @@ function FilePaneSkeleton({ path }: { path?: string }) {
   return (
     <>
       <SectionHeading heading={path ?? <Skeleton width={160} height={14} className="inline-block align-middle" />} inset={24} className="mt-section" />
-      <Tabs aria-label={path ?? t('label_loading')} items={[{ value: 'preview', label: t('label_preview') }, { value: 'content', label: t('field_content') }]} value="preview" className="flex min-w-0 flex-col">
-        <PreviewSkeleton />
-      </Tabs>
+      <FileBodySkeleton path={path} />
     </>
   );
 }

@@ -678,6 +678,7 @@ function IssueTemplateFileDrawer({ project, file, onClose, onSaved }) {
 		children: [
 			/* @__PURE__ */ jsx(CardHeader, {
 				title: form.title,
+				subtitle: project.name,
 				divider: true,
 				actions: /* @__PURE__ */ jsx(DrawerActionsGroup, { children: /* @__PURE__ */ jsx(DrawerCloseButton, { onClose }) })
 			}),
@@ -992,7 +993,6 @@ function FilePane({ id, manual, files, onEdit, onDelete }) {
 	const t = useT();
 	const { project } = useExtensionContext();
 	const query = useKitQuery(project && filePath(project, id));
-	const [tab, setTab] = useState("preview");
 	const row = files.find((file) => file.id === id);
 	if (query.isPending) return /* @__PURE__ */ jsx(FilePaneSkeleton, { path: row?.path });
 	if (query.isError) return /* @__PURE__ */ jsx(Notice, {
@@ -1000,35 +1000,55 @@ function FilePane({ id, manual, files, onEdit, onDelete }) {
 		text: t("kit.error.load_failed")
 	});
 	const file = query.data.issue_template_file;
-	return /* @__PURE__ */ jsxs(Fragment, { children: [
-		/* @__PURE__ */ jsx(FileHeading, {
-			path: file.path,
-			elsewhere: !manual,
-			onEdit: () => onEdit(file),
-			onDelete: row ? () => onDelete(row) : void 0
-		}),
-		file.messages.map((message) => /* @__PURE__ */ jsx(MessageNotice, { message }, message.text)),
-		/* @__PURE__ */ jsxs(Tabs, {
-			"aria-label": file.path,
-			items: [{
-				value: "preview",
-				label: t("label_preview")
-			}, {
-				value: "content",
-				label: t("field_content")
-			}],
-			value: tab,
-			onValueChange: setTab,
-			className: "flex min-w-0 flex-col",
-			children: [/* @__PURE__ */ jsx(TabsContent, {
-				value: "preview",
-				children: /* @__PURE__ */ jsx(TemplatePreview, { preview: file.preview })
-			}), /* @__PURE__ */ jsx(TabsContent, {
-				value: "content",
-				children: /* @__PURE__ */ jsx(FileContent, { content: file.content })
-			})]
-		})
-	] });
+	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(FileHeading, {
+		path: file.path,
+		elsewhere: !manual,
+		onEdit: () => onEdit(file),
+		onDelete: row ? () => onDelete(row) : void 0
+	}), /* @__PURE__ */ jsx(FileBody, { file })] });
+}
+/** What a template file shows under its name, in the tab's pane and on the file's page (IssueTemplateFile): its messages,
+*  then プレビュー and 内容. */
+function FileBody({ file }) {
+	const t = useT();
+	const [tab, setTab] = useState("preview");
+	return /* @__PURE__ */ jsxs(Fragment, { children: [file.messages.map((message) => /* @__PURE__ */ jsx(MessageNotice, { message }, message.text)), /* @__PURE__ */ jsxs(Tabs, {
+		"aria-label": file.path,
+		items: [{
+			value: "preview",
+			label: t("label_preview")
+		}, {
+			value: "content",
+			label: t("field_content")
+		}],
+		value: tab,
+		onValueChange: setTab,
+		className: "flex min-w-0 flex-col",
+		children: [/* @__PURE__ */ jsx(TabsContent, {
+			value: "preview",
+			children: /* @__PURE__ */ jsx(TemplatePreview, { preview: file.preview })
+		}), /* @__PURE__ */ jsx(TabsContent, {
+			value: "content",
+			children: /* @__PURE__ */ jsx(FileContent, { content: file.content })
+		})]
+	})] });
+}
+/** FileBody while the file comes: its tabs and the preview's skeleton. */
+function FileBodySkeleton({ path }) {
+	const t = useT();
+	return /* @__PURE__ */ jsx(Tabs, {
+		"aria-label": path ?? t("label_loading"),
+		items: [{
+			value: "preview",
+			label: t("label_preview")
+		}, {
+			value: "content",
+			label: t("field_content")
+		}],
+		value: "preview",
+		className: "flex min-w-0 flex-col",
+		children: /* @__PURE__ */ jsx(PreviewSkeleton, {})
+	});
 }
 function FileContent({ content }) {
 	const t = useT();
@@ -1229,7 +1249,7 @@ function ChooserSettings({ data, onSaved, onError }) {
 }
 /** A file's pane while its text and preview come: its heading (the name, known from the list), its tabs, the preview. */
 function FilePaneSkeleton({ path }) {
-	const t = useT();
+	useT();
 	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(SectionHeading, {
 		heading: path ?? /* @__PURE__ */ jsx(Skeleton, {
 			width: 160,
@@ -1238,19 +1258,7 @@ function FilePaneSkeleton({ path }) {
 		}),
 		inset: 24,
 		className: "mt-section"
-	}), /* @__PURE__ */ jsx(Tabs, {
-		"aria-label": path ?? t("label_loading"),
-		items: [{
-			value: "preview",
-			label: t("label_preview")
-		}, {
-			value: "content",
-			label: t("field_content")
-		}],
-		value: "preview",
-		className: "flex min-w-0 flex-col",
-		children: /* @__PURE__ */ jsx(PreviewSkeleton, {})
-	})] });
+	}), /* @__PURE__ */ jsx(FileBodySkeleton, { path })] });
 }
 /** A row of the files' list while it comes: the ListRow itself, with bars for its icon, name and file name. */
 function RowSkeleton({ id, width }) {
@@ -1572,4 +1580,107 @@ function IssueTemplateSidebar() {
 		groups: issueTemplateSidebarBlocks(data.sidebar, t)
 	});
 }
-export { IssueTemplateChooser, IssueTemplateEdit, IssueTemplateFields, IssueTemplateSection, IssueTemplateSettings, IssueTemplateSidebar };
+// src/IssueTemplateFile.tsx
+function IssueTemplateFile() {
+	const t = useT();
+	const { project, params } = useExtensionContext();
+	const navigate = useKitNavigate();
+	const invalidate = useKitInvalidate();
+	const query = useKitQuery(project && params.id ? filePath(project, params.id) : null);
+	const settings = useKitQuery(project && settingsPath(project));
+	const [drawer, setDrawer] = useState(false);
+	const [deleting, setDeleting] = useState(false);
+	const [band, setBand] = useState(null);
+	if (!project) return null;
+	const tab = tabPage(project);
+	const file = query.data?.issue_template_file;
+	const manual = settings.data?.issue_templates.manual;
+	const status = query.error instanceof ApiError ? query.error.status : 0;
+	const fail = (error) => setBand({
+		tone: "danger",
+		text: error instanceof ApiError && error.errors.length ? error.errors.join("\n") : t("kit.error.load_failed")
+	});
+	const remove = (id) => kitApi.delete(filePath(project, id)).then(() => {
+		invalidate();
+		navigate(tab);
+	}).catch(fail);
+	return /* @__PURE__ */ jsxs(Card, {
+		"aria-label": file?.path ?? t("label_issue_template_plural"),
+		children: [
+			/* @__PURE__ */ jsx(CardHeader, {
+				back: {
+					label: t("button_back"),
+					href: tab
+				},
+				title: file ? file.path : query.isPending ? /* @__PURE__ */ jsx(Skeleton, {
+					width: 160,
+					height: 16,
+					className: "inline-block align-middle"
+				}) : t("label_issue_template_plural"),
+				sidebarToggle: true,
+				sidebarLabel: t("label_settings"),
+				divider: !band,
+				actions: file && manual && /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Button, {
+					icon: "edit",
+					onClick: () => (setBand(null), setDrawer(true)),
+					children: t("button_edit")
+				}), /* @__PURE__ */ jsx(Button, {
+					variant: "danger",
+					icon: "delete",
+					onClick: () => setDeleting(true),
+					children: t("button_delete")
+				})] })
+			}),
+			band && /* @__PURE__ */ jsx(Notice, {
+				tone: band.tone,
+				role: band.tone === "danger" ? "alert" : "status",
+				wrap: true,
+				text: band.text
+			}),
+			file && manual === false && /* @__PURE__ */ jsx(Notice, {
+				tone: "neutral",
+				wrap: true,
+				text: t("error_issue_template_managed_elsewhere")
+			}),
+			/* @__PURE__ */ jsx(CardBody, {
+				className: "flex flex-col",
+				children: status === 403 || status === 404 ? /* @__PURE__ */ jsx(ErrorState, {
+					status,
+					title: t(status === 403 ? "notice_not_authorized" : "notice_file_not_found")
+				}) : query.isError ? /* @__PURE__ */ jsx(ErrorState, {
+					icon: "warning",
+					title: t("kit.error.load_failed"),
+					actions: /* @__PURE__ */ jsx(Button, {
+						onClick: () => void query.refetch(),
+						children: t("kit.error.reload")
+					})
+				}) : file ? /* @__PURE__ */ jsx(FileBody, { file }) : /* @__PURE__ */ jsx(FileBodySkeleton, {})
+			}),
+			drawer && file && /* @__PURE__ */ jsx(IssueTemplateFileDrawer, {
+				project,
+				file,
+				onClose: () => setDrawer(false),
+				onSaved: () => {
+					setDrawer(false);
+					setBand({
+						tone: "neutral",
+						text: t("notice_successful_update")
+					});
+					invalidate();
+				}
+			}),
+			deleting && file && /* @__PURE__ */ jsx(ConfirmDialog, {
+				open: true,
+				onOpenChange: (open) => !open && setDeleting(false),
+				title: t("kit.confirm.delete_title", { name: file.path }),
+				description: t("text_are_you_sure"),
+				action: t("button_delete"),
+				onConfirm: () => {
+					setDeleting(false);
+					remove(file.id);
+				}
+			})
+		]
+	});
+}
+export { IssueTemplateChooser, IssueTemplateEdit, IssueTemplateFields, IssueTemplateFile, IssueTemplateSection, IssueTemplateSettings, IssueTemplateSidebar };
