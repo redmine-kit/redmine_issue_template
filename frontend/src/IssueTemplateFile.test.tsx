@@ -23,6 +23,20 @@ const responses = (manual: boolean) => ({
   'DELETE /projects/ecookbook/issue_templates/1.json': {},
 });
 
+
+/** The form's one scroll body (CardBody: a bounded flex item that scrolls) holds the field and, last, the sticky actions. */
+function expectOneScrollBody(field: HTMLElement, action: HTMLElement) {
+  const body = field.closest<HTMLElement>('.overflow-y-auto');
+  expect(body).not.toBeNull();
+  expect(body!.className).toMatch(/\bmin-h-0\b/);
+  expect(body!.className).toMatch(/\bflex-1\b/);
+  expect(body).toContainElement(action);
+  const actions = action.closest<HTMLElement>('.sticky');
+  expect(actions).not.toBeNull();
+  expect(actions!.className).toMatch(/\bbottom-0\b/);
+  expect(body!.lastElementChild).toBe(actions);
+}
+
 describe("a template file's page", () => {
   it("the file's name in the header, its messages and its preview and content, 編集 and 削除 when edited here", async () => {
     const requests: KitTestRequest[] = [];
@@ -48,6 +62,13 @@ describe("a template file's page", () => {
 });
 
 describe("the file's drawer", () => {
+  it('scrolls in one body, its actions sticky at the foot (a long template)', async () => {
+    renderKit(<IssueTemplateFileDrawer project={project} file={FILE} onClose={() => {}} onSaved={() => {}} />, { context, responses: responses(true) });
+    const dialog = await screen.findByRole('dialog');
+    const save = await within(dialog).findByRole('button', { name: /保存/ });
+    expectOneScrollBody(within(dialog).getByRole('tablist'), save);
+  });
+
   it('names the project under its title', async () => {
     renderKit(<IssueTemplateFileDrawer project={project} file={FILE} onClose={() => {}} onSaved={() => {}} />, { context, responses: responses(true) });
     const dialog = await screen.findByRole('dialog');

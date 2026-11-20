@@ -683,13 +683,12 @@ function IssueTemplateFileDrawer({ project, file, onClose, onSaved }) {
 				actions: /* @__PURE__ */ jsx(DrawerActionsGroup, { children: /* @__PURE__ */ jsx(DrawerCloseButton, { onClose }) })
 			}),
 			form.bands,
-			form.body,
-			/* @__PURE__ */ jsx(FormActions, {
+			/* @__PURE__ */ jsxs(CardBody, { children: [form.body, /* @__PURE__ */ jsx(FormActions, {
 				placement: "sticky",
 				edge: true,
 				dirty: form.dirty,
 				children: form.actions
-			})
+			})] })
 		]
 	});
 }

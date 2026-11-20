@@ -1,4 +1,4 @@
-import { CardHeader, Drawer, DrawerActionsGroup, DrawerCloseButton, FormActions } from '@redmine-kit/ui';
+import { CardBody, CardHeader, Drawer, DrawerActionsGroup, DrawerCloseButton, FormActions } from '@redmine-kit/ui';
 import { editPage, newPage, type FileData } from './api';
 import { useTemplateFileForm } from './useTemplateFileForm';
 
@@ -22,10 +22,12 @@ export function IssueTemplateFileDrawer({ project, file, onClose, onSaved }: { p
         }
       />
       {form.bands}
-      {form.body}
-      <FormActions placement="sticky" edge dirty={form.dirty}>
-        {form.actions}
-      </FormActions>
+      <CardBody>
+        {form.body}
+        <FormActions placement="sticky" edge dirty={form.dirty}>
+          {form.actions}
+        </FormActions>
+      </CardBody>
     </Drawer>
   );
 }
