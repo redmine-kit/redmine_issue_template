@@ -73,7 +73,7 @@ module RedmineKit
       # The last revision that changed the folder, when the adapter can tell.
       def revision(repository, folder)
         repository.latest_changesets(folder, nil, 1).first&.identifier
-      rescue StandardError
+      rescue Redmine::Scm::Adapters::CommandFailed
         nil
       end
 

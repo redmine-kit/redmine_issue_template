@@ -10,9 +10,9 @@ A project's templates are stored in Redmine. The pages read the stored files and
 
 ## The project's repository
 
-When Redmine fetches the changesets of the project's main repository (when someone opens the repository and "Fetch commits automatically" is on, with `Repository.fetch_changesets` from cron, or through Redmine's repository web service), the plugin reads the template folder on the default branch and compares it with the stored files. When the files differ, it imports them and records the last revision that changed the folder. Reading uses Redmine's own repository adapters, so it works with every SCM Redmine supports.
+When Redmine fetches the changesets of the project's main repository (when someone opens the repository and "Fetch commits automatically" is on, with `Repository.fetch_changesets` from cron, or through Redmine's repository web service), and the fetch adds changesets, the plugin reads the template folder on the default branch and compares it with the stored files. When the files differ, it imports them and records the last revision that changed the folder. A fetch that adds no changesets reads nothing, so opening the repository doesn't read the folder each time. Reading uses Redmine's own repository adapters, so it works with every SCM Redmine supports.
 
-"Import" in the project settings reads the folder at once, without waiting for a fetch.
+"Import" in the project settings reads the folder at once, without waiting for a fetch: for example when the module is enabled for a repository that has already been fetched.
 
 When the repository no longer has a template folder, the templates that came from it are removed. Templates edited in the project settings are kept.
 

@@ -158,6 +158,27 @@ module RedmineKit
         assert_equal 40, IssueTemplateSource.find_by(project: @project).revision.to_s.length
       end
 
+      test 'a fetch that adds no changesets reads nothing; one that adds some imports' do
+        repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        repository.fetch_changesets
+        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+
+        RedmineKit::IssueTemplate::RepositorySource.expects(:read).never
+        repository.fetch_changesets
+        RedmineKit::IssueTemplate::RepositorySource.unstub(:read)
+
+        commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
+        repository.fetch_changesets
+        assert_equal %w[bug.md task.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
+      end
+
+      test 'a failed import does not fail the fetch' do
+        repository, = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        RedmineKit::IssueTemplate::RepositorySource.stubs(:sync).raises(ActiveRecord::StatementInvalid)
+        assert_nothing_raised { repository.fetch_changesets }
+        assert repository.changesets.any?
+      end
+
       test 'only .redmine/ISSUE_TEMPLATE is read: the files of .github/ISSUE_TEMPLATE are not' do
         _repository, dir = git_repository(@project, '.github/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
