@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import { ApiError } from '@redmine-kit/plugin';
 import { CardHeaderActionsContext } from '@redmine-kit/plugin/host';
+import type { KitTestRequest } from '@redmine-kit/plugin/testing';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { DOCS, type FileData, type SettingsData } from './api';
@@ -85,5 +87,23 @@ describe('the settings tab', () => {
     renderKit(<IssueTemplateSettings />, { context, responses: responses(settings({ files: [] })) });
     expect(await screen.findByText('テンプレートを使わずにチケットを作成できます。チケットテンプレートの管理の権限があるユーザーは、常に作成できます。')).toBeInTheDocument();
     expect(screen.getByText('保存すると config.yml を作り直します')).toBeInTheDocument();
+  });
+});
+
+describe('the settings tab that couldn’t load', () => {
+  it.each([
+    [403, 'notice_not_authorized'],
+    [404, 'notice_file_not_found'],
+  ])('%i: Redmine’s refusal, no 再読み込み', async (status, title) => {
+    renderKit(<InCard />, { context, responses: { 'GET /projects/ecookbook/issue_templates.json': new ApiError(status, []) } });
+    expect(await screen.findByRole('heading', { name: new RegExp(title) })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'kit.error.reload' })).toBeNull();
+  });
+
+  it('another failure: 再読み込み reads the tab again', async () => {
+    const requests: KitTestRequest[] = [];
+    renderKit(<InCard />, { context, requests, responses: { 'GET /projects/ecookbook/issue_templates.json': new ApiError(500, []) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'kit.error.reload' }));
+    await waitFor(() => expect(requests.filter((r) => r.path === '/projects/ecookbook/issue_templates.json')).toHaveLength(2));
   });
 });

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Button, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, Notice, Skeleton } from '@redmine-kit/ui';
+import { Button, Card, CardBody, CardHeader, ConfirmDialog, Notice, Skeleton } from '@redmine-kit/ui';
 import { ApiError, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { filePath, settingsPath, tabPage, type FileData, type SettingsData } from './api';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
+import { LoadError } from './LoadError';
 import { FileBody, FileBodySkeleton } from './IssueTemplateSettings';
 
 // A template file's own page (/projects/:project_id/issue_templates/:id, the classic issue_templates/show), beside the
@@ -28,7 +29,6 @@ export function IssueTemplateFile() {
   const tab = tabPage(project);
   const file = query.data?.issue_template_file;
   const manual = settings.data?.issue_templates.manual;
-  const status = query.error instanceof ApiError ? query.error.status : 0;
   const fail = (error: unknown) => setBand({ tone: 'danger', text: error instanceof ApiError && error.errors.length ? error.errors.join('\n') : t('kit.error.load_failed') });
   const remove = (id: number) =>
     kitApi
@@ -64,10 +64,8 @@ export function IssueTemplateFile() {
       {band && <Notice tone={band.tone} role={band.tone === 'danger' ? 'alert' : 'status'} wrap text={band.text} />}
       {file && manual === false && <Notice tone="neutral" wrap text={t('error_issue_template_managed_elsewhere')} />}
       <CardBody className="flex flex-col">
-        {status === 403 || status === 404 ? (
-          <ErrorState status={status} title={t(status === 403 ? 'notice_not_authorized' : 'notice_file_not_found')} />
-        ) : query.isError ? (
-          <ErrorState icon="warning" title={t('kit.error.load_failed')} actions={<Button onClick={() => void query.refetch()}>{t('kit.error.reload')}</Button>} />
+        {query.isError ? (
+          <LoadError error={query.error} onRetry={() => void query.refetch()} />
         ) : file ? (
           <FileBody file={file} />
         ) : (

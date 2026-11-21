@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, ExternalLink, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
 import { ApiError, CardHeaderActions, kitApi, useExtensionContext, useKitInvalidate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { ChooserList } from './ChooserList';
+import { LoadError } from './LoadError';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
 import { TemplatePreview } from './TemplatePreview';
 import { PreviewSkeleton } from './useTemplateFileForm';
@@ -35,7 +36,7 @@ export function IssueTemplateSettings() {
   const [importing, setImporting] = useState(false);
   if (!project) return null;
   if (query.isPending) return <SettingsSkeleton />;
-  if (query.isError) return <Notice tone="warning" text={t('kit.error.load_failed')} />;
+  if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const data = query.data.issue_templates;
   const templates = data.files.filter((file) => file.kind !== 'config');
   const configFile = data.files.find((file) => file.kind === 'config');
@@ -207,7 +208,7 @@ function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual:
   const query = useKitQuery<{ issue_template_file: FileData }>(project && filePath(project, id));
   const row = files.find((file) => file.id === id);
   if (query.isPending) return <FilePaneSkeleton path={row?.path} />;
-  if (query.isError) return <Notice tone="warning" text={t('kit.error.load_failed')} />;
+  if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
   const file = query.data.issue_template_file;
   return (
     <>

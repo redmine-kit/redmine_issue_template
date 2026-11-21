@@ -1,6 +1,7 @@
-import { Button, Card, CardBody, CardHeader, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
-import { ApiError, useExtensionContext, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
+import { Button, Card, CardBody, CardHeader, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
+import { useExtensionContext, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { DOCS, filePath, tabPage, type FileData } from './api';
+import { LoadError } from './LoadError';
 import { useTemplateFileForm } from './useTemplateFileForm';
 
 // A template file's page (the manifest's screens: /projects/:project_id/issue_templates/new and …/:id/edit, with the
@@ -16,15 +17,10 @@ export function IssueTemplateEdit() {
   if (!project) return null;
   if (id && query.isPending) return <EditSkeleton />;
   if (id && query.isError) {
-    const status = query.error instanceof ApiError ? query.error.status : 0;
     return (
       <Card aria-label={t('label_issue_template_plural')}>
         <CardBody className="flex flex-col px-gutter">
-          {status === 403 || status === 404 ? (
-            <ErrorState status={status} title={t(status === 403 ? 'notice_not_authorized' : 'notice_file_not_found')} />
-          ) : (
-            <ErrorState icon="warning" title={t('kit.error.load_failed')} actions={<Button onClick={() => void query.refetch()}>{t('kit.error.reload')}</Button>} />
-          )}
+          <LoadError error={query.error} onRetry={() => void query.refetch()} />
         </CardBody>
       </Card>
     );
