@@ -1,7 +1,7 @@
 // Redmine Kit Issue Template: the plugin's module for the new UI, built from frontend/src by `npm run build` (frontend/vite.config.js).
 // Edit the source, not this file. React, @redmine-kit/ui and @redmine-kit/plugin come from the app (the shell's import map).
-import { ApiError, CardHeaderActions, NewIssueFileField, ScreenSidebar, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT } from "@redmine-kit/plugin";
-import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerHeader, EmptyState, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
+import { ApiError, CardHeaderActions, NewIssueFileField, ScreenSidebar, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT, useUnsavedChanges } from "@redmine-kit/plugin";
+import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerHeader, EmptyState, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, UnsavedChangesDialog } from "@redmine-kit/ui";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { useEffect, useRef, useState } from "react";
 // src/answers.ts
@@ -373,6 +373,25 @@ function IssueTemplateFields() {
 		} })
 	});
 }
+// src/LoadError.tsx
+/** A read that failed, on the plugin's pages, its settings tab and the tab's file pane: Redmine's 403 and 404, else
+*  読み込めませんでした with 再読み込み (never the error's own text). */
+function LoadError({ error, onRetry }) {
+	const t = useT();
+	const status = error instanceof ApiError ? error.status : 0;
+	if (status === 403 || status === 404) return /* @__PURE__ */ jsx(ErrorState, {
+		status,
+		title: t(status === 403 ? "notice_not_authorized" : "notice_file_not_found")
+	});
+	return /* @__PURE__ */ jsx(ErrorState, {
+		icon: "warning",
+		title: t("kit.error.load_failed"),
+		actions: /* @__PURE__ */ jsx(Button, {
+			onClick: onRetry,
+			children: t("kit.error.reload")
+		})
+	});
+}
 // src/TemplatePreview.tsx
 function TemplatePreview({ preview }) {
 	const t = useT();
@@ -463,6 +482,7 @@ function useTemplateFileForm({ project, file, onSaved, onCancel }) {
 	const [saving, setSaving] = useState(false);
 	const dirty = path !== (file?.path ?? "") || content !== (file?.content ?? "");
 	const reason = !file || dirty ? void 0 : t("kit.common.no_changes");
+	const guard = useUnsavedChanges(dirty);
 	const save = () => {
 		setSaving(true);
 		setErrors([]);
@@ -470,11 +490,15 @@ function useTemplateFileForm({ project, file, onSaved, onCancel }) {
 			path,
 			content
 		} };
-		(file ? kitApi.put(filePath(project, file.id), body) : kitApi.post(settingsPath(project), body)).then(() => onSaved(!file)).catch((error) => setErrors(error instanceof ApiError && error.errors.length ? error.errors : [t("kit.error.load_failed")])).finally(() => setSaving(false));
+		(file ? kitApi.put(filePath(project, file.id), body) : kitApi.post(settingsPath(project), body)).then(() => {
+			guard.allow();
+			onSaved(!file);
+		}).catch((error) => setErrors(error instanceof ApiError && error.errors.length ? error.errors : [t("kit.error.load_failed")])).finally(() => setSaving(false));
 	};
 	return {
 		title: file ? file.path : t("label_issue_template_file_new"),
 		dirty,
+		dialog: /* @__PURE__ */ jsx(UnsavedChangesDialog, { guard }),
 		bands: /* @__PURE__ */ jsxs(Fragment, { children: [errors.length > 0 && /* @__PURE__ */ jsx(Notice, {
 			tone: "danger",
 			role: "alert",
@@ -686,7 +710,11 @@ function IssueTemplateFileDrawer({ project, file, onClose, onSaved }) {
 			dirty: form.dirty,
 			children: form.actions
 		}),
-		children: [form.bands, /* @__PURE__ */ jsx(CardBody, { children: form.body })]
+		children: [
+			form.bands,
+			/* @__PURE__ */ jsx(CardBody, { children: form.body }),
+			form.dialog
+		]
 	});
 }
 // src/source.ts
@@ -729,9 +757,9 @@ function IssueTemplateSettings() {
 	const [importing, setImporting] = useState(false);
 	if (!project) return null;
 	if (query.isPending) return /* @__PURE__ */ jsx(SettingsSkeleton, {});
-	if (query.isError) return /* @__PURE__ */ jsx(Notice, {
-		tone: "warning",
-		text: t("kit.error.load_failed")
+	if (query.isError) return /* @__PURE__ */ jsx(LoadError, {
+		error: query.error,
+		onRetry: () => void query.refetch()
 	});
 	const data = query.data.issue_templates;
 	const templates = data.files.filter((file) => file.kind !== "config");
@@ -918,7 +946,9 @@ function IssueTemplateSettings() {
 		/* @__PURE__ */ jsx(ConfirmDialog, {
 			open: !!deleting,
 			onOpenChange: (open) => !open && setDeleting(null),
-			title: t("kit.common.delete_named", { name: deleting?.path ?? "" }),
+			title: t("kit.confirm.delete_title", { name: deleting?.path ?? "" }),
+			description: t("text_are_you_sure"),
+			action: t("button_delete"),
 			onConfirm: () => {
 				if (deleting) remove(deleting);
 				setDeleting(null);
@@ -987,14 +1017,14 @@ function FileHeading({ path, onEdit, onDelete, elsewhere }) {
 }
 /** A template file: its messages, プレビュー and 内容 (GET the file: its text, messages and preview). */
 function FilePane({ id, manual, files, onEdit, onDelete }) {
-	const t = useT();
+	useT();
 	const { project } = useExtensionContext();
 	const query = useKitQuery(project && filePath(project, id));
 	const row = files.find((file) => file.id === id);
 	if (query.isPending) return /* @__PURE__ */ jsx(FilePaneSkeleton, { path: row?.path });
-	if (query.isError) return /* @__PURE__ */ jsx(Notice, {
-		tone: "warning",
-		text: t("kit.error.load_failed")
+	if (query.isError) return /* @__PURE__ */ jsx(LoadError, {
+		error: query.error,
+		onRetry: () => void query.refetch()
 	});
 	const file = query.data.issue_template_file;
 	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(FileHeading, {
@@ -1351,26 +1381,16 @@ function IssueTemplateEdit() {
 	const query = useKitQuery(project && id ? filePath(project, id) : null);
 	if (!project) return null;
 	if (id && query.isPending) return /* @__PURE__ */ jsx(EditSkeleton, {});
-	if (id && query.isError) {
-		const status = query.error instanceof ApiError ? query.error.status : 0;
-		return /* @__PURE__ */ jsx(Card, {
-			"aria-label": t("label_issue_template_plural"),
-			children: /* @__PURE__ */ jsx(CardBody, {
-				className: "flex flex-col px-gutter",
-				children: status === 403 || status === 404 ? /* @__PURE__ */ jsx(ErrorState, {
-					status,
-					title: t(status === 403 ? "notice_not_authorized" : "notice_file_not_found")
-				}) : /* @__PURE__ */ jsx(ErrorState, {
-					icon: "warning",
-					title: t("kit.error.load_failed"),
-					actions: /* @__PURE__ */ jsx(Button, {
-						onClick: () => void query.refetch(),
-						children: t("kit.error.reload")
-					})
-				})
+	if (id && query.isError) return /* @__PURE__ */ jsx(Card, {
+		"aria-label": t("label_issue_template_plural"),
+		children: /* @__PURE__ */ jsx(CardBody, {
+			className: "flex flex-col px-gutter",
+			children: /* @__PURE__ */ jsx(LoadError, {
+				error: query.error,
+				onRetry: () => void query.refetch()
 			})
-		});
-	}
+		})
+	});
 	return /* @__PURE__ */ jsx(FilePage, {
 		project,
 		file: id ? query.data?.issue_template_file : void 0
@@ -1422,7 +1442,8 @@ function FilePage({ project, file }) {
 					className: "pb-6",
 					children: /* @__PURE__ */ jsx(FormatHelp, {})
 				})]
-			})
+			}),
+			form.dialog
 		]
 	});
 }
@@ -1593,7 +1614,6 @@ function IssueTemplateFile() {
 	const tab = tabPage(project);
 	const file = query.data?.issue_template_file;
 	const manual = settings.data?.issue_templates.manual;
-	const status = query.error instanceof ApiError ? query.error.status : 0;
 	const fail = (error) => setBand({
 		tone: "danger",
 		text: error instanceof ApiError && error.errors.length ? error.errors.join("\n") : t("kit.error.load_failed")
@@ -1642,16 +1662,9 @@ function IssueTemplateFile() {
 			}),
 			/* @__PURE__ */ jsx(CardBody, {
 				className: "flex flex-col",
-				children: status === 403 || status === 404 ? /* @__PURE__ */ jsx(ErrorState, {
-					status,
-					title: t(status === 403 ? "notice_not_authorized" : "notice_file_not_found")
-				}) : query.isError ? /* @__PURE__ */ jsx(ErrorState, {
-					icon: "warning",
-					title: t("kit.error.load_failed"),
-					actions: /* @__PURE__ */ jsx(Button, {
-						onClick: () => void query.refetch(),
-						children: t("kit.error.reload")
-					})
+				children: query.isError ? /* @__PURE__ */ jsx(LoadError, {
+					error: query.error,
+					onRetry: () => void query.refetch()
 				}) : file ? /* @__PURE__ */ jsx(FileBody, { file }) : /* @__PURE__ */ jsx(FileBodySkeleton, {})
 			}),
 			drawer && file && /* @__PURE__ */ jsx(IssueTemplateFileDrawer, {

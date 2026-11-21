@@ -10,7 +10,7 @@ import { renderKit } from './test/render';
 // click beside it; on the page a move to another page), and lets the move after a save through (allow).
 const guard = vi.hoisted(() => ({ dirty: [] as boolean[], allowed: 0 }));
 vi.mock('@redmine-kit/plugin', async (original) => ({
-  ...(await original<typeof import('@redmine-kit/plugin')>()),
+  ...(await original<typeof import('@redmine-kit/plugin')>()), // check-ui-ok: a test mocks one hook of the real module
   useUnsavedChanges: (dirty: boolean): KitUnsavedChangesGuard => {
     guard.dirty.push(dirty);
     return { asking: false, stay: () => {}, leave: () => {}, allow: () => void (guard.allowed += 1) };
