@@ -32,6 +32,7 @@ const REDMINE_JA: Record<string, string> = {
   'activerecord.errors.messages.blank': 'を入力してください',
   actionview_instancetag_blank_option: '選んでください',
   button_save: '保存',
+  button_create: '作成',
   button_cancel: 'キャンセル',
   button_import: 'インポート',
   button_edit: '編集',

@@ -24,6 +24,7 @@ export function IssueTemplateFileDrawer({ project, file, onClose, onSaved }: { p
       {form.bands}
       {/* the form's parts bring their own gutter */}
       <CardBody>{form.body}</CardBody>
+      {form.dialog}
     </Drawer>
   );
 }

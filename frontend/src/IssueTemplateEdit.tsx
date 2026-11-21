@@ -65,6 +65,7 @@ function FilePage({ project, file }: { project: { identifier: string }; file?: F
           <FormatHelp />
         </Pane>
       </Panes>
+      {form.dialog}
     </Card>
   );
 }

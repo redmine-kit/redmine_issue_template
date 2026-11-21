@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Button, CardSection, FormRow, Input, ListRow, Notice, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
-import { ApiError, kitApi, useT } from '@redmine-kit/plugin';
+import { Button, CardSection, FormRow, Input, ListRow, Notice, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, UnsavedChangesDialog } from '@redmine-kit/ui';
+import { ApiError, kitApi, useT, useUnsavedChanges } from '@redmine-kit/plugin';
 import { filePath, previewPath, settingsPath, type FileData, type PreviewData } from './api';
 import { TemplatePreview } from './TemplatePreview';
 
@@ -9,7 +9,9 @@ import { TemplatePreview } from './TemplatePreview';
 // Redmine's form has its preview button. One form for the drawer the settings tab opens (IssueTemplateFileDrawer) and the
 // page of its URL (IssueTemplateEdit): the caller draws the frame, the form gives its body, its errors and its actions.
 // 保存 (作成 for a new file) creates or updates the file through the plugin's actions (the same checks as Redmine's form:
-// the file's errors come back as Redmine's messages) and is disabled until something changed.
+// the file's errors come back as Redmine's messages) and is disabled until something changed. While the form has input
+// that leaving would lose, the app asks first (useUnsavedChanges: ✕, Esc and a click beside the drawer, a move to another
+// page from the page); the move after a save goes through.
 
 export interface TemplateFileForm {
   title: string;
@@ -19,6 +21,8 @@ export interface TemplateFileForm {
   /** キャンセル and 保存 / 作成, for the frame's FormActions */
   actions: ReactNode;
   dirty: boolean;
+  /** the question before unsaved input is lost (UnsavedChangesDialog), drawn by the frame */
+  dialog: ReactNode;
 }
 
 export function useTemplateFileForm({ project, file, onSaved, onCancel }: { project: { identifier: string }; file?: FileData; onSaved: (created: boolean) => void; onCancel: () => void }): TemplateFileForm {
@@ -30,19 +34,24 @@ export function useTemplateFileForm({ project, file, onSaved, onCancel }: { proj
   const [saving, setSaving] = useState(false);
   const dirty = path !== (file?.path ?? '') || content !== (file?.content ?? '');
   const reason = !file || dirty ? undefined : t('kit.common.no_changes');
+  const guard = useUnsavedChanges(dirty);
   const save = () => {
     setSaving(true);
     setErrors([]);
     const body = { issue_template_file: { path, content } };
     const request = file ? kitApi.put(filePath(project, file.id), body) : kitApi.post(settingsPath(project), body);
     request
-      .then(() => onSaved(!file))
+      .then(() => {
+        guard.allow();
+        onSaved(!file);
+      })
       .catch((error: unknown) => setErrors(error instanceof ApiError && error.errors.length ? error.errors : [t('kit.error.load_failed')]))
       .finally(() => setSaving(false));
   };
   return {
     title: file ? file.path : t('label_issue_template_file_new'),
     dirty,
+    dialog: <UnsavedChangesDialog guard={guard} />,
     bands: (
       <>
         {errors.length > 0 && <Notice tone="danger" role="alert" wrap text={errors.join('\n')} />}
