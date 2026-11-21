@@ -30,7 +30,7 @@ class IssueTemplatesController < ApplicationController
   def index
     @set = RedmineKit::IssueTemplate::TemplateSet.for(@project)
     @carried = request.query_parameters.except('issue_template')
-    @blank = @set.config.blank_issues_enabled? || User.current.allowed_to?(:manage_issue_templates, @project)
+    @blank = @set.blank_issue_allowed?(@project)
   end
 
   # The chooser's settings from the project settings: the config file the

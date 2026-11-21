@@ -152,11 +152,7 @@ module RedmineKit
       end
 
       def issue_without_template_allowed?(project = issue_template_project)
-        return true unless project.module_enabled?(:issue_templates)
-        return true if User.current.allowed_to?(:manage_issue_templates, project)
-
-        set = TemplateSet.for(project) # cached by the database's key: once a request anyway
-        set.config.blank_issues_enabled? || set.usable_for(project).none?
+        TemplateSet.blank_issue_allowed?(project)
       end
     end
   end

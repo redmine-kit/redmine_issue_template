@@ -114,9 +114,8 @@ module RedmineKit
         field.name if field&.visible_by?(@project, @user)
       end
 
-      # The chooser offers a blank issue as IssueTemplatesController#index does.
       def blank?
-        set.config.blank_issues_enabled? || @user.allowed_to?(:manage_issue_templates, @project)
+        set.blank_issue_allowed?(@project, @user)
       end
 
       def kind(template)

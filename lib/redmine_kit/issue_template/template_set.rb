@@ -32,6 +32,14 @@ module RedmineKit
         CACHE.clear
       end
 
+      # Whether the user may create an issue without a template in the
+      # project: where the module is off, and as #blank_issue_allowed? says.
+      def self.blank_issue_allowed?(project, user = User.current)
+        return true unless project.module_enabled?(:issue_templates)
+
+        self.for(project).blank_issue_allowed?(project, user)
+      end
+
       def initialize(templates:, config:, messages:)
         @templates = templates
         @config = config
@@ -56,6 +64,15 @@ module RedmineKit
 
       def any?
         usable.any?
+      end
+
+      # A blank issue (no template): allowed by config.yml
+      # (blank_issues_enabled), to those who manage the templates, and where
+      # the user may use none of the templates. The chooser, the new UI's
+      # step and the refusal of issues without a template all ask this.
+      def blank_issue_allowed?(project, user = User.current)
+        config.blank_issues_enabled? || user.allowed_to?(:manage_issue_templates, project) ||
+          usable_for(project, user).none?
       end
     end
   end
