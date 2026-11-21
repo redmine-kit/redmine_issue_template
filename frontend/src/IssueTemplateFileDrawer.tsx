@@ -1,4 +1,4 @@
-import { CardBody, CardHeader, Drawer, DrawerActionsGroup, DrawerCloseButton, FormActions } from '@redmine-kit/ui';
+import { CardBody, Drawer, DrawerHeader, FormActions } from '@redmine-kit/ui';
 import { editPage, newPage, type FileData } from './api';
 import { useTemplateFileForm } from './useTemplateFileForm';
 
@@ -9,25 +9,21 @@ import { useTemplateFileForm } from './useTemplateFileForm';
 
 export function IssueTemplateFileDrawer({ project, file, onClose, onSaved }: { project: { identifier: string; name: string }; file?: FileData; onClose: () => void; onSaved: (created: boolean) => void }) {
   const form = useTemplateFileForm({ project, file, onSaved, onCancel: onClose });
+  const url = file ? editPage(project, file.id) : newPage(project);
   return (
-    <Drawer label={form.title} onClose={onClose} preset="create" trapFocus url={file ? editPage(project, file.id) : newPage(project)}>
-      <CardHeader
-        title={form.title}
-        subtitle={project.name}
-        divider
-        actions={
-          <DrawerActionsGroup>
-            <DrawerCloseButton onClose={onClose} />
-          </DrawerActionsGroup>
-        }
-      />
+    // every drawer's header (全画面で表示 and 新しいタブで開く: the file's page), one scroll body, the actions as its last row
+    <Drawer
+      label={form.title}
+      onClose={onClose}
+      preset="create"
+      trapFocus
+      url={url}
+      header={<DrawerHeader title={form.title} subtitle={project.name} href={url} onClose={onClose} />}
+      footer={<FormActions dirty={form.dirty}>{form.actions}</FormActions>}
+    >
       {form.bands}
-      <CardBody>
-        {form.body}
-        <FormActions placement="sticky" edge dirty={form.dirty}>
-          {form.actions}
-        </FormActions>
-      </CardBody>
+      {/* the form's parts bring their own gutter */}
+      <CardBody>{form.body}</CardBody>
     </Drawer>
   );
 }

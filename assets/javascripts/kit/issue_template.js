@@ -1,7 +1,7 @@
 // Redmine Kit Issue Template: the plugin's module for the new UI, built from frontend/src by `npm run build` (frontend/vite.config.js).
 // Edit the source, not this file. React, @redmine-kit/ui and @redmine-kit/plugin come from the app (the shell's import map).
 import { ApiError, CardHeaderActions, NewIssueFileField, ScreenSidebar, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useNewIssueExtension, useT } from "@redmine-kit/plugin";
-import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerActionsGroup, DrawerCloseButton, EmptyState, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
+import { AttrGrid, Badge, Button, Card, CardBody, CardHeader, CardSection, Checkbox, CheckboxGroup, ConfirmDialog, DateInput, Drawer, DrawerHeader, EmptyState, ErrorState, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Icon, IconButton, Input, ListRow, MarkdownEditor, MultiSelect, Notice, Pane, Panes, Prose, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from "@redmine-kit/ui";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 import { useEffect, useRef, useState } from "react";
 // src/answers.ts
@@ -669,27 +669,24 @@ function IssueTemplateFileDrawer({ project, file, onClose, onSaved }) {
 		onSaved,
 		onCancel: onClose
 	});
+	const url = file ? editPage(project, file.id) : newPage(project);
 	return /* @__PURE__ */ jsxs(Drawer, {
 		label: form.title,
 		onClose,
 		preset: "create",
 		trapFocus: true,
-		url: file ? editPage(project, file.id) : newPage(project),
-		children: [
-			/* @__PURE__ */ jsx(CardHeader, {
-				title: form.title,
-				subtitle: project.name,
-				divider: true,
-				actions: /* @__PURE__ */ jsx(DrawerActionsGroup, { children: /* @__PURE__ */ jsx(DrawerCloseButton, { onClose }) })
-			}),
-			form.bands,
-			/* @__PURE__ */ jsxs(CardBody, { children: [form.body, /* @__PURE__ */ jsx(FormActions, {
-				placement: "sticky",
-				edge: true,
-				dirty: form.dirty,
-				children: form.actions
-			})] })
-		]
+		url,
+		header: /* @__PURE__ */ jsx(DrawerHeader, {
+			title: form.title,
+			subtitle: project.name,
+			href: url,
+			onClose
+		}),
+		footer: /* @__PURE__ */ jsx(FormActions, {
+			dirty: form.dirty,
+			children: form.actions
+		}),
+		children: [form.bands, /* @__PURE__ */ jsx(CardBody, { children: form.body })]
 	});
 }
 // src/source.ts
