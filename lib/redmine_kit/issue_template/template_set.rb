@@ -7,25 +7,29 @@ module RedmineKit
     class TemplateSet
       attr_reader :templates, :config, :messages
 
+      # The parsed sets of the projects, in every thread of the process, up to
+      # this size (the least recently used go first). Stored as they are
+      # (coder: nil), not copied on each read: a set is frozen, all of it,
+      # before it is stored, so that no request changes what another reads.
+      CACHE = ActiveSupport::Cache::MemoryStore.new(size: 32.megabytes, coder: nil)
+
       # The parsed files of a project, kept while the stored files are the same
       # (their number, last change and last id, without reading the contents).
       def self.for(project)
         scope = IssueTemplateFile.where(project_id: project.id)
-        key = scope.pick(Arel.sql('COUNT(*)'), Arel.sql('MAX(updated_at)'), Arel.sql('MAX(id)'))
-        @cache ||= {}
-        cached = @cache[project.id]
-        return cached[1] if cached && cached[0] == key
-
-        files = scope.pluck(:path, :content, :too_long).to_h do |path, content, too_long|
-          [path, too_long ? Parser::TOO_LONG : content]
+        count, updated, last = scope.pick(Arel.sql('COUNT(*)'), Arel.sql('MAX(updated_at)'), Arel.sql('MAX(id)'))
+        # the time with its fractions of a second (Time#to_param drops them)
+        updated = updated.iso8601(6) if updated.respond_to?(:iso8601)
+        CACHE.fetch([project.id, count, updated, last].join('/')) do
+          files = scope.pluck(:path, :content, :too_long).to_h do |path, content, too_long|
+            [path, too_long ? Parser::TOO_LONG : content]
+          end
+          Ractor.make_shareable(Parser.parse(files))
         end
-        set = Parser.parse(files)
-        @cache[project.id] = [key, set]
-        set
       end
 
       def self.reset!
-        @cache = {}
+        CACHE.clear
       end
 
       def initialize(templates:, config:, messages:)

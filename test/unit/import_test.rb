@@ -143,6 +143,17 @@ module RedmineKit
         assert_equal %w[a b], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
       end
 
+      test 'a cached template set is shared read-only, in a store of bounded size' do
+        import(github_files)
+        set = RedmineKit::IssueTemplate::TemplateSet.for(@project)
+        assert_same set, RedmineKit::IssueTemplate::TemplateSet.for(Project.find(@project.id))
+        assert Ractor.shareable?(set), 'frozen, all of it'
+        assert set.templates.first.frozen?
+        assert_raises(FrozenError) { set.messages << nil }
+        # MemoryStore: thread-safe, and the least recently used entries go at its size
+        assert_kind_of ActiveSupport::Cache::MemoryStore, RedmineKit::IssueTemplate::TemplateSet::CACHE
+      end
+
       test 'sync imports the folder of the repository when it changes' do
         repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         source = RedmineKit::IssueTemplate::RepositorySource.sync(@project)
