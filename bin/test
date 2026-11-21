@@ -10,25 +10,21 @@
 # shellcheck disable=SC2016
 set -euo pipefail
 cd "$(dirname "$0")/.."
-image=redmine-kit-issue-template-test${REDMINE_BRANCH:+-$REDMINE_BRANCH}
 source bin/container_cli
+name=redmine-kit-issue-template-test
+plugin=redmine_kit_issue_template
 bin/services >/dev/null
+source bin/test_image
 if [[ "$cli" == docker ]]; then
   network=redmine-kit-issue-template-test_default
-  opts=()
-  docker buildx build --load -q -t "$image" --build-arg REDMINE_BRANCH="${REDMINE_BRANCH:-}" -f test/Dockerfile . >/dev/null
+  opts=("${mounts[@]}")
 else
   # Apple container (bin/services): PostgreSQL by its address, since containers
   # don't find each other by name on a network of their own, and more memory
   # than the 1 GB a container gets by default, for the parallel workers.
   network=$kit_test_network
-  opts=(-m 4G -e TEST_DATABASE_HOST="$(container inspect redmine-kit-issue-template-test-postgres |
+  opts=(-m 4G "${mounts[@]}" -e TEST_DATABASE_HOST="$(container inspect redmine-kit-issue-template-test-postgres |
     sed -n 's/.*"ipv4Address" : "\([0-9.]*\)\/.*/\1/p' | head -1)")
-  # The build's log only when it fails (`container build -q` doesn't return).
-  log=$(mktemp)
-  container build --progress plain -t "$image" --build-arg REDMINE_BRANCH="${REDMINE_BRANCH:-}" -f test/Dockerfile . >"$log" 2>&1 ||
-    { cat "$log" >&2; exit 1; }
-  rm -f "$log"
 fi
 setup='bin/rails db:drop db:create db:migrate redmine:plugins:migrate db:schema:dump >/dev/null'
 # A database of this run's own (test/database.yml reads TEST_DATABASE): runs at

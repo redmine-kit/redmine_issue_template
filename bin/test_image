@@ -1,0 +1,73 @@
+# shellcheck shell=bash
+# Sourced by bin/test after bin/container_cli: the image the tests run in
+# ($image) and what they mount ($mounts). No image is built for the plugin:
+# $image is the base image of every Redmine Kit plugin's tests (test/Dockerfile:
+# Ruby, Redmine 7.0.3 and its gems), tagged with the file's hash and built only
+# when no image has that tag. The plugin comes as files, mounted at
+# /src/plugins: this checkout's run-time and test files (tracked and new, not
+# ignored, as they are in the working tree; not the module's source, whose
+# build is in assets/). The image's entrypoint copies them into Redmine's
+# plugins/ and installs the gems the plugin's Gemfile adds into its named volume
+# ($name-gems), kept between runs. This plugin's tests need no other plugin.
+: "${name:?}" "${plugin:?}" "${cli:?}"
+test_context=$(mktemp -d)
+mkdir -p "$test_context/plugins/$plugin"
+git ls-files -co --exclude-standard . |
+  grep -E '^(init\.rb|Gemfile|[^/]*\.gemspec|LICENSE|(app|assets|boot|config|db|lib|test)/)' |
+  while IFS= read -r file; do if [[ -e "$file" ]]; then printf '%s\n' "$file"; fi; done | tar -cf - -T - |
+  tar -xf - -C "$test_context/plugins/$plugin"
+# Redmine from its repository instead of the 7.0.3 release: REDMINE_BRANCH=
+# <branch> (master) at the branch's current commit, or REDMINE_COMMIT=<sha>;
+# a base image of its own, tagged with the commit.
+build_args=()
+redmine_commit=${REDMINE_COMMIT:-}
+if [[ -z "$redmine_commit" && -n "${REDMINE_BRANCH:-}" ]]; then
+  redmine_commit=$(git ls-remote https://github.com/redmine/redmine.git "refs/heads/$REDMINE_BRANCH" | cut -f1)
+  [[ -n "$redmine_commit" ]] || { echo "no branch $REDMINE_BRANCH in Redmine's repository" >&2; exit 1; }
+fi
+image=redmine-kit-test-base:$(shasum -a 256 test/Dockerfile | cut -c1-12)
+if [[ -n "$redmine_commit" ]]; then
+  build_args=(--build-arg REDMINE_COMMIT="$redmine_commit")
+  image=$image-${redmine_commit:0:12}
+fi
+# One build of an image at a time on this machine, as the other plugins' bin/test_slot does (the same lock).
+test_build_lock="${TMPDIR:-/tmp}/redmine-kit-ui-test-slots/build"
+mkdir -p "${test_build_lock%/*}"
+if ! "$cli" image inspect "$image" >/dev/null 2>&1; then
+  until mkdir "$test_build_lock" 2>/dev/null; do
+    holder=$(cat "$test_build_lock/pid" 2>/dev/null || true)
+    if [[ -n "$holder" ]] && ! kill -0 "$holder" 2>/dev/null; then rm -rf "$test_build_lock"; else sleep 2; fi
+  done
+  echo $$ >"$test_build_lock/pid"
+  # another run may have built it while this one waited
+  if ! "$cli" image inspect "$image" >/dev/null 2>&1; then
+    empty=$(mktemp -d)
+    if [[ "$cli" == docker ]]; then
+      docker buildx build --load -q -t "$image" ${build_args[@]+"${build_args[@]}"} -f test/Dockerfile "$empty" >/dev/null ||
+        { rm -rf "$test_build_lock"; exit 1; }
+    else
+      # The build's log only when it fails (`container build -q` doesn't return).
+      log=$(mktemp)
+      container build --progress plain -t "$image" ${build_args[@]+"${build_args[@]}"} -f test/Dockerfile "$empty" \
+        >"$log" 2>&1 || { cat "$log" >&2; rm -rf "$test_build_lock"; exit 1; }
+      rm -f "$log"
+    fi
+    rmdir "$empty"
+  fi
+  rm -rf "$test_build_lock"
+fi
+# The plugin's gems volume holds one run at a time (Apple container attaches a
+# named volume to one container only): runs of this plugin wait for each other.
+gems_lock="${TMPDIR:-/tmp}/$name-gems.lock"
+until [[ "$(cat "$gems_lock/pid" 2>/dev/null)" == "$$" ]] || mkdir "$gems_lock" 2>/dev/null; do
+  holder=$(cat "$gems_lock/pid" 2>/dev/null || true)
+  if [[ -n "$holder" ]] && ! kill -0 "$holder" 2>/dev/null; then rm -rf "$gems_lock"; else sleep 3; fi
+done
+echo $$ >"$gems_lock/pid"
+# After the script's own clean-up, if it has one (bin/test_slot's, the services'):
+# `trap -p` quotes it, so that it is read back as it was.
+eval "previous_exit_trap=($(trap -p EXIT))"
+# shellcheck disable=SC2064,SC2154 # the variables at exit; the earlier clean-up as it is now
+trap "rm -rf \"\$test_context\" \"\$gems_lock\"${previous_exit_trap[2]:+; ${previous_exit_trap[2]}}" EXIT
+# shellcheck disable=SC2034 # bin/test reads it
+mounts=(-v "$test_context/plugins:/src/plugins" -v "$name-gems:/extra-gems")
