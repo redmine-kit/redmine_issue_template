@@ -7,7 +7,7 @@ import { IssueTemplateSettings } from './IssueTemplateSettings';
 const meta = {
   title: 'Settings/IssueTemplateSettings',
   component: IssueTemplateSettings,
-  ...kitStory({ frame: 'card', title: 'Issue templates', project, permissions: ['manage_issue_templates'], responses: fileResponses }),
+  ...kitStory({ frame: 'card', title: 'label_issue_template_plural', project, permissions: ['manage_issue_templates'], responses: fileResponses }),
 } satisfies Meta<typeof IssueTemplateSettings>;
 
 export default meta;
