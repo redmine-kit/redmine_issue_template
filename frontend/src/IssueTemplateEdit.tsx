@@ -47,17 +47,24 @@ function FilePage({ project, file }: { project: { identifier: string }; file?: F
         divider
       />
       {form.bands}
-      <Panes dividers stacked>
+      {/* one scroll (ui docs/decisions/forms.md "One scroll per form"): the format's help a sticky side column, the form's
+          actions the scroller's sticky last row */}
+      <Panes
+        dividers
+        stacked
+        footer={
+          <FormActions placement="sticky" edge dirty={form.dirty}>
+            {form.actions}
+          </FormActions>
+        }
+      >
         <Pane as="section" aria-label={form.title} className="flex flex-col">
           {form.body}
         </Pane>
-        <Pane as="aside" width={360} aria-label={t('label_issue_template_format_help')} className="pb-6">
+        <Pane as="aside" width={360} sticky aria-label={t('label_issue_template_format_help')} className="pb-6">
           <FormatHelp />
         </Pane>
       </Panes>
-      <FormActions placement="footer" dirty={form.dirty}>
-        {form.actions}
-      </FormActions>
     </Card>
   );
 }
@@ -94,7 +101,7 @@ function EditSkeleton() {
         sidebarLabel={t('label_settings')}
         divider
       />
-      <Panes dividers stacked>
+      <Panes dividers stacked footer={<FormActionsSkeleton edge />}>
         <Pane as="section" className="flex flex-col">
           <Tabs aria-label={t('label_loading')} items={[{ value: 'edit', label: t('button_edit') }, { value: 'preview', label: t('label_preview') }]} value="edit" className="flex min-w-0 flex-col">
             <SkeletonRegion label={t('label_loading')} className="flex min-w-0 flex-col gap-4 px-gutter py-section">
@@ -107,11 +114,10 @@ function EditSkeleton() {
             </SkeletonRegion>
           </Tabs>
         </Pane>
-        <Pane as="aside" width={360} aria-label={t('label_issue_template_format_help')} className="pb-6">
+        <Pane as="aside" width={360} sticky aria-label={t('label_issue_template_format_help')} className="pb-6">
           <FormatHelp />
         </Pane>
       </Panes>
-      <FormActionsSkeleton />
     </Card>
   );
 }

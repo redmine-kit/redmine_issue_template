@@ -814,6 +814,7 @@ function IssueTemplateSettings() {
 			children: [/* @__PURE__ */ jsxs(Pane, {
 				as: "nav",
 				width: 320,
+				sticky: true,
 				"aria-label": t("label_issue_template_plural"),
 				className: "pb-6",
 				children: [
@@ -1295,6 +1296,7 @@ function SettingsSkeleton() {
 			children: [/* @__PURE__ */ jsxs(Pane, {
 				as: "nav",
 				width: 320,
+				sticky: true,
 				"aria-label": t("label_issue_template_plural"),
 				className: "pb-6",
 				children: [
@@ -1401,6 +1403,12 @@ function FilePage({ project, file }) {
 			/* @__PURE__ */ jsxs(Panes, {
 				dividers: true,
 				stacked: true,
+				footer: /* @__PURE__ */ jsx(FormActions, {
+					placement: "sticky",
+					edge: true,
+					dirty: form.dirty,
+					children: form.actions
+				}),
 				children: [/* @__PURE__ */ jsx(Pane, {
 					as: "section",
 					"aria-label": form.title,
@@ -1409,15 +1417,11 @@ function FilePage({ project, file }) {
 				}), /* @__PURE__ */ jsx(Pane, {
 					as: "aside",
 					width: 360,
+					sticky: true,
 					"aria-label": t("label_issue_template_format_help"),
 					className: "pb-6",
 					children: /* @__PURE__ */ jsx(FormatHelp, {})
 				})]
-			}),
-			/* @__PURE__ */ jsx(FormActions, {
-				placement: "footer",
-				dirty: form.dirty,
-				children: form.actions
 			})
 		]
 	});
@@ -1452,71 +1456,69 @@ function EditSkeleton() {
 	const { project } = useExtensionContext();
 	return /* @__PURE__ */ jsxs(Card, {
 		"aria-label": t("label_loading"),
-		children: [
-			/* @__PURE__ */ jsx(CardHeader, {
-				back: project ? {
-					label: t("button_back"),
-					href: tabPage(project)
-				} : void 0,
-				title: /* @__PURE__ */ jsx(Skeleton, {
-					width: 120,
-					height: 16,
-					className: "inline-block align-middle"
-				}),
-				sidebarToggle: true,
-				sidebarLabel: t("label_settings"),
-				divider: true
+		children: [/* @__PURE__ */ jsx(CardHeader, {
+			back: project ? {
+				label: t("button_back"),
+				href: tabPage(project)
+			} : void 0,
+			title: /* @__PURE__ */ jsx(Skeleton, {
+				width: 120,
+				height: 16,
+				className: "inline-block align-middle"
 			}),
-			/* @__PURE__ */ jsxs(Panes, {
-				dividers: true,
-				stacked: true,
-				children: [/* @__PURE__ */ jsx(Pane, {
-					as: "section",
-					className: "flex flex-col",
-					children: /* @__PURE__ */ jsx(Tabs, {
-						"aria-label": t("label_loading"),
-						items: [{
-							value: "edit",
-							label: t("button_edit")
-						}, {
-							value: "preview",
-							label: t("label_preview")
-						}],
+			sidebarToggle: true,
+			sidebarLabel: t("label_settings"),
+			divider: true
+		}), /* @__PURE__ */ jsxs(Panes, {
+			dividers: true,
+			stacked: true,
+			footer: /* @__PURE__ */ jsx(FormActionsSkeleton, { edge: true }),
+			children: [/* @__PURE__ */ jsx(Pane, {
+				as: "section",
+				className: "flex flex-col",
+				children: /* @__PURE__ */ jsx(Tabs, {
+					"aria-label": t("label_loading"),
+					items: [{
 						value: "edit",
-						className: "flex min-w-0 flex-col",
-						children: /* @__PURE__ */ jsxs(SkeletonRegion, {
-							label: t("label_loading"),
-							className: "flex min-w-0 flex-col gap-4 px-gutter py-section",
-							children: [/* @__PURE__ */ jsx(FormRow, {
-								layout: "stack",
-								label: t("field_filename"),
-								required: true,
-								hint: t("text_issue_template_path_info"),
-								children: /* @__PURE__ */ jsx(Skeleton, {
-									width: "100%",
-									height: 32
-								})
-							}), /* @__PURE__ */ jsx(FormRow, {
-								layout: "stack",
-								label: t("field_content"),
-								required: true,
-								children: /* @__PURE__ */ jsx(Skeleton, {
-									width: "100%",
-									height: 320
-								})
-							})]
-						})
+						label: t("button_edit")
+					}, {
+						value: "preview",
+						label: t("label_preview")
+					}],
+					value: "edit",
+					className: "flex min-w-0 flex-col",
+					children: /* @__PURE__ */ jsxs(SkeletonRegion, {
+						label: t("label_loading"),
+						className: "flex min-w-0 flex-col gap-4 px-gutter py-section",
+						children: [/* @__PURE__ */ jsx(FormRow, {
+							layout: "stack",
+							label: t("field_filename"),
+							required: true,
+							hint: t("text_issue_template_path_info"),
+							children: /* @__PURE__ */ jsx(Skeleton, {
+								width: "100%",
+								height: 32
+							})
+						}), /* @__PURE__ */ jsx(FormRow, {
+							layout: "stack",
+							label: t("field_content"),
+							required: true,
+							children: /* @__PURE__ */ jsx(Skeleton, {
+								width: "100%",
+								height: 320
+							})
+						})]
 					})
-				}), /* @__PURE__ */ jsx(Pane, {
-					as: "aside",
-					width: 360,
-					"aria-label": t("label_issue_template_format_help"),
-					className: "pb-6",
-					children: /* @__PURE__ */ jsx(FormatHelp, {})
-				})]
-			}),
-			/* @__PURE__ */ jsx(FormActionsSkeleton, {})
-		]
+				})
+			}), /* @__PURE__ */ jsx(Pane, {
+				as: "aside",
+				width: 360,
+				sticky: true,
+				"aria-label": t("label_issue_template_format_help"),
+				className: "pb-6",
+				children: /* @__PURE__ */ jsx(FormatHelp, {})
+			})]
+		})]
 	});
 }
 // src/IssueTemplateSidebar.tsx

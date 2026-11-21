@@ -89,7 +89,7 @@ export function IssueTemplateSettings() {
       {data.text_formatting && <Notice tone="warning" wrap text={t('warning_issue_template_text_formatting', { name: data.text_formatting })} />}
 
       <Panes dividers stacked>
-        <Pane as="nav" width={320} aria-label={t('label_issue_template_plural')} className="pb-6">
+        <Pane as="nav" width={320} sticky aria-label={t('label_issue_template_plural')} className="pb-6">
           {/* where the templates come from: the repository's folder, or the project's settings (edited here) */}
           <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
           <AttrGrid columns={1} className="px-gutter" items={sourceRows(data.source, t).map(({ label, value, href }) => ({ label, value, href }))} />
@@ -408,7 +408,7 @@ function SettingsSkeleton() {
         <Skeleton width={160} height={32} />
       </CardHeaderActions>
       <Panes dividers stacked>
-        <Pane as="nav" width={320} aria-label={t('label_issue_template_plural')} className="pb-6">
+        <Pane as="nav" width={320} sticky aria-label={t('label_issue_template_plural')} className="pb-6">
           {/* 取得元 with its first row (the source's other rows follow it when it is a repository) */}
           <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
           <AttrGrid columns={1} className="px-gutter" items={[{ label: t('label_issue_template_source'), value: <Skeleton width={120} height={12} className="inline-block align-middle" /> }]} />

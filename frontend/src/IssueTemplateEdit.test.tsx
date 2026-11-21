@@ -26,4 +26,15 @@ describe("the template file's page", () => {
     expect(help.querySelectorAll('svg')).toHaveLength(1);
     expect(screen.queryByRole('button', { name: /^ヘルプ/ })).toBeNull();
   });
+
+  it('one scroll: 形式のヘルプ a sticky side column, the actions the scroller\'s last row (ui forms.md "One scroll per form")', async () => {
+    renderKit(<IssueTemplateEdit />, { context });
+    const aside = (await screen.findByRole('link', { name: /^ヘルプ/ })).closest('aside')!;
+    expect(aside).toHaveAttribute('data-sticky');
+    const scroller = aside.parentElement!.parentElement!;
+    const cancel = screen.getAllByRole('button').find((b) => b.hasAttribute('data-form-cancel'));
+    expect(cancel).toBeDefined();
+    expect(scroller).toContainElement(cancel!);
+    expect(scroller.lastElementChild).toContainElement(cancel!);
+  });
 });
