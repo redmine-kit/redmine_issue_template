@@ -71,7 +71,7 @@ through its extension API (`kit_ui` in `init.rb`; nothing to set up):
   Source says where the files come from (the repository's folder, revision and date, or Project settings when they are
   edited there); a file's messages are headed Error or Warning; Settings explains Allow blank issues and notes that saving
   rewrites `config.yml`.
-  The header has Help, Import (with a repository; its tooltip says it reads the folder now) and New template. A new file and Edit open the file's form in a
+  The header has Help, Import (with a repository; its tooltip says it reads the folder now, and it asks first when it would replace files edited in Redmine) and New template (when the files are edited in Redmine). A new file and Edit open the file's form in a
   drawer, with Preview of the text as typed; the form's URL (`/projects/<id>/issue_templates/new`,
   `…/<file>/edit`) shows the same form as a page, beside the settings' tabs, with Format help.
 
