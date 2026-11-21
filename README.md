@@ -16,8 +16,8 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 
 ## Documentation
 
-- Website: https://redmine-kit.github.io/redmine_issue_template/ (日本語: https://redmine-kit.github.io/redmine_issue_template/ja/)
-- Markdown: [docs/README.md](docs/README.md) (日本語: [docs/ja/README.md](docs/ja/README.md))
+- Website: https://redmine-kit.github.io/redmine_issue_template/ ([日本語](https://redmine-kit.github.io/redmine_issue_template/ja/))
+- Markdown: [docs/README.md](docs/README.md) ([日本語](docs/ja/README.md))
 
 ## Sponsors
 

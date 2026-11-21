@@ -57,6 +57,7 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 ## Documentation
 
 - **Two languages.** English is the source (`README.md`, `docs/`); the Japanese translation is `README.ja.md` and `docs/ja/`, with the same file names. Change both together.
+- **One language per document.** The English documents are in English only and name the UI with the English locale's strings (Redmine's and this plugin's `config/locales/en.yml`); Japanese appears only in the link to the translation, a strings table's `ja` column or a value an example must match (`../AGENTS.md` › Writing › Translations).
 - **Layout.** The READMEs stay short. The details go in `docs/`, published at <https://redmine-kit.github.io/redmine_issue_template/> with [redmine-kit/docs-skeleton](https://github.com/redmine-kit/docs-skeleton).
 - **Anchors in Japanese.** Put `<a id="..."></a>` with the English heading's anchor before each Japanese heading.
 - **Facts.** State only what has been checked, with the date and the source. Mark what has not been checked yet.
