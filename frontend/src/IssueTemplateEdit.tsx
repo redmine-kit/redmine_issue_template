@@ -47,7 +47,7 @@ function FilePage({ project, file }: { project: { identifier: string }; file?: F
         divider
       />
       {form.bands}
-      {/* one scroll (ui docs/decisions/forms.md "One scroll per form"): the format's help a sticky side column, the form's
+      {/* one scroll (ui docs/components/forms.md "One scroll per form"): the format's help a sticky side column, the form's
           actions the scroller's sticky last row */}
       <Panes
         dividers

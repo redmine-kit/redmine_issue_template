@@ -10,7 +10,7 @@ module RedmineKit
 
     DOCS_URL = 'https://redmine-kit.github.io/redmine_issue_template/'
     # The folder read from the repository. .github/ISSUE_TEMPLATE is not read
-    # (decided 2026-11-18: templates for Redmine live in .redmine only).
+    # (templates for Redmine live in .redmine only).
     FOLDERS = ['.redmine/ISSUE_TEMPLATE'].freeze
 
     # Where a project's files come from (IssueTemplateSource#kind).

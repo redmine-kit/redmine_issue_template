@@ -9,7 +9,7 @@ import { renderKit } from './test/render';
 
 // A template file's own page (issue_templates/show's URL) and the file's form in a drawer: the page shows what the tab's
 // pane shows of the file, with 編集 and 削除 only when the templates are edited here; the drawer names the project, as a
-// drawer over any screen does (ui's docs/decisions/drawers.md "The current project's name").
+// drawer over any screen does (ui's docs/architecture/drawers.md "The current project's name").
 
 const MANAGED_ELSEWHERE = 'テンプレートは取得元で編集してください。';
 const project = { identifier: 'ecookbook', name: 'eCookbook' };
