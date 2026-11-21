@@ -101,18 +101,18 @@ describe('the settings tab', () => {
 
 describe('the settings tab that couldn’t load', () => {
   it.each([
-    [403, 'notice_not_authorized'],
-    [404, 'notice_file_not_found'],
+    [403, 'このページのアクセスは許可されていません。'],
+    [404, 'アクセスしようとしたページは存在しないか削除されています。'],
   ])('%i: Redmine’s refusal, no 再読み込み', async (status, title) => {
     renderKit(<InCard />, { context, responses: { 'GET /projects/ecookbook/issue_templates.json': new ApiError(status, []) } });
-    expect(await screen.findByRole('heading', { name: new RegExp(title) })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'kit.error.reload' })).toBeNull();
+    expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /再読み込み/ })).toBeNull();
   });
 
   it('another failure: 再読み込み reads the tab again', async () => {
     const requests: KitTestRequest[] = [];
     renderKit(<InCard />, { context, requests, responses: { 'GET /projects/ecookbook/issue_templates.json': new ApiError(500, []) } });
-    await userEvent.click(await screen.findByRole('button', { name: 'kit.error.reload' }));
+    await userEvent.click(await screen.findByRole('button', { name: /再読み込み/ }));
     await waitFor(() => expect(requests.filter((r) => r.path === '/projects/ecookbook/issue_templates.json')).toHaveLength(2));
   });
 });

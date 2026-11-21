@@ -1,7 +1,6 @@
-import { Button, Card, CardBody, CardHeader, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
+import { Button, Card, CardBody, CardHeader, ExternalLink, FormActions, FormActionsSkeleton, FormRow, Pane, Panes, Prose, RequestErrorState, SectionHeading, Skeleton, SkeletonRegion, Tabs } from '@redmine-kit/ui';
 import { useExtensionContext, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { DOCS, filePath, tabPage, type FileData } from './api';
-import { LoadError } from './LoadError';
 import { useTemplateFileForm } from './useTemplateFileForm';
 
 // A template file's page (the manifest's screens: /projects/:project_id/issue_templates/new and …/:id/edit, with the
@@ -20,7 +19,7 @@ export function IssueTemplateEdit() {
     return (
       <Card aria-label={t('label_issue_template_plural')}>
         <CardBody className="flex flex-col px-gutter">
-          <LoadError error={query.error} onRetry={() => void query.refetch()} />
+          <RequestErrorState error={query.error} onRetry={() => void query.refetch()} />
         </CardBody>
       </Card>
     );

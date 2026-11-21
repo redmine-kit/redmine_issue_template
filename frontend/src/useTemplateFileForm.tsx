@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button, CardSection, FormRow, Input, ListRow, Notice, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea, UnsavedChangesDialog } from '@redmine-kit/ui';
-import { ApiError, kitApi, useT, useUnsavedChanges } from '@redmine-kit/plugin';
+import { kitApi, useApiErrorTexts, useT, useUnsavedChanges } from '@redmine-kit/plugin';
 import { filePath, previewPath, settingsPath, type FileData, type PreviewData } from './api';
 import { TemplatePreview } from './TemplatePreview';
 
@@ -27,6 +27,7 @@ export interface TemplateFileForm {
 
 export function useTemplateFileForm({ project, file, onSaved, onCancel }: { project: { identifier: string }; file?: FileData; onSaved: (created: boolean) => void; onCancel: () => void }): TemplateFileForm {
   const t = useT();
+  const errorTexts = useApiErrorTexts();
   const [path, setPath] = useState(file?.path ?? '');
   const [content, setContent] = useState(file?.content ?? '');
   const [tab, setTab] = useState('edit');
@@ -45,7 +46,7 @@ export function useTemplateFileForm({ project, file, onSaved, onCancel }: { proj
         guard.allow();
         onSaved(!file);
       })
-      .catch((error: unknown) => setErrors(error instanceof ApiError && error.errors.length ? error.errors : [t('kit.error.load_failed')]))
+      .catch((error: unknown) => setErrors(errorTexts(error)))
       .finally(() => setSaving(false));
   };
   return {

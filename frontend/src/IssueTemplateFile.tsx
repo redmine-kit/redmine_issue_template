@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Button, Card, CardBody, CardHeader, ConfirmDialog, Notice, Skeleton } from '@redmine-kit/ui';
-import { ApiError, kitApi, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
+import { Button, Card, CardBody, CardHeader, ConfirmDialog, Notice, RequestErrorState, Skeleton } from '@redmine-kit/ui';
+import { kitApi, useApiErrorTexts, useExtensionContext, useKitInvalidate, useKitNavigate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { filePath, settingsPath, tabPage, type FileData, type SettingsData } from './api';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
-import { LoadError } from './LoadError';
 import { FileBody, FileBodySkeleton } from './IssueTemplateSettings';
 
 // A template file's own page (/projects/:project_id/issue_templates/:id, the classic issue_templates/show), beside the
@@ -16,6 +15,7 @@ type Band = { tone: 'neutral' | 'danger'; text: string };
 
 export function IssueTemplateFile() {
   const t = useT();
+  const errorTexts = useApiErrorTexts();
   const { project, params } = useExtensionContext();
   const navigate = useKitNavigate();
   const invalidate = useKitInvalidate();
@@ -29,7 +29,11 @@ export function IssueTemplateFile() {
   const tab = tabPage(project);
   const file = query.data?.issue_template_file;
   const manual = settings.data?.issue_templates.manual;
-  const fail = (error: unknown) => setBand({ tone: 'danger', text: error instanceof ApiError && error.errors.length ? error.errors.join('\n') : t('kit.error.load_failed') });
+  // Redmine's refusal in its words, else the app's; nothing after the sudo dialog's キャンセル
+  const fail = (error: unknown) => {
+    const texts = errorTexts(error);
+    setBand(texts.length ? { tone: 'danger', text: texts.join('\n') } : null);
+  };
   const remove = (id: number) =>
     kitApi
       .delete(filePath(project, id))
@@ -65,7 +69,7 @@ export function IssueTemplateFile() {
       {file && manual === false && <Notice tone="neutral" wrap text={t('error_issue_template_managed_elsewhere')} />}
       <CardBody className="flex flex-col">
         {query.isError ? (
-          <LoadError error={query.error} onRetry={() => void query.refetch()} />
+          <RequestErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : file ? (
           <FileBody file={file} />
         ) : (

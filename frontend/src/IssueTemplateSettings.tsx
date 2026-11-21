@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, ExternalLink, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
-import { ApiError, CardHeaderActions, kitApi, useExtensionContext, useKitInvalidate, useKitQuery, useT } from '@redmine-kit/plugin';
+import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, ExternalLink, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, RequestErrorState, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
+import { CardHeaderActions, kitApi, useApiErrorTexts, useExtensionContext, useKitInvalidate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { ChooserList } from './ChooserList';
-import { LoadError } from './LoadError';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
 import { TemplatePreview } from './TemplatePreview';
 import { PreviewSkeleton } from './useTemplateFileForm';
@@ -26,6 +25,7 @@ type Band = { tone: 'neutral' | 'warning' | 'danger'; text: string };
 
 export function IssueTemplateSettings() {
   const t = useT();
+  const errorTexts = useApiErrorTexts();
   const { project } = useExtensionContext();
   const query = useKitQuery<{ issue_templates: SettingsData }>(project && settingsPath(project));
   const invalidate = useKitInvalidate();
@@ -36,12 +36,16 @@ export function IssueTemplateSettings() {
   const [importing, setImporting] = useState(false);
   if (!project) return null;
   if (query.isPending) return <SettingsSkeleton />;
-  if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <RequestErrorState error={query.error} onRetry={() => void query.refetch()} />;
   const data = query.data.issue_templates;
   const templates = data.files.filter((file) => file.kind !== 'config');
   const configFile = data.files.find((file) => file.kind === 'config');
   const current: Selection = selected?.kind === 'config' || (selected && templates.some((file) => file.id === selected.id)) ? selected : templates[0] ? { kind: 'file', id: templates[0].id } : { kind: 'config' };
-  const fail = (error: unknown) => setBand({ tone: 'danger', text: error instanceof ApiError && error.errors.length ? error.errors.join('\n') : t('kit.error.load_failed') });
+  // Redmine's refusal in its words, else the app's; nothing after the sudo dialog's キャンセル
+  const fail = (error: unknown) => {
+    const texts = errorTexts(error);
+    setBand(texts.length ? { tone: 'danger', text: texts.join('\n') } : null);
+  };
   const sync = () =>
     kitApi
       .post<{ kind: 'notice' | 'warning'; message: string }>(syncPath(project), {})
@@ -210,7 +214,7 @@ function FilePane({ id, manual, files, onEdit, onDelete }: { id: number; manual:
   const query = useKitQuery<{ issue_template_file: FileData }>(project && filePath(project, id));
   const row = files.find((file) => file.id === id);
   if (query.isPending) return <FilePaneSkeleton path={row?.path} />;
-  if (query.isError) return <LoadError error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isError) return <RequestErrorState error={query.error} onRetry={() => void query.refetch()} />;
   const file = query.data.issue_template_file;
   return (
     <>
