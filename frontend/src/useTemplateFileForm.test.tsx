@@ -29,7 +29,7 @@ describe('the template file form’s unsaved input', () => {
     const user = userEvent.setup();
     renderKit(<IssueTemplateEdit />, { context: { plugin: 'redmine_kit_issue_template', project }, responses: { [`POST ${settingsPath(project)}`]: {} } });
     expect(guard.dirty.at(-1)).toBe(false);
-    await user.type(screen.getByRole('textbox', { name: /ファイル名/ }), 'bug.yml');
+    await user.type(screen.getByRole('textbox', { name: /^ファイル/ }), 'bug.yml');
     expect(guard.dirty.at(-1)).toBe(true);
     expect(guard.allowed).toBe(0);
     await user.click(screen.getByRole('button', { name: /^作成/ }));

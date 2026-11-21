@@ -92,7 +92,7 @@ describe('the sidebar', () => {
     const rows = (blocks[0] as { rows: { over?: string; label: string }[] }).rows;
     expect(rows.map((row) => [row.over, row.label])).toEqual([
       ['リポジトリ', '.redmine/ISSUE_TEMPLATE'],
-      ['ファイル名', 'bug.yml'],
+      ['ファイル', 'bug.yml'],
       ['リビジョン', 'abc12345'],
       ['更新日', '2026/11/19 10:00'],
     ]);

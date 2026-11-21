@@ -5,7 +5,5 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
-  // the plugin's locale files (config/locales), outside frontend/
-  server: { fs: { allow: ['..'] } },
   test: { environment: 'jsdom', setupFiles: ['src/test/setup.ts'], include: ['src/**/*.test.{ts,tsx}'] },
 });
