@@ -15,24 +15,31 @@ module RedmineKit
       #   folder:   the folder they were read from: ".redmine/ISSUE_TEMPLATE"
       #             (FOLDERS); files of another folder are refused
       # Returns the IssueTemplateSource; IssueTemplateSource.messages_for gives
-      # the errors and warnings.
+      # the errors and warnings. With a block, the block is given the stored
+      # IssueTemplateSource and the files' digest inside the project's lock,
+      # and nothing is imported (nil) when it returns true: a decision on what
+      # is stored holds only there, since another import may have committed
+      # since it was read.
       def import(project, files:, revision: nil, source: 'repository', folder: nil)
         raise ArgumentError, "unknown source: #{source}" unless SOURCES.include?(source)
         raise ArgumentError, "unsupported folder: #{folder}" if folder && !FOLDERS.include?(folder)
 
         files = files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
                      .select { |path, _| storable?(project, path) }
+        files_digest = digest(files)
         record = IssueTemplateFile.transaction do
           # One import at a time per project (a fetch, the button and a push
           # can come together).
           project.lock!
+          current = IssueTemplateSource.for(project)
+          next nil if block_given? && yield(current, files_digest)
+
           store(project, files)
-          IssueTemplateSource.for(project).tap do |source_record|
-            source_record.update!(kind: source, folder: folder, revision: revision, digest: digest(files),
-                                  synced_at: Time.current)
-          end
+          current.update!(kind: source, folder: folder, revision: revision, digest: files_digest,
+                          synced_at: Time.current)
+          current
         end
-        TemplateSet.reset!
+        TemplateSet.reset! if record
         record
       end
 

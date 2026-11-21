@@ -19,6 +19,15 @@ module RedmineKit
         remove_git_dirs
       end
 
+      # RepositorySource.read returns what the folder has, after a push from
+      # GitHub was imported: between the fetch's first check and its import.
+      def read_after_github_push(result)
+        RedmineKit::IssueTemplate::RepositorySource.stubs(:read).with do
+          import({ 'gh.md' => "---\nname: From GitHub\nabout: a\n---\n" }, @project, source: 'github')
+          true
+        end.returns(result)
+      end
+
       test 'import stores the files and the warnings for the project' do
         source = import(github_files, @project, source: 'github')
         assert_equal %w[bug.md bug_report.yml config.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
@@ -216,6 +225,22 @@ module RedmineKit
         assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
         RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
         assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+      end
+
+      test 'a fetch never replaces templates that GitHub imported while it read the repository' do
+        git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
+        read_after_github_push(RedmineKit::IssueTemplate::RepositorySource.read(@project.repository))
+        assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+        assert_equal 'github', IssueTemplateSource.find_by(project: @project).kind
+        assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
+      end
+
+      test 'a fetch that finds no folder keeps templates that GitHub imported meanwhile' do
+        git_repository(@project, 'README' => 'x')
+        import({ 'a.md' => "---\nname: Alpha\nabout: a\n---\n" }, @project, source: 'repository')
+        read_after_github_push([nil, {}])
+        assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
+        assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
       end
 
       test 'sync does nothing without the module' do

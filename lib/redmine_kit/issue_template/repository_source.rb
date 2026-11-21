@@ -17,16 +17,25 @@ module RedmineKit
       def sync(project, force: false)
         repository = project.repository
         return nil unless repository && project.module_enabled?(:issue_templates)
-
-        current = IssueTemplateSource.for(project)
-        return nil if current.kind == 'github' && !force
+        # Before reading the repository; checked again in the import's lock.
+        return nil if keep?(IssueTemplateSource.for(project), force: force)
 
         folder, files = read(repository)
-        return clear(project, current) if folder.nil?
-        return nil if !force && current.kind == 'repository' && current.digest == Importer.digest(files)
+        return clear(project) if folder.nil?
 
         Importer.import(project, files: files, revision: revision(repository, folder), source: 'repository',
-                                 folder: folder)
+                                 folder: folder) do |current, digest|
+          keep?(current, force: force, digest: digest)
+        end
+      end
+
+      # Whether the stored files stay as they are: those from GitHub unless
+      # forced, and those of the repository when the folder's files (digest)
+      # are the same.
+      def keep?(current, force:, digest: nil)
+        return false if force
+
+        current.kind == 'github' || (digest && current.kind == 'repository' && current.digest == digest)
       end
 
       # The first folder with template files: [folder, { name => content }].
@@ -70,10 +79,8 @@ module RedmineKit
 
       # The repository has no templates any more: files that came from it go
       # away; files edited in the project settings stay.
-      def clear(project, current)
-        return nil unless current.kind == 'repository'
-
-        Importer.import(project, files: {}, source: 'manual')
+      def clear(project)
+        Importer.import(project, files: {}, source: 'manual') { |current, _| current.kind != 'repository' }
       end
     end
   end
