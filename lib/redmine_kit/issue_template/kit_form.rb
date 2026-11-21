@@ -13,7 +13,7 @@ module RedmineKit
     #
     # - no template, and the project has templates: the chooser, as a step
     #   before the form (the templates the user may use, a blank issue when it
-    #   is allowed, the contact links), as IssueTemplatesController#index;
+    #   is allowed, the contact links), as TemplatesController#index;
     # - a template: its part of the form (its name and description, the values
     #   it sets, a form's fields with their answers as Redmine's form starts
     #   them, BodyComposer#value);
@@ -147,7 +147,7 @@ module RedmineKit
         end
       end
 
-      # A form's elements as issue_templates/_form_fields draws them: the ones
+      # A form's elements as templates/_form_fields draws them: the ones
       # the form leaves out dropped, each with what the form starts with.
       def elements
         composer = @issue.issue_template_composer

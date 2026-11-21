@@ -10,14 +10,14 @@
 
 <%= title [l(:label_issue_template_plural), settings_project_path(@project, tab: 'issue_templates')], @file.path %>
 
-<%= render partial: 'issue_templates/source', locals: { source: @source } unless manual %>
+<%= render partial: 'redmine_kit/issue_template/templates/source', locals: { source: @source } unless manual %>
 
 <%# The file's errors are in the preview, in place of the preview. %>
-<% warnings = IssueTemplateSource.messages_for(@project).select { |m| m.path == @file.path && !m.error? } %>
-<%= render partial: 'issue_templates/warnings', locals: { warnings: warnings } %>
+<% warnings = RedmineKit::IssueTemplate::TemplateSource.messages_for(@project).select { |m| m.path == @file.path && !m.error? } %>
+<%= render partial: 'redmine_kit/issue_template/templates/warnings', locals: { warnings: warnings } %>
 
 <div class="box autoscroll">
 <pre><%= @file.content %></pre>
 </div>
 
-<%= render partial: 'issue_templates/preview' %>
+<%= render partial: 'redmine_kit/issue_template/templates/preview' %>

@@ -9,8 +9,8 @@
 <% end %>
 <%= hidden_field_tag 'issue_template', issue.issue_template.key, id: nil %>
 <% if issue.issue_template.form? %>
-<%= render partial: 'issue_templates/form_fields', locals: { issue: issue } %>
+<%= render partial: 'redmine_kit/issue_template/templates/form_fields', locals: { issue: issue } %>
 <% else %>
-<%= render partial: 'issue_templates/preset_values', locals: { issue: issue } %>
+<%= render partial: 'redmine_kit/issue_template/templates/preset_values', locals: { issue: issue } %>
 <% end %>
 <% end %>

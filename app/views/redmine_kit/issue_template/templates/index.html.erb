@@ -1,7 +1,7 @@
 <%# The template chooser of "New issue". %>
 <h2><%= l(:label_issue_new) %></h2>
 
-<%= render partial: 'issue_templates/chooser',
+<%= render partial: 'redmine_kit/issue_template/templates/chooser',
            locals: { templates: @set.usable_for(@project), config: @set.config, blank: @blank, carried: @carried } %>
 
 <% html_title(l(:label_issue_new)) -%>

@@ -14,7 +14,7 @@
               class: 'icon icon-help' %>
 </p>
 
-<%= render partial: 'issue_templates/source', locals: { source: source } unless manual %>
+<%= render partial: 'redmine_kit/issue_template/templates/source', locals: { source: source } unless manual %>
 
 <%# The problems themselves are on each file's page. %>
 <% if tab.errors? %>

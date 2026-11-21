@@ -14,9 +14,9 @@ module RedmineKit
       #   source:   "repository", "github" or "manual"
       #   folder:   the folder they were read from: ".redmine/ISSUE_TEMPLATE"
       #             (FOLDERS); files of another folder are refused
-      # Returns the IssueTemplateSource; IssueTemplateSource.messages_for gives
+      # Returns the TemplateSource; TemplateSource.messages_for gives
       # the errors and warnings. With a block, the block is given the stored
-      # IssueTemplateSource and the files' digest inside the project's lock,
+      # TemplateSource and the files' digest inside the project's lock,
       # and nothing is imported (nil) when it returns true: a decision on what
       # is stored holds only there, since another import may have committed
       # since it was read.
@@ -27,11 +27,11 @@ module RedmineKit
         files = files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
                      .select { |path, _| storable?(project, path) }
         files_digest = digest(files)
-        record = IssueTemplateFile.transaction do
+        record = TemplateFile.transaction do
           # One import at a time per project (a fetch, the button and a push
           # can come together).
           project.lock!
-          current = IssueTemplateSource.for(project)
+          current = TemplateSource.for(project)
           next nil if block_given? && yield(current, files_digest)
 
           store(project, files)
@@ -46,10 +46,10 @@ module RedmineKit
       # The project's files replaced by these. A file too long to store is kept
       # empty, marked as too long.
       def store(project, files)
-        IssueTemplateFile.where(project_id: project.id).delete_all
+        TemplateFile.where(project_id: project.id).delete_all
         files.each do |path, content|
           too_long = content.length > Parser::MAX_LENGTH
-          IssueTemplateFile.create!(project: project, path: path, content: too_long ? '' : content, too_long: too_long)
+          TemplateFile.create!(project: project, path: path, content: too_long ? '' : content, too_long: too_long)
         end
       end
 
@@ -62,7 +62,7 @@ module RedmineKit
       # out, so that one odd name doesn't stop the import.
       def storable?(project, path)
         return false unless Parser.kind(path)
-        return true if path.length <= 255 && IssueTemplateFile::PATH.match?(path)
+        return true if path.length <= 255 && TemplateFile::PATH.match?(path)
 
         Rails.logger.warn("redmine_kit_issue_template: #{project.identifier}: file name not used: #{path.inspect}")
         false

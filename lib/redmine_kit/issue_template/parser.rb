@@ -10,7 +10,7 @@ module RedmineKit
     module Parser
       module_function
 
-      # The longest file, as IssueTemplateFile stores it.
+      # The longest file, as TemplateFile stores it.
       MAX_LENGTH = 65_535
       # Stands for a file the repository has but that is not read, being longer
       # in bytes than MAX_LENGTH characters can be.

@@ -3,7 +3,7 @@
 module RedmineKit
   module IssueTemplate
     # Project settings › Issue templates: what the tab shows, for Redmine's
-    # page (issue_templates/_settings) and the new UI's
+    # page (templates/_settings) and the new UI's
     # (GET /projects/:id/issue_templates.json), from one place. Where the files
     # come from, whether they are edited here, the files with their errors and
     # warnings, and the chooser's settings (config.yml).
@@ -19,7 +19,7 @@ module RedmineKit
       def source
         return @source if defined?(@source)
 
-        @source = IssueTemplateSource.find_by(project_id: project.id)
+        @source = TemplateSource.find_by(project_id: project.id)
       end
 
       # The files are edited here (none imported from elsewhere).
@@ -32,11 +32,11 @@ module RedmineKit
       end
 
       def messages
-        @messages ||= IssueTemplateSource.messages_for(project)
+        @messages ||= TemplateSource.messages_for(project)
       end
 
       def files
-        @files ||= IssueTemplateFile.where(project_id: project.id).sort_by { |file| Parser.sort_key(file.path) }
+        @files ||= TemplateFile.where(project_id: project.id).sort_by { |file| Parser.sort_key(file.path) }
       end
 
       def template_for(file)

@@ -87,7 +87,7 @@ class RedmineKitIssueTemplateScreenshotsTest < ScreenshotCase
   end
 
   def shoot_preview
-    file = IssueTemplateFile.find_by(path: 'feature.md')
+    file = RedmineKit::IssueTemplate::TemplateFile.find_by(path: 'feature.md')
     each_language do |language|
       visit "/projects/ecookbook/issue_templates/#{file.id}/edit"
       find('input[name=preview]').click

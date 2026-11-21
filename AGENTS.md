@@ -16,8 +16,9 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 | `lib/redmine_kit/issue_template/importer.rb`, `repository_source.rb`, `repository_patch.rb` | Importing and storing files (the entry point for redmine_kit_github) |
 | `lib/redmine_kit/issue_template/issue_patch.rb` (`issue_template_visibility`, the one place), `redmine_rules.rb`, `issue_template_defaults.rb`, `issue_template_answers.rb`, `linked_field.rb`, `body_composer.rb` | What a template does to a new issue: hidden, preset, linked and required fields, the template's values, the description from the answers, the files of upload fields |
 | `lib/redmine_kit/issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, refusing issues without a template; the request's parameters (permitted answers and uploads, preset values, what the request can't set) |
-| `app/controllers/issue_templates_controller.rb`, `app/views/issue_templates/` | The chooser, the settings tab, the file pages, a YAML form's part at the top of Redmine's form |
-| `app/helpers/issue_templates_helper.rb`, `issue_template_form_helper.rb` | The one Markdown helper and the fields' labels; the change to Redmine's `projects_for_select` |
+| `app/models/redmine_kit/issue_template/template_file.rb`, `template_source.rb` | The stored files (`redmine_kit_issue_template_files`) and where they came from (`redmine_kit_issue_template_sources`) |
+| `app/controllers/redmine_kit/issue_template/templates_controller.rb`, `app/views/redmine_kit/issue_template/templates/` | The chooser, the settings tab, the file pages, a YAML form's part at the top of Redmine's form |
+| `app/helpers/redmine_kit/issue_template/templates_helper.rb`, `issue_form_helper.rb` | The one Markdown helper and the fields' labels; the change to Redmine's `projects_for_select` |
 | `assets/stylesheets/issue_template.css`, `assets/javascripts/issue_template.js` | The plugin's CSS, each rule with its reason; the one script (dropping files on upload fields) |
 | `test/` | Unit (`unit/`, `helpers/`) and functional tests, `test/screenshots/` for the docs' images, `test/fixtures/github/` example templates |
 
@@ -46,7 +47,7 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 ### Data
 
 - **Pages never read the repository.** Imports store the files; pages read the stored files.
-- **Files** are stored in UTF-8, with names that `IssueTemplateFile::PATH` accepts and at most `Parser::MAX_LENGTH` characters.
+- **Files** are stored in UTF-8, with names that `TemplateFile::PATH` accepts and at most `Parser::MAX_LENGTH` characters.
 
 ### Tests
 

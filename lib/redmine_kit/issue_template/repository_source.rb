@@ -13,12 +13,12 @@ module RedmineKit
 
       # Imports the folder when it changed since the last import (or always
       # with force). Templates kept by redmine_kit_github are left alone unless
-      # forced. Returns the IssueTemplateSource, or nil when nothing was done.
+      # forced. Returns the TemplateSource, or nil when nothing was done.
       def sync(project, force: false)
         repository = project.repository
         return nil unless repository && project.module_enabled?(:issue_templates)
         # Before reading the repository; checked again in the import's lock.
-        return nil if keep?(IssueTemplateSource.for(project), force: force)
+        return nil if keep?(TemplateSource.for(project), force: force)
 
         folder, files = read(repository)
         return clear(project) if folder.nil?

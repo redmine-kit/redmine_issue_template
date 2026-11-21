@@ -30,9 +30,9 @@ module RedmineKit
 
       test 'import stores the files and the warnings for the project' do
         source = import(github_files, @project, source: 'github')
-        assert_equal %w[bug.md bug_report.yml config.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
+        assert_equal %w[bug.md bug_report.yml config.yml], TemplateFile.where(project: @project).pluck(:path).sort
         assert_equal 'github', source.kind
-        keys = IssueTemplateSource.messages_for(@project).map(&:key)
+        keys = TemplateSource.messages_for(@project).map(&:key)
         assert_includes keys, 'projects_ignored'
         assert_includes keys, 'labels_ignored'
         assert_includes keys, 'assignees_ignored'
@@ -42,13 +42,13 @@ module RedmineKit
         import('a.md' => "---\nname: Alpha\nabout: a\n---\n")
         import('b.md' => "---\nname: Beta\nabout: b\n---\n", 'README.txt' => 'x',
                'sub/c.md' => "---\nname: C\nabout: c\n---\n")
-        assert_equal %w[b.md c.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
+        assert_equal %w[b.md c.md], TemplateFile.where(project: @project).pluck(:path).sort
       end
 
       test 'import reads files in UTF-8 and leaves out names it can\'t store' do
         latin1 = "---\nname: Caf\xE9\nabout: a\n---\n".b
         import('cafe.md' => latin1, '.md' => 'x', 'feature.md' => "---\nname: Feature\nabout: f\n---\n")
-        files = IssueTemplateFile.where(project: @project).order(:path)
+        files = TemplateFile.where(project: @project).order(:path)
         assert_equal %w[cafe.md feature.md], files.pluck(:path)
         assert files.first.content.valid_encoding?
       end
@@ -56,11 +56,11 @@ module RedmineKit
       test 'errors and warnings come from the stored files and the project as it is now' do
         long = "---\nname: Long\nabout: a\n---\n#{'x' * RedmineKit::IssueTemplate::Parser::MAX_LENGTH}"
         import('long.md' => long, 'feature.md' => "---\nname: Feature\nabout: f\ntracker: Bug\n---\n")
-        file = IssueTemplateFile.find_by(project: @project, path: 'long.md')
+        file = TemplateFile.find_by(project: @project, path: 'long.md')
         assert file.too_long
         assert_equal '', file.content
         # The project as a new request loads it.
-        keys = -> { IssueTemplateSource.messages_for(Project.find(@project.id)).map(&:key) }
+        keys = -> { TemplateSource.messages_for(Project.find(@project.id)).map(&:key) }
         assert_includes keys.call, 'file_too_long'
         assert_not_includes keys.call, 'unknown_value'
 
@@ -96,7 +96,7 @@ module RedmineKit
         assert_equal expected, defaults.except('subject')
         visibility = template.options.visibility(@project)
         assert_equal({ hidden: %w[assigned_to_id 1], required: %w[due_date] }, visibility)
-        assert_equal %w[unknown_field], IssueTemplateSource.messages_for(@project).map(&:key).sort
+        assert_equal %w[unknown_field], TemplateSource.messages_for(@project).map(&:key).sort
       end
 
       test 'the tracker comes from type; labels are not used' do
@@ -131,7 +131,7 @@ module RedmineKit
       test 'invalid redmine options are errors' do
         content = "---\nname: Bad\nabout: a\nis_private: maybe\nfields:\n  assigned_to: invisible\n---\n"
         import('bad.md' => content)
-        errors = IssueTemplateSource.messages_for(@project).select(&:error?)
+        errors = TemplateSource.messages_for(@project).select(&:error?)
         assert_equal %w[redmine_invalid_value redmine_invalid_visibility], errors.map(&:key)
         assert_not RedmineKit::IssueTemplate::TemplateSet.for(@project).any?
       end
@@ -139,7 +139,7 @@ module RedmineKit
       test 'a template set is read again when the files change' do
         import('a.md' => "---\nname: Alpha\nabout: a\n---\n")
         assert_equal %w[a], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
-        IssueTemplateFile.create!(project: @project, path: 'b.md', content: "---\nname: Beta\nabout: b\n---\n")
+        TemplateFile.create!(project: @project, path: 'b.md', content: "---\nname: Beta\nabout: b\n---\n")
         assert_equal %w[a b], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
       end
 
@@ -159,20 +159,20 @@ module RedmineKit
         source = RedmineKit::IssueTemplate::RepositorySource.sync(@project)
         assert_equal 'repository', source.kind
         assert_equal '.redmine/ISSUE_TEMPLATE', source.folder
-        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[bug.md], TemplateFile.where(project: @project).pluck(:path)
 
         assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project), 'nothing changed'
 
         commit_files(dir, '.redmine/ISSUE_TEMPLATE/feature.yml' => github_fixture('bug_report.yml'))
         repository.fetch_changesets
-        assert_equal %w[bug.md feature.yml], IssueTemplateFile.where(project: @project).pluck(:path).sort
-        assert_equal 40, IssueTemplateSource.find_by(project: @project).revision.to_s.length
+        assert_equal %w[bug.md feature.yml], TemplateFile.where(project: @project).pluck(:path).sort
+        assert_equal 40, TemplateSource.find_by(project: @project).revision.to_s.length
       end
 
       test 'a fetch that adds no changesets reads nothing; one that adds some imports' do
         repository, dir = git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         repository.fetch_changesets
-        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[bug.md], TemplateFile.where(project: @project).pluck(:path)
 
         RedmineKit::IssueTemplate::RepositorySource.expects(:read).never
         repository.fetch_changesets
@@ -180,7 +180,7 @@ module RedmineKit
 
         commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
         repository.fetch_changesets
-        assert_equal %w[bug.md task.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
+        assert_equal %w[bug.md task.md], TemplateFile.where(project: @project).pluck(:path).sort
       end
 
       test 'a failed import does not fail the fetch' do
@@ -193,11 +193,11 @@ module RedmineKit
       test 'only .redmine/ISSUE_TEMPLATE is read: the files of .github/ISSUE_TEMPLATE are not' do
         _repository, dir = git_repository(@project, '.github/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
-        assert_empty IssueTemplateFile.where(project: @project)
+        assert_empty TemplateFile.where(project: @project)
 
         commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
         RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
-        assert_equal %w[task.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[task.md], TemplateFile.where(project: @project).pluck(:path)
         assert_raises(ArgumentError) do
           import({ 'bug.md' => github_fixture('bug.md') }, @project, folder: '.github/ISSUE_TEMPLATE')
         end
@@ -213,8 +213,8 @@ module RedmineKit
           git_repository(@project, '.redmine/ISSUE_TEMPLATE/bad.yml' => content,
                                    '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
           RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
-          assert_equal %w[bad.yml task.md], IssueTemplateFile.where(project: @project).pluck(:path).sort
-          messages = IssueTemplateSource.messages_for(@project).select { |message| message.path == 'bad.yml' }
+          assert_equal %w[bad.yml task.md], TemplateFile.where(project: @project).pluck(:path).sort
+          messages = TemplateSource.messages_for(@project).select { |message| message.path == 'bad.yml' }
           assert(messages.any? { |message| message.error? == (level == :error) })
           assert_equal %w[task], RedmineKit::IssueTemplate::TemplateSet.for(@project).usable.map(&:key)
         end
@@ -227,12 +227,12 @@ module RedmineKit
         git_repository(@project, files)
         RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
         assert_equal RedmineKit::IssueTemplate::RepositorySource::MAX_FILES,
-                     IssueTemplateFile.where(project: @project).count
+                     TemplateFile.where(project: @project).count
       end
 
       test "names a repository can't give a file are not stored (a folder, a name of another kind)" do
         import({ '../x.md' => "---\nname: X\nabout: a\n---\n", 'a/b.md' => 'x', 'c.txt' => 'x' }, @project)
-        assert_equal %w[b.md x.md], IssueTemplateFile.where(project: @project).pluck(:path).sort,
+        assert_equal %w[b.md x.md], TemplateFile.where(project: @project).pluck(:path).sort,
                      'the names in the folder'
       end
 
@@ -241,30 +241,30 @@ module RedmineKit
         RedmineKit::IssueTemplate::RepositorySource.sync(@project)
         commit_files(dir, '.redmine/ISSUE_TEMPLATE/bug.md' => nil, 'README' => 'x')
         repository.fetch_changesets
-        assert_equal 'manual', IssueTemplateSource.find_by(project: @project).kind
-        assert_empty IssueTemplateFile.where(project: @project)
+        assert_equal 'manual', TemplateSource.find_by(project: @project).kind
+        assert_empty TemplateFile.where(project: @project)
 
-        IssueTemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
+        TemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
         commit_files(dir, 'README' => 'y')
         repository.fetch_changesets
-        assert_equal %w[a.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[a.md], TemplateFile.where(project: @project).pluck(:path)
       end
 
       test 'templates from GitHub are not replaced by a fetch unless forced' do
         git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         import({ 'gh.md' => "---\nname: From GitHub\nabout: a\n---\n" }, @project, source: 'github')
         assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
-        assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[gh.md], TemplateFile.where(project: @project).pluck(:path)
         RedmineKit::IssueTemplate::RepositorySource.sync(@project, force: true)
-        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[bug.md], TemplateFile.where(project: @project).pluck(:path)
       end
 
       test 'a fetch never replaces templates that GitHub imported while it read the repository' do
         git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         read_after_github_push(RedmineKit::IssueTemplate::RepositorySource.read(@project.repository))
         assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
-        assert_equal 'github', IssueTemplateSource.find_by(project: @project).kind
-        assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal 'github', TemplateSource.find_by(project: @project).kind
+        assert_equal %w[gh.md], TemplateFile.where(project: @project).pluck(:path)
       end
 
       test 'a fetch that finds no folder keeps templates that GitHub imported meanwhile' do
@@ -272,7 +272,7 @@ module RedmineKit
         import({ 'a.md' => "---\nname: Alpha\nabout: a\n---\n" }, @project, source: 'repository')
         read_after_github_push([nil, {}])
         assert_nil RedmineKit::IssueTemplate::RepositorySource.sync(@project)
-        assert_equal %w[gh.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[gh.md], TemplateFile.where(project: @project).pluck(:path)
       end
 
       test 'sync does nothing without the module' do
@@ -289,8 +289,8 @@ module RedmineKit
         project = Project.generate!
         import({ 'a.md' => "---\nname: Alpha\nabout: a\n---\n" }, project)
         project.reload.destroy
-        assert_empty IssueTemplateFile.where(project_id: project.id)
-        assert_nil IssueTemplateSource.find_by(project_id: project.id)
+        assert_empty TemplateFile.where(project_id: project.id)
+        assert_nil TemplateSource.find_by(project_id: project.id)
       end
     end
   end

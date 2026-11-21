@@ -2,7 +2,7 @@
 
 module RedmineKit
   module IssueTemplate
-    # The settings' requests of IssueTemplatesController, read safely (a
+    # The settings' requests of TemplatesController, read safely (a
     # value of another shape is ignored), and the new UI's answer to a save.
     # Part of the controller.
     module SettingsParams
@@ -26,10 +26,10 @@ module RedmineKit
       # for an id of another shape or of another project's file.
       def previewed_file
         id = params.dig(:issue_template_file, :id) if params[:issue_template_file].respond_to?(:dig)
-        return IssueTemplateFile.new(project: @project) if id.blank?
+        return TemplateFile.new(project: @project) if id.blank?
         return nil unless id.is_a?(String) || id.is_a?(Integer)
 
-        IssueTemplateFile.where(project_id: @project.id).find_by(id: id.to_s)
+        TemplateFile.where(project_id: @project.id).find_by(id: id.to_s)
       end
 
       # The form's contact links, without the empty rows.

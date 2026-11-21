@@ -1,5 +1,5 @@
 // The plugin's data, as its server gives it: the new issue's form (KitForm, through redmine_kit_ui's hook
-// kit_ui_new_issue_form) and the project settings' tab (IssueTemplatesController's JSON, SettingsTab). Paths are this
+// kit_ui_new_issue_form) and the project settings' tab (TemplatesController's JSON, SettingsTab). Paths are this
 // server's, built from the context the app gives, with the identifier encoded.
 
 /** A template of the chooser (KitForm#chooser_row). */

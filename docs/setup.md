@@ -8,7 +8,7 @@
 
 ## Installation
 
-Put the plugin in `plugins/redmine_kit_issue_template`, run its migrations and restart Redmine. The migrations create the tables `issue_template_files` and `issue_template_sources`.
+Put the plugin in `plugins/redmine_kit_issue_template`, run its migrations and restart Redmine. The migrations create the tables `redmine_kit_issue_template_files` and `redmine_kit_issue_template_sources`.
 
 ```sh
 bin/rake redmine:plugins:migrate

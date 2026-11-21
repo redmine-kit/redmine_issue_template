@@ -4,10 +4,10 @@ require_relative '../test_helper'
 
 module RedmineKit
   module IssueTemplate
-    class IssueTemplatesControllerTest < Redmine::ControllerTest
+    class TemplatesControllerTest < Redmine::ControllerTest
       include RedmineKit::IssueTemplate::TestHelper
 
-      tests IssueTemplatesController
+      tests TemplatesController
       fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles, :trackers, :projects_trackers,
                :enabled_modules, :issue_statuses, :enumerations, :custom_fields, :custom_fields_projects,
                :custom_fields_trackers, :issue_categories, :versions, :workflows
@@ -62,8 +62,8 @@ module RedmineKit
         post :create, params: { project_id: 'ecookbook',
                                 issue_template_file: { path: 'bug.md', content: github_fixture('bug.md') } }
         assert_redirected_to '/projects/ecookbook/settings/issue_templates'
-        file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
-        assert_equal 'manual', IssueTemplateSource.find_by(project: @project).kind
+        file = TemplateFile.find_by(project: @project, path: 'bug.md')
+        assert_equal 'manual', TemplateSource.find_by(project: @project).kind
 
         get :edit, params: { project_id: 'ecookbook', id: file.id }
         assert_response :success
@@ -85,7 +85,7 @@ module RedmineKit
         assert_equal '1-bug.md', file.reload.path
 
         delete :destroy, params: { project_id: 'ecookbook', id: file.id }
-        assert_empty IssueTemplateFile.where(project: @project)
+        assert_empty TemplateFile.where(project: @project)
       end
 
       test 'an invalid file name is refused' do
@@ -100,7 +100,7 @@ module RedmineKit
         post :create, params: { project_id: 'ecookbook', preview: 'Preview',
                                 issue_template_file: { path: 'feature.md', content: content } }
         assert_response :success
-        assert_empty IssueTemplateFile.where(project: @project)
+        assert_empty TemplateFile.where(project: @project)
         assert_select 'textarea#issue_template_file_content', text: /name: Feature/
         assert_select 'div.box > fieldset.issue-template-preview[inert] > legend', text: 'Preview'
         assert_select '.issue-template-preview[inert]' do
@@ -144,7 +144,7 @@ module RedmineKit
       test 'the chooser\'s settings go to the config file the chooser reads' do
         import('config.yaml' => "blank_issues_enabled: false\n", 'feature.md' => github_fixture('bug.md'))
         patch :settings, params: { project_id: 'ecookbook', blank_issues_enabled: '1' }
-        assert_equal %w[config.yaml feature.md], IssueTemplateFile.where(project: @project).order(:path).pluck(:path)
+        assert_equal %w[config.yaml feature.md], TemplateFile.where(project: @project).order(:path).pluck(:path)
         assert RedmineKit::IssueTemplate::TemplateSet.for(@project).config.blank_issues_enabled?
       end
 
@@ -158,7 +158,7 @@ module RedmineKit
       test 'the preview works for a manager who cannot add issues' do
         import(github_files)
         Role.find(1).remove_permission!(:add_issues)
-        file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
+        file = TemplateFile.find_by(project: @project, path: 'bug.md')
         get :show, params: { project_id: 'ecookbook', id: file.id }
         assert_response :success
         assert_select '.issue-template-preview'
@@ -166,7 +166,7 @@ module RedmineKit
 
       test 'the page of a file shows its warnings' do
         import(github_files)
-        file = IssueTemplateFile.find_by(project: @project, path: 'bug_report.yml')
+        file = TemplateFile.find_by(project: @project, path: 'bug_report.yml')
         get :show, params: { project_id: 'ecookbook', id: file.id }
         assert_response :success
         assert_select 'div.flash.warning li', text: /octo-org/
@@ -182,7 +182,7 @@ module RedmineKit
 
       test 'preview of config.yml shows the chooser' do
         import(github_files, @project, source: 'repository')
-        file = IssueTemplateFile.find_by(project: @project, path: 'config.yml')
+        file = TemplateFile.find_by(project: @project, path: 'config.yml')
         get :show, params: { project_id: 'ecookbook', id: file.id }
         assert_select '.issue-template-preview' do
           assert_select 'table.issue-templates tbody tr', 2
@@ -197,12 +197,12 @@ module RedmineKit
         assert_response :success
         assert_select '#errorExplanation li', text: 'form.yml: description cannot be blank'
         assert_select '#errorExplanation li', text: 'form.yml: body cannot be blank'
-        assert_empty IssueTemplateFile.where(project: @project)
+        assert_empty TemplateFile.where(project: @project)
       end
 
       test 'files from a repository are shown read-only and not edited in Redmine' do
         import(github_files, @project, source: 'repository', folder: '.redmine/ISSUE_TEMPLATE')
-        file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
+        file = TemplateFile.find_by(project: @project, path: 'bug.md')
         content = file.content
 
         get :show, params: { project_id: 'ecookbook', id: file.id }
@@ -228,7 +228,7 @@ module RedmineKit
         git_repository(@project, '.redmine/ISSUE_TEMPLATE/bug.md' => github_fixture('bug.md'))
         post :sync, params: { project_id: 'ecookbook' }
         assert_redirected_to '/projects/ecookbook/settings/issue_templates'
-        assert_equal %w[bug.md], IssueTemplateFile.where(project: @project).pluck(:path)
+        assert_equal %w[bug.md], TemplateFile.where(project: @project).pluck(:path)
       end
 
       test 'Import without a repository' do
@@ -255,7 +255,7 @@ module RedmineKit
       end
 
       test 'every action needs the permission and the module' do
-        file = IssueTemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
+        file = TemplateFile.create!(project: @project, path: 'a.md', content: "---\nname: Alpha\nabout: a\n---\n")
         Role.find(1).remove_permission!(:manage_issue_templates)
         ACTIONS.each do |method, action, extra|
           request_action(method, action, extra, file)
@@ -271,7 +271,7 @@ module RedmineKit
       end
 
       test 'a file of another project is not found' do
-        other = IssueTemplateFile.create!(project: Project.find(2), path: 'b.md',
+        other = TemplateFile.create!(project: Project.find(2), path: 'b.md',
                                           content: "---\nname: Beta\nabout: b\n---\n")
         ACTIONS.select { |*, extra| extra == :file }.each do |method, action, extra|
           request_action(method, action, extra, other)
@@ -281,7 +281,7 @@ module RedmineKit
 
       test 'templates from a repository are not changed in the settings' do
         import(github_files, @project, source: 'repository')
-        file = IssueTemplateFile.find_by(project: @project, path: 'bug.md')
+        file = TemplateFile.find_by(project: @project, path: 'bug.md')
         patch :update, params: { project_id: 'ecookbook', id: file.id,
                                  issue_template_file: { path: 'bug.md', content: 'x' } }
         assert_redirected_to '/projects/ecookbook/settings/issue_templates'

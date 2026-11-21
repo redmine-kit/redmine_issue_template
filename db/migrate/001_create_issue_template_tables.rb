@@ -14,7 +14,7 @@ class CreateIssueTemplateTables < ActiveRecord::Migration[8.1]
   private
 
   def create_files
-    create_table :issue_template_files do |t|
+    create_table :redmine_kit_issue_template_files do |t|
       t.references :project, null: false, index: false, foreign_key: false
       t.string :path, null: false
       # A file has at most 65,535 characters, more bytes than MySQL's TEXT
@@ -24,13 +24,13 @@ class CreateIssueTemplateTables < ActiveRecord::Migration[8.1]
       t.boolean :too_long, null: false, default: false
       t.timestamps
     end
-    add_index :issue_template_files, %i[project_id path], unique: true
+    add_index :redmine_kit_issue_template_files, %i[project_id path], unique: true
   end
 
   # Where a project's template files come from, and the last import. The
   # errors and warnings are worked out from the stored files when shown.
   def create_sources
-    create_table :issue_template_sources do |t|
+    create_table :redmine_kit_issue_template_sources do |t|
       t.references :project, null: false, index: { unique: true }, foreign_key: false
       t.string :kind, null: false, default: 'manual'
       t.string :folder

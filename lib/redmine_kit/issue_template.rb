@@ -13,7 +13,7 @@ module RedmineKit
     # (templates for Redmine live in .redmine only).
     FOLDERS = ['.redmine/ISSUE_TEMPLATE'].freeze
 
-    # Where a project's files come from (IssueTemplateSource#kind).
+    # Where a project's files come from (RedmineKit::IssueTemplate::TemplateSource#kind).
     SOURCES = %w[repository github manual].freeze
 
     module_function
@@ -31,12 +31,14 @@ module RedmineKit
          settings_params kit_form kit_preview hooks].each do |file|
         require_relative "issue_template/#{file}"
       end
-      Project.has_many :issue_template_files, dependent: :delete_all
-      Project.has_one :issue_template_source, dependent: :delete
+      Project.has_many :issue_template_files, class_name: 'RedmineKit::IssueTemplate::TemplateFile',
+                                              dependent: :delete_all
+      Project.has_one :issue_template_source, class_name: 'RedmineKit::IssueTemplate::TemplateSource',
+                                              dependent: :delete
       Issue.prepend IssuePatch
       IssuesController.prepend IssuesControllerPatch
-      IssuesController.helper IssueTemplatesHelper
-      IssuesController.helper IssueTemplateFormHelper
+      IssuesController.helper TemplatesHelper
+      IssuesController.helper IssueFormHelper
       ProjectsHelper.prepend ProjectsHelperPatch
       RepositoryPatch.install
     end

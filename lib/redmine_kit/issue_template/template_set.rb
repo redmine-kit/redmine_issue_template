@@ -16,7 +16,7 @@ module RedmineKit
       # The parsed files of a project, kept while the stored files are the same
       # (their number, last change and last id, without reading the contents).
       def self.for(project)
-        scope = IssueTemplateFile.where(project_id: project.id)
+        scope = TemplateFile.where(project_id: project.id)
         count, updated, last = scope.pick(Arel.sql('COUNT(*)'), Arel.sql('MAX(updated_at)'), Arel.sql('MAX(id)'))
         # the time with its fractions of a second (Time#to_param drops them)
         updated = updated.iso8601(6) if updated.respond_to?(:iso8601)

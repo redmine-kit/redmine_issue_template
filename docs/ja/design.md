@@ -79,7 +79,7 @@ Redmine は、説明をテキスト書式の設定で表示します。テンプ
 
 ## 取り込みと同期
 
-プロジェクトは、使うファイル(`issue_template_files`)と、その取得元(`issue_template_sources`。リポジトリ、GitHub、プロジェクトの設定のどれか、リビジョン、時刻、ファイルのダイジェスト)を保存します。エラーと警告は、表示するときに保存したファイルから求めます。画面は保存したファイルを読み、リポジトリは読みません。
+プロジェクトは、使うファイル(`redmine_kit_issue_template_files`)と、その取得元(`redmine_kit_issue_template_sources`。リポジトリ、GitHub、プロジェクトの設定のどれか、リビジョン、時刻、ファイルのダイジェスト)を保存します。エラーと警告は、表示するときに保存したファイルから求めます。画面は保存したファイルを読み、リポジトリは読みません。
 
 - **Redmine のリポジトリ。** Redmine がプロジェクトのメインのリポジトリのコミットを取得して新しいコミットが追加されたあと、テンプレートフォルダーのファイルを保存したものと比べ、違えば取り込み直して、フォルダーを最後に変えたリビジョンを記録します。Redmine のリポジトリのアダプターを使うので、Redmine が対応するすべての SCM で動きます。プロジェクトの設定のタブには、「インポート」のボタンがあります。
 - **redmine_kit_github。** [Redmine Kit GitHub](https://github.com/redmine-kit/redmine_github) は、GitHub の push のイベントを受け取ります。デフォルトブランチへの push で `.redmine/ISSUE_TEMPLATE/` が変わると、そのフォルダーのファイルを付けて `RedmineKit::IssueTemplate::Importer.import(project, files:, revision:, source: 'github', folder: '.redmine/ISSUE_TEMPLATE')` を呼びます。ほかのフォルダーは拒否します。

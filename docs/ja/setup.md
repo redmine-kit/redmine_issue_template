@@ -12,7 +12,7 @@
 
 ## インストール
 
-プラグインを `plugins/redmine_kit_issue_template` に置き、マイグレーションを実行して、Redmine を再起動します。マイグレーションは、`issue_template_files` と `issue_template_sources` の 2 つのテーブルを作ります。
+プラグインを `plugins/redmine_kit_issue_template` に置き、マイグレーションを実行して、Redmine を再起動します。マイグレーションは、`redmine_kit_issue_template_files` と `redmine_kit_issue_template_sources` の 2 つのテーブルを作ります。
 
 ```sh
 bin/rake redmine:plugins:migrate

@@ -13,7 +13,8 @@ Redmine::Plugin.register :redmine_kit_issue_template do
 
   project_module :issue_templates do
     permission :manage_issue_templates,
-               { issue_templates: %i[files sync settings show new create edit update destroy preview],
+               { 'redmine_kit/issue_template/templates' => %i[files sync settings show new create edit update
+                                                               destroy preview],
                  projects: :settings },
                require: :member
   end
@@ -54,7 +55,7 @@ ActiveSupport.on_load(:redmine_kit_ui) do
     screen path: '/projects/:project_id/issue_templates/:id/edit', component: 'IssueTemplateEdit',
            menu_item: :settings, permission: :manage_issue_templates, title: :label_issue_template_plural,
            settings_tab: :issue_templates
-    # a file's own page (Redmine's issue_templates/show): what the tab's pane shows of it, at its URL
+    # a file's own page (Redmine's templates/show): what the tab's pane shows of it, at its URL
     screen path: '/projects/:project_id/issue_templates/:id', component: 'IssueTemplateFile',
            menu_item: :settings, permission: :manage_issue_templates, title: :label_issue_template_plural,
            settings_tab: :issue_templates

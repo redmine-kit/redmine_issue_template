@@ -3,7 +3,7 @@
 module RedmineKit
   module IssueTemplate
     # The values a template sets on a new issue, shown where the user can't
-    # change them: in Redmine's form (issue_templates/_preset_values) and in
+    # change them: in Redmine's form (templates/_preset_values) and in
     # the new UI's (KitForm). Each entry is the field (an attribute or a
     # custom field's id), Redmine's label of it, and the value as the issue has
     # it: a record, true or false (is_private), or a CustomFieldValue. Custom

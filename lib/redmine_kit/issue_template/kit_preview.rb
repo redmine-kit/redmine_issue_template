@@ -4,7 +4,7 @@ module RedmineKit
   module IssueTemplate
     # The preview of a template file in the new UI's settings (the tab's
     # プレビュー, and the file form's, from the text as typed): what users see
-    # with the file, as IssueTemplatesController#build_preview gives Redmine's
+    # with the file, as TemplatesController#build_preview gives Redmine's
     # page. The file is read with the project's other files (names and ids
     # must be unique) and checked as an import checks it; nothing is saved.
     #

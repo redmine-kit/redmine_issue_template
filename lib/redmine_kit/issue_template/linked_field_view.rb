@@ -3,7 +3,7 @@
 module RedmineKit
   module IssueTemplate
     # How a form's field with a link is shown, in Redmine's form
-    # (issue_templates/_linked_field) and in the new UI's (KitForm): as the
+    # (templates/_linked_field) and in the new UI's (KitForm): as the
     # issue's field it sets (the LinkedField that applies), or, for a link that
     # can't apply, as a select of the element's own options, answered into
     # the description.

@@ -87,7 +87,7 @@ module RedmineKit
         assert_nil answer(new_issue)
 
         @project.enabled_module_names = @project.enabled_module_names | ['issue_templates']
-        IssueTemplateFile.where(project_id: @project.id).delete_all
+        TemplateFile.where(project_id: @project.id).delete_all
         assert_nil answer(new_issue)
       end
 

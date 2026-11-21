@@ -1,8 +1,8 @@
 <%= title [l(:label_issue_template_plural), settings_project_path(@project, tab: 'issue_templates')], l(:label_issue_template_file_new) %>
 
 <%= labelled_form_for @file, as: :issue_template_file, url: project_issue_templates_path(@project) do |f| %>
-<%= render partial: 'issue_templates/file_form', locals: { f: f } %>
-<%= render partial: 'issue_templates/preview' %>
+<%= render partial: 'redmine_kit/issue_template/templates/file_form', locals: { f: f } %>
+<%= render partial: 'redmine_kit/issue_template/templates/preview' %>
 <%= submit_tag l(:button_create) %>
 <%= submit_tag l(:label_preview), name: 'preview' %>
 <%= link_to l(:button_cancel), settings_project_path(@project, tab: 'issue_templates') %>

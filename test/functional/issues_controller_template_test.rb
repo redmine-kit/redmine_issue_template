@@ -48,7 +48,7 @@ module RedmineKit
       end
 
       test 'without templates or without the module, New issue is Redmine\'s form' do
-        IssueTemplateFile.delete_all
+        TemplateFile.delete_all
         RedmineKit::IssueTemplate::TemplateSet.reset!
         get :new, params: { project_id: 'ecookbook' }
         assert_response :success

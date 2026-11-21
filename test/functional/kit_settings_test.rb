@@ -11,7 +11,7 @@ module RedmineKit
     class KitSettingsTest < Redmine::ControllerTest
       include RedmineKit::IssueTemplate::TestHelper
 
-      tests IssueTemplatesController
+      tests TemplatesController
       fixtures :projects, :users, :email_addresses, :roles, :members, :member_roles, :trackers, :projects_trackers,
                :enabled_modules, :issue_statuses, :enumerations, :custom_fields, :custom_fields_projects,
                :custom_fields_trackers, :issue_categories, :versions, :workflows
@@ -27,11 +27,11 @@ module RedmineKit
       end
 
       def as_user(user)
-        IssueTemplatesController.any_instance.stubs(:find_current_user).returns(user)
+        TemplatesController.any_instance.stubs(:find_current_user).returns(user)
       end
 
       def file(path = 'bug_report.yml')
-        IssueTemplateFile.find_by!(project_id: @project.id, path: path)
+        TemplateFile.find_by!(project_id: @project.id, path: path)
       end
 
       def config
@@ -83,7 +83,7 @@ module RedmineKit
       end
 
       test 'a file with errors has no preview, and its messages' do
-        broken = IssueTemplateFile.new(project: @project, path: 'broken.yml', content: "name: Broken\nbody: []\n")
+        broken = TemplateFile.new(project: @project, path: 'broken.yml', content: "name: Broken\nbody: []\n")
         broken.save!(validate: false)
         get :show, params: { project_id: 'ecookbook', id: broken.id, format: 'json' }
         data = response.parsed_body['issue_template_file']
@@ -93,7 +93,7 @@ module RedmineKit
 
       test 'the preview of a file as typed: nothing is saved' do
         task = "---\nname: Task\nabout: A task\ntitle: \"[Task] \"\n---\n## Steps\n"
-        assert_no_difference 'IssueTemplateFile.count' do
+        assert_no_difference 'TemplateFile.count' do
           post :preview, params: { project_id: 'ecookbook', format: 'json',
                                    issue_template_file: { path: 'task.md', content: task } }
         end
@@ -130,7 +130,7 @@ module RedmineKit
       # name => params of the preview; each is 404 or a preview of a new file, never an error of the server
       {
         "another project's file" => lambda {
-          other = IssueTemplateFile.create!(project_id: 2, path: 'o.md', content: '')
+          other = TemplateFile.create!(project_id: 2, path: 'o.md', content: '')
           { issue_template_file: { id: other.id.to_s, path: 'o.md' } }
         },
         'an id that is a list' => -> { { issue_template_file: { id: ['1'], path: 'a.md' } } },
@@ -157,7 +157,7 @@ module RedmineKit
         assert_response :success
         assert_equal file.content, response.parsed_body.dig('issue_template_file', 'content')
 
-        other = IssueTemplateFile.create!(project_id: 2, path: 'other.md', content: "---\nname: x\nabout: y\n---\n")
+        other = TemplateFile.create!(project_id: 2, path: 'other.md', content: "---\nname: x\nabout: y\n---\n")
         get :show, params: { project_id: 'ecookbook', id: other.id, format: 'json' }
         assert_response :not_found
       end
@@ -182,7 +182,7 @@ module RedmineKit
 
         delete :destroy, params: { project_id: 'ecookbook', id: created.id, format: 'json' }
         assert_response :no_content
-        assert_nil IssueTemplateFile.find_by(id: created.id)
+        assert_nil TemplateFile.find_by(id: created.id)
       end
 
       test "the chooser's settings are saved into config.yml (PUT: the new UI's requests have no PATCH)" do
@@ -230,7 +230,7 @@ module RedmineKit
         source = data['source']
         assert_equal %w[repository .redmine/ISSUE_TEMPLATE], source.values_at('kind', 'folder')
         pages = "/projects/ecookbook/repository/#{repository.identifier}"
-        imported = IssueTemplateSource.find_by(project: @project)
+        imported = TemplateSource.find_by(project: @project)
         assert_equal "#{pages}/show/.redmine/ISSUE_TEMPLATE", source['folder_path']
         assert_equal "#{pages}/revisions/#{imported.revision}", source['revision_path']
         assert_equal Object.new.extend(Redmine::I18n).format_time(imported.synced_at), source['synced_at_text'],
@@ -243,7 +243,7 @@ module RedmineKit
         post :sync, params: { project_id: 'ecookbook', format: 'json' }
         assert_equal({ 'kind' => 'warning', 'message' => I18n.t(:warning_issue_template_nothing_to_import) },
                      response.parsed_body)
-        assert_equal %w[bug_report.yml config.yml], IssueTemplateFile.where(project_id: @project.id).pluck(:path).sort
+        assert_equal %w[bug_report.yml config.yml], TemplateFile.where(project_id: @project.id).pluck(:path).sort
       end
 
       test 'the import without a repository: 422 with the message' do

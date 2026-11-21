@@ -21,7 +21,7 @@
                  onchange: "updateIssueFrom('#{escape_javascript update_issue_form_path(issue.project, issue)}', this)" %>
 </p>
 <% end %>
-<%= render partial: 'issue_templates/preset_values', locals: { issue: issue, except: ['tracker_id'] } %>
+<%= render partial: 'redmine_kit/issue_template/templates/preset_values', locals: { issue: issue, except: ['tracker_id'] } %>
 <p>
   <%= label_tag 'issue_subject' do %><%= l(:field_subject) %><span class="required"> *</span><% end %>
   <%= text_field_tag 'issue[subject]', issue.subject, id: 'issue_subject', size: 80, maxlength: 255 %>
@@ -60,7 +60,7 @@
     <%= issue_template_info(element) %>
   </p>
   <% when 'link' %>
-  <%= render partial: 'issue_templates/linked_field',
+  <%= render partial: 'redmine_kit/issue_template/templates/linked_field',
              locals: { issue: issue, element: element, name: name, field_id: field_id, value: value } %>
   <% when 'checkboxes' %>
   <p>

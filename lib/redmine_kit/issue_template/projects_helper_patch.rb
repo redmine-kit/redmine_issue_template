@@ -7,7 +7,7 @@ module RedmineKit
       def project_settings_tabs
         tabs = super
         if User.current.allowed_to?(:manage_issue_templates, @project) && @project.module_enabled?(:issue_templates)
-          tabs << { name: 'issue_templates', action: :manage_issue_templates, partial: 'issue_templates/settings',
+          tabs << { name: 'issue_templates', action: :manage_issue_templates, partial: 'redmine_kit/issue_template/templates/settings',
                     label: :label_issue_template_plural }
         end
         tabs

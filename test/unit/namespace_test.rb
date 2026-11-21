@@ -19,6 +19,23 @@ module RedmineKit
         assert_equal 'RedmineKit::IssueTemplate', RedmineKit::IssueTemplate.name
         assert_instance_of Module, RedmineKit
       end
+
+      test 'the controller, models and helpers are under RedmineKit::IssueTemplate' do
+        root = File.expand_path('../../app', __dir__)
+        files = Dir.glob('{controllers,models,helpers}/**/*.rb', base: root)
+        assert_not_empty files
+        files.each do |file|
+          assert file.match?(%r{\A\w+/redmine_kit/issue_template/}), file
+          constant = file.split('/', 2).last.delete_suffix('.rb').camelize.constantize
+          assert constant.name.start_with?('RedmineKit::IssueTemplate::'), constant.name
+        end
+      end
+
+      test 'the tables are prefixed with the plugin\'s name' do
+        models = [TemplateFile, TemplateSource]
+        assert_equal %w[redmine_kit_issue_template_files redmine_kit_issue_template_sources], models.map(&:table_name)
+        assert(models.all?(&:table_exists?))
+      end
     end
   end
 end
