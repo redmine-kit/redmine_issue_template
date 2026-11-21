@@ -105,14 +105,14 @@ bin/test --redmine
 REDMINE_BRANCH=master bin/test   # Redmine の master ブランチで実行
 COVERAGE=1 bin/test              # プラグインのカバレッジも (coverage/coverage.xml)
 bin/test-gem                     # gem としてインストールしたプラグイン、続けて plugins/ のプラグイン
-bin/services --down              # PostgreSQL を止める
+bin/services --down              # PostgreSQL (と Chromium) を止める
 bin/lint                         # RuboCop と Brakeman (同じコンテナのツールで)
 bin/screenshots                  # ドキュメントのスクリーンショット(docs/images/、docs/ja/images/)
 ```
 
 `COVERAGE=1 bin/test` は、テストによるプラグインのファイルのカバレッジも [SimpleCov](https://github.com/simplecov-ruby/simplecov) で測り、Cobertura XML として `coverage/coverage.xml` に書き出します。1 ワーカーで実行するため、時間が長くかかります。CI は Redmine 7.0.3 でこれを実行し、ファイルを GitHub の OIDC トークンで [Codecov](https://app.codecov.io/gh/redmine-kit/redmine_issue_template) にアップロードします。Codecov のトークンは使いません (`.github/workflows/ci.yml`、`codecov.yml`)。
 
-`bin/screenshots` (今は Docker だけ) は、Redmine のテストのデータと GitHub の例を使い、ヘッドレスの Chromium でスクリーンショットを撮ります(`test/screenshots/screens.rb`)。画面を変えたら実行します。
+`bin/screenshots` (`bin/test` と同じく Apple container または Docker) は、Redmine のテストのデータと GitHub の例を使い、ヘッドレスの Chromium でスクリーンショットを撮ります(`test/screenshots/screens.rb`)。画面を変えたら実行します。
 
 <a id="to-verify"></a>
 

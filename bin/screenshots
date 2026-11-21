@@ -2,7 +2,8 @@
 # Takes the screenshots of the docs (docs/images/, docs/ja/images/) in headless
 # Chromium, from Redmine 7.0.3 with this plugin and Redmine's test data
 # (test/screenshots/screens.rb, not named *_test.rb so that bin/test leaves
-# it out). Run it after changing a screen.
+# it out), in Apple container when it runs, else in Docker
+# (CONTAINER_CLI=container|docker chooses). Run it after changing a screen.
 #   bin/screenshots
 # Commands that run inside the container are in single quotes on purpose.
 # shellcheck disable=SC2016
@@ -10,19 +11,34 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 plugin=redmine_kit_issue_template
 name=redmine-kit-issue-template-test
-cli=docker
-project=redmine-kit-issue-template-screenshots
-compose=(docker compose -f test/compose.yml -p "$project" --profile screenshots)
-"${compose[@]}" up -d --wait >/dev/null
-# Its own Compose project, apart from bin/test's, removed afterwards.
-trap '"${compose[@]}" down -v >/dev/null 2>&1' EXIT
+source bin/container_cli
+bin/services --screenshots >/dev/null
+# Chromium is stopped afterwards; PostgreSQL stays for bin/test.
+if [[ "$cli" == docker ]]; then
+  trap 'docker compose -f test/compose.yml -p "$name" stop chrome >/dev/null 2>&1' EXIT
+else
+  trap 'container stop "$name-chrome" >/dev/null 2>&1' EXIT
+fi
 source bin/test_image
 mkdir -p docs/images docs/ja/images
-# The browser in the chrome container opens the test server of this container
-# by its network alias.
-docker run --rm --network "${project}_default" --network-alias redmine-screenshots \
-  -e SELENIUM_REMOTE_URL=http://chrome:4444 -e CAPYBARA_SERVER_HOST=0.0.0.0 -e CAPYBARA_SERVER_PORT=3001 \
-  -e CAPYBARA_APP_HOST=http://redmine-screenshots:3001 -e GOOGLE_CHROME_OPTS_ARGS=--headless=new,--force-device-scale-factor=2 \
-  -e PARALLEL_WORKERS=1 -v "$PWD/docs:/redmine/plugins/$plugin/docs" "${mounts[@]}" "$image" \
-  sh -c 'bin/rails db:drop db:create db:migrate redmine:plugins:migrate >/dev/null && bin/rails test "$1"' \
+# The browser opens the test server of this container: by its network alias
+# in Docker, by its address in Apple container (containers don't find each
+# other by name there).
+if [[ "$cli" == docker ]]; then
+  opts+=(--network-alias redmine-screenshots)
+  chrome=http://chrome:4444
+  app_host=redmine-screenshots
+else
+  chrome="http://$(container inspect "$name-chrome" |
+    sed -n 's/.*"ipv4Address" : "\([0-9.]*\)\/.*/\1/p' | head -1):4444"
+  app_host=
+fi
+"$cli" run --rm --network "$network" "${opts[@]}" -e TEST_DATABASE="redmine_test_$$" \
+  -e SELENIUM_REMOTE_URL="$chrome" -e CAPYBARA_SERVER_HOST=0.0.0.0 -e CAPYBARA_SERVER_PORT=3001 \
+  -e CAPYBARA_APP_HOST="${app_host:+http://$app_host:3001}" \
+  -e GOOGLE_CHROME_OPTS_ARGS=--headless=new,--force-device-scale-factor=2 \
+  -e PARALLEL_WORKERS=1 -v "$PWD/docs:/redmine/plugins/$plugin/docs" "$image" \
+  sh -c 'export CAPYBARA_APP_HOST="${CAPYBARA_APP_HOST:-http://$(hostname -i | cut -d" " -f1):3001}"
+    bin/rails db:drop db:create db:migrate redmine:plugins:migrate >/dev/null && bin/rails test "$1"
+    status=$?; bin/rails db:drop >/dev/null 2>&1; exit $status' \
   screenshots "plugins/$plugin/test/screenshots/screens.rb"

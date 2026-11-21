@@ -1,37 +1,53 @@
 #!/usr/bin/env bash
-# Starts PostgreSQL 16 for the tests, or stops it with --down: in Apple
-# container when it runs, else in Docker (CONTAINER_CLI=container|docker
+# Starts PostgreSQL 16 for the tests, or stops the services with --down: in
+# Apple container when it runs, else in Docker (CONTAINER_CLI=container|docker
 # chooses). No host ports: the tests run in a container on the same network.
+#   bin/services                 # PostgreSQL
+#   bin/services --screenshots   # also headless Chromium (bin/screenshots)
+#   bin/services --down          # stops them
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source bin/container_cli
 if [[ "$cli" == docker ]]; then
   compose=(docker compose -f test/compose.yml -p redmine-kit-issue-template-test)
-  if [[ "${1:-}" == "--down" ]]; then
-    "${compose[@]}" down -v
-    exit 0
-  fi
-  "${compose[@]}" up -d --wait postgres
+  case "${1:-}" in
+    --down) "${compose[@]}" --profile screenshots down -v ;;
+    --screenshots) "${compose[@]}" --profile screenshots up -d --wait ;;
+    *) "${compose[@]}" up -d --wait postgres ;;
+  esac
   exit 0
 fi
-# Apple container: the same service as test/compose.yml, on the network the
-# tests of every repository share (bin/container_cli), which stays.
+# Apple container: the same services as test/compose.yml (the same images), on
+# the network the tests of every repository share (bin/container_cli), which
+# stays.
 network=$kit_test_network
 postgres=redmine-kit-issue-template-test-postgres
+chrome=redmine-kit-issue-template-test-chrome
 if [[ "${1:-}" == "--down" ]]; then
-  container rm -f "$postgres" >/dev/null 2>&1 || true
+  container rm -f "$postgres" "$chrome" >/dev/null 2>&1 || true
   exit 0
 fi
+running() { container inspect "$1" 2>/dev/null | grep -q '"state" : "running"'; }
 ensure_shared_network "$network"
-if ! container inspect "$postgres" 2>/dev/null | grep -q '"state" : "running"'; then
+if ! running "$postgres"; then
   container rm -f "$postgres" >/dev/null 2>&1 || true
   container run -d --name "$postgres" --network "$network" -m 1G --progress none \
     -e POSTGRES_HOST_AUTH_METHOD=trust \
     postgres:16@sha256:f9a7b9ebf6f56201f949db745e47bc423c0f0f8294bafe991cc10bf74b029657 >/dev/null
 fi
-for _ in $(seq 60); do
-  container exec "$postgres" pg_isready -q -U postgres && exit 0
+if [[ "${1:-}" == --screenshots ]] && ! running "$chrome"; then
+  container rm -f "$chrome" >/dev/null 2>&1 || true
+  container run -d --name "$chrome" --network "$network" -m 3G --shm-size 2G --progress none \
+    selenium/standalone-chromium:155.0-chromedriver-155.0-grid-4.51.0-20261010@sha256:c7c17cd79c62819a8329df00e610dbc4073c279da034a6f37135d454eb0d8870 \
+    >/dev/null
+fi
+for _ in $(seq 90); do
+  if container exec "$postgres" pg_isready -q -U postgres &&
+    { [[ "${1:-}" != --screenshots ]] ||
+      container exec "$chrome" /opt/bin/check-grid.sh --host 0.0.0.0 --port 4444 >/dev/null 2>&1; }; then
+    exit 0
+  fi
   sleep 2
 done
-echo "PostgreSQL did not start: container logs $postgres" >&2
+echo "The services did not start: container logs $postgres (or $chrome)" >&2
 exit 1
