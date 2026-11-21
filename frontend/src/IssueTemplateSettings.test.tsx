@@ -88,6 +88,15 @@ describe('the settings tab', () => {
     expect(await screen.findByText('テンプレートを使わずにチケットを作成できます。チケットテンプレートの管理の権限があるユーザーは、常に作成できます。')).toBeInTheDocument();
     expect(screen.getByText('保存すると config.yml を作り直します')).toBeInTheDocument();
   });
+
+  it('削除 asks with the same question as the file’s page: 「bug.yml を削除」, よろしいですか？', async () => {
+    const user = userEvent.setup();
+    renderKit(<InCard />, { context, responses: responses(settings()) });
+    await user.click(await screen.findByRole('button', { name: '削除' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveAccessibleName('bug.yml を削除');
+    expect(within(dialog).getByText('よろしいですか？')).toBeInTheDocument();
+  });
 });
 
 describe('the settings tab that couldn’t load', () => {

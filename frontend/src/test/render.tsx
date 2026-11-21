@@ -50,6 +50,8 @@ const REDMINE_JA: Record<string, string> = {
   field_content: '内容',
   'kit.new_issue.sidebar': '新しいチケットの補助',
   'kit.common.no_changes': '変更はありません',
+  'kit.confirm.delete_title': '%{name} を削除',
+  text_are_you_sure: 'よろしいですか？',
   'support.array.words_connector': '、',
 };
 

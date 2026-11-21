@@ -142,7 +142,9 @@ export function IssueTemplateSettings() {
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={t('kit.common.delete_named', { name: deleting?.path ?? '' })}
+        title={t('kit.confirm.delete_title', { name: deleting?.path ?? '' })}
+        description={t('text_are_you_sure')}
+        action={t('button_delete')}
         onConfirm={() => {
           if (deleting) void remove(deleting);
           setDeleting(null);
