@@ -39,8 +39,8 @@
 //   global selector (one without a class: html, body, *, a, :root with the tokens …), which would restyle the app's own
 //   screens. Tailwind's own fallback of its properties (*, :before, :after, ::backdrop in @layer properties) is let
 //   through.
-// And notices, in the source: printed with the recommended way, without changing the exit status (the user, 2026-11-20:
-// these are recommendations, not prohibitions):
+// And notices, in the source: printed with the recommended way, without changing the exit status (they are
+// recommendations, not prohibitions):
 // - dangerouslySetInnerHTML, innerHTML, eval, new Function, fetch/XMLHttpRequest (kitApi is recommended; a request of
 //   the plugin's own sends csrfToken() on writes);
 // - a way out of the server other than ExternalLink (@redmine-kit/ui: a new tab, rel noopener noreferrer, the external

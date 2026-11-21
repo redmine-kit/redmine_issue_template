@@ -4,8 +4,8 @@ import { keepDraft, type Answers } from './answers';
 import { TemplateSummary } from './TemplateSummary';
 
 // The template's part at the top of the new issue's form (the manifest's new_issue section, before the tracker's row), as
-// the server gives it (KitForm): the template's line with ‹ back to the chooser before its name (the user, 2026-11-12:
-// 「『変更』ラベルではなく戻る矢印」) and its description. A YAML form's fields come after the subject
+// the server gives it (KitForm): the template's line with ‹ back to the chooser before its name (a back arrow, not a
+// 変更 label) and its description. A YAML form's fields come after the subject
 // (IssueTemplateFields); the values the template sets are the form's own fields, shown read-only at their places (the
 // part's `locked`), and a form's other fields fold under 「そのほかの項目」 (`fold_attributes`). The server decides
 // everything else, as for Redmine's own form: which of the form's fields the user may set, which are required, what the

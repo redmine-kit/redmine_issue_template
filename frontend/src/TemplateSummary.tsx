@@ -3,7 +3,7 @@ import { useT } from '@redmine-kit/plugin';
 import type { SectionData } from './api';
 
 // The template's line at the top of the new issue's form (the part's section, and the settings' preview): ‹ back to the
-// chooser before its name (an arrow, not a 変更 label: the user, 2026-11-12), its kind and its name, then its description.
+// chooser before its name (an arrow, not a 変更 label), its kind and its name, then its description.
 // The preview (no `onBack`) lists the values it sets as text (`preset`); the form shows them at their fields, read-only.
 // A blank issue: its line only.
 
