@@ -174,12 +174,13 @@ module RedmineKit
         repository.fetch_changesets
         assert_equal %w[bug.md], TemplateFile.where(project: @project).pluck(:path)
 
+        # Each fetch as a request makes it: Redmine's Git adapter keeps the branches it read.
         RedmineKit::IssueTemplate::RepositorySource.expects(:read).never
-        repository.fetch_changesets
+        Repository.find(repository.id).fetch_changesets
         RedmineKit::IssueTemplate::RepositorySource.unstub(:read)
 
         commit_files(dir, '.redmine/ISSUE_TEMPLATE/task.md' => "---\nname: Task\nabout: a\n---\n")
-        repository.fetch_changesets
+        Repository.find(repository.id).fetch_changesets
         assert_equal %w[bug.md task.md], TemplateFile.where(project: @project).pluck(:path).sort
       end
 
