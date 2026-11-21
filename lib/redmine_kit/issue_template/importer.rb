@@ -24,8 +24,7 @@ module RedmineKit
         raise ArgumentError, "unknown source: #{source}" unless SOURCES.include?(source)
         raise ArgumentError, "unsupported folder: #{folder}" if folder && !FOLDERS.include?(folder)
 
-        files = files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
-                     .select { |path, _| storable?(project, path) }
+        files = storable_files(project, files)
         files_digest = digest(files)
         record = TemplateFile.transaction do
           # One import at a time per project (a fetch, the button and a push
@@ -56,6 +55,13 @@ module RedmineKit
       # Text in UTF-8, as Redmine reads the repository's files.
       def utf8(content)
         Redmine::CodesetUtil.to_utf8_by_setting(content.to_s)
+      end
+
+      # The files by their names in the folder, in UTF-8, without those the
+      # project can't store.
+      def storable_files(project, files)
+        files.to_h { |path, content| [File.basename(path.to_s), utf8(content)] }
+             .select { |path, _| storable?(project, path) }
       end
 
       # A template file with a name the project can store; others are left

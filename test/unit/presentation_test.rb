@@ -46,8 +46,8 @@ module RedmineKit
       test 'preset values: the fields the template sets, with Redmine\'s labels, but not those shown elsewhere' do
         values = PresetValues.new(issue(preset: %w[tracker_id priority_id category_id]), User.find(2),
                                   except: ['tracker_id'])
-        assert_equal [%w[priority_id Priority High], %w[category_id Category Recipes]],
-                     values.map { |entry| [entry.field, entry.label, entry.value.name] }
+        shown = values.map { |entry| [entry.field, entry.label, entry.value.name] }
+        assert_equal [%w[priority_id Priority High], %w[category_id Category Recipes]], shown
       end
 
       test 'preset values leave out custom fields the user can\'t see' do

@@ -272,7 +272,7 @@ module RedmineKit
 
       test 'a file of another project is not found' do
         other = TemplateFile.create!(project: Project.find(2), path: 'b.md',
-                                          content: "---\nname: Beta\nabout: b\n---\n")
+                                     content: "---\nname: Beta\nabout: b\n---\n")
         ACTIONS.select { |*, extra| extra == :file }.each do |method, action, extra|
           request_action(method, action, extra, other)
           assert_response :not_found, "#{method} #{action}"
