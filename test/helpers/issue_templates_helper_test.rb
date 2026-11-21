@@ -15,7 +15,14 @@ class IssueTemplatesHelperTest < Redmine::HelperTest
     '/\\example.com/a.png' => false,
     '\\\\example.com/a.png' => false,
     'https:/\\example.com/a.png' => false,
-    ' https://example.com/a.png' => false
+    ' https://example.com/a.png' => false,
+    "/\t/example.com/a.png" => false,
+    "/\n/example.com/a.png" => false,
+    "/\r/example.com/a.png" => false,
+    "\t//example.com/a.png" => false,
+    "/a\u0000/b.png" => false,
+    "java\tscript:alert(1)" => false,
+    "/images/a\u007f.png" => false
   }.freeze
 
   test 'only images of this site by a path stay images' do

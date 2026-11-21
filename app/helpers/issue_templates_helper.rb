@@ -3,8 +3,10 @@
 module IssueTemplatesHelper
   # Only images of this site, by a path: a template's text is shown to
   # everyone who opens New issue, and another site would see each of them.
-  # Other images become links.
-  LOCAL_IMAGE = %r{\A(?![a-z][a-z0-9+.-]*:)(?![/\\]{2})[^\\\s][^\\]*\z}i
+  # Other images become links. Control characters (tabs, line breaks) are
+  # refused anywhere, because browsers drop them from a URL and "/\t/host"
+  # would load from another host.
+  LOCAL_IMAGE = %r{\A(?![a-z][a-z0-9+.-]*:)(?![/\\]{2})[^\\\s[:cntrl:]][^\\[:cntrl:]]*\z}i
   EXTERNAL_IMAGES = Loofah::Scrubber.new do |node|
     next unless node.name == 'img' && !LOCAL_IMAGE.match?(node['src'].to_s)
 
