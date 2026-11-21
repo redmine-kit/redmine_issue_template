@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
-require_relative 'lib/redmine_kit/issue_template'
-
+# Redmine Kit Issue Template (lib/redmine_kit/issue_template.rb). It is
+# installed as a gem (boot/redmine_kit_issue_template.rb) or in plugins/
+# (docs/setup.md, "Installation"); RedmineKit::IssueTemplate comes from lib/
+# through Rails' code loader (Zeitwerk) either way.
 Redmine::Plugin.register :redmine_kit_issue_template do
   name 'Redmine Kit Issue Template'
   author 'Redmine Kit'
@@ -10,6 +12,12 @@ Redmine::Plugin.register :redmine_kit_issue_template do
   url 'https://github.com/redmine-kit/redmine_issue_template'
   author_url 'https://github.com/redmine-kit'
   requires_redmine version_or_higher: '7.0.0'
+  # This folder, as Redmine's plugin loader found it: plugins/redmine_kit_issue_template
+  # (a checkout or a link, kept unresolved, unlike __dir__: Redmine finds the
+  # plugin's assets by this path), or the installed gem's folder
+  # (boot/redmine_kit_issue_template.rb). Redmine's default is plugins/<id>,
+  # which a gem doesn't have.
+  directory File.dirname(__FILE__)
 
   project_module :issue_templates do
     permission :manage_issue_templates,

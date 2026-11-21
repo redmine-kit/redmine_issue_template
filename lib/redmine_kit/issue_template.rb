@@ -24,13 +24,6 @@ module RedmineKit
     end
 
     def setup
-      %w[yaml_nodes message parser redmine_options linked_field linked_field_view template markdown_template
-         redmine_rules issue_form_checks issue_form chooser_config template_set body_composer importer
-         repository_source issue_template_defaults issue_template_answers preset_values issue_patch
-         issue_template_params issues_controller_patch projects_helper_patch repository_patch settings_tab
-         settings_params kit_form kit_preview hooks].each do |file|
-        require_relative "issue_template/#{file}"
-      end
       Project.has_many :issue_template_files, class_name: 'RedmineKit::IssueTemplate::TemplateFile',
                                               dependent: :delete_all
       Project.has_one :issue_template_source, class_name: 'RedmineKit::IssueTemplate::TemplateSource',
@@ -41,6 +34,8 @@ module RedmineKit
       IssuesController.helper IssueFormHelper
       ProjectsHelper.prepend ProjectsHelperPatch
       RepositoryPatch.install
+      # the chooser's line and a form's part of Redmine's issue form (view hooks)
+      Hooks.instance
     end
   end
 end

@@ -8,15 +8,11 @@
 
 ## Installation
 
-Put the plugin in `plugins/redmine_kit_issue_template`, run its migrations and restart Redmine. The migrations create the tables `redmine_kit_issue_template_files` and `redmine_kit_issue_template_sources`.
-
-```sh
-bin/rake redmine:plugins:migrate
-```
+The plugin is installed as a gem (first choice) or in `plugins/`. Its migrations create the tables `redmine_kit_issue_template_files` and `redmine_kit_issue_template_sources`. Restart Redmine afterwards.
 
 ### Gem
 
-Each version tag (`v*`) publishes the plugin as a gem to GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`). Installing from GitHub Packages needs a GitHub token with `read:packages`, even for a public package. Redmine loads plugins only from `plugins/`, so the installed gem is linked there.
+Each version tag (`v*`) publishes the plugin as a gem to GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`). Installing from GitHub Packages needs a GitHub token with `read:packages`, even for a public package. Add the gem to Redmine's `Gemfile.local`, then install and migrate from Redmine's folder:
 
 ```ruby
 # Redmine's Gemfile.local
@@ -28,15 +24,18 @@ end
 ```sh
 bundle config set --global rubygems.pkg.github.com <user>:<token>   # or BUNDLE_RUBYGEMS__PKG__GITHUB__COM
 bundle install
-ln -s "$(bundle info --path redmine_kit_issue_template)" plugins/redmine_kit_issue_template
+bin/rails redmine:plugins:migrate RAILS_ENV=production
 ```
 
-### Without the gem
+Bundler requires `boot/redmine_kit_issue_template.rb`, which hands the gem's folder to Redmine's plugin loader: Redmine runs the gem's `init.rb`, serves its assets, strings, views and migrations, adds its `lib/` and `app/` to Rails' code loader and draws its routes, as for a plugin in `plugins/`. A folder of the same id in `plugins/` wins over the gem.
 
-Clone the repository into `plugins/redmine_kit_issue_template`. The plugin needs no other gems.
+### In plugins/
+
+Clone the repository into `plugins/redmine_kit_issue_template` and run its migrations. The plugin needs no other gems.
 
 ```sh
 git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redmine_kit_issue_template
+bin/rails redmine:plugins:migrate RAILS_ENV=production
 ```
 
 ## Configuration
@@ -90,6 +89,7 @@ bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # on Redmine's master branch
 COVERAGE=1 bin/test              # also the plugin's coverage (coverage/coverage.xml)
+bin/test-gem                     # the plugin installed as a gem, then from plugins/
 bin/services --down              # stops PostgreSQL
 bin/lint                         # RuboCop and Brakeman (in the same container tool)
 bin/screenshots                  # the screenshots of the docs (docs/images/, docs/ja/images/)
@@ -102,4 +102,4 @@ bin/screenshots                  # the screenshots of the docs (docs/images/, do
 ## To verify
 
 - Templates in Subversion, Mercurial and other SCMs (the tests use Git).
-- Large repositories: the import reads the template folder after every fetch; the time it takes there.
+- Large repositories: the import reads the template folder after every fetch that adds changesets; the time it takes there.

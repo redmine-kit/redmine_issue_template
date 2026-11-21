@@ -12,17 +12,13 @@
 
 ## インストール
 
-プラグインを `plugins/redmine_kit_issue_template` に置き、マイグレーションを実行して、Redmine を再起動します。マイグレーションは、`redmine_kit_issue_template_files` と `redmine_kit_issue_template_sources` の 2 つのテーブルを作ります。
-
-```sh
-bin/rake redmine:plugins:migrate
-```
+プラグインは gem としてインストールするか (推奨)、`plugins/` に置きます。マイグレーションは、`redmine_kit_issue_template_files` と `redmine_kit_issue_template_sources` の 2 つのテーブルを作ります。インストールしたら Redmine を再起動します。
 
 <a id="gem"></a>
 
 ### gem
 
-バージョンのタグ(`v*`)ごとに、プラグインを gem として GitHub Packages(`https://rubygems.pkg.github.com/redmine-kit`)に公開します。GitHub Packages からのインストールには、公開のパッケージでも `read:packages` の権限を持つ GitHub のトークンが要ります。Redmine は `plugins/` からしかプラグインを読まないので、インストールした gem をそこにリンクします。
+バージョンのタグ (`v*`) ごとに、プラグインを gem として GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`) に公開します。GitHub Packages からのインストールには、公開のパッケージでも `read:packages` の権限を持つ GitHub のトークンが必要です。Redmine の `Gemfile.local` に gem を追加し、Redmine のフォルダーでインストールとマイグレーションを実行します。
 
 ```ruby
 # Redmine の Gemfile.local
@@ -34,17 +30,20 @@ end
 ```sh
 bundle config set --global rubygems.pkg.github.com <ユーザー>:<トークン>   # または BUNDLE_RUBYGEMS__PKG__GITHUB__COM
 bundle install
-ln -s "$(bundle info --path redmine_kit_issue_template)" plugins/redmine_kit_issue_template
+bin/rails redmine:plugins:migrate RAILS_ENV=production
 ```
 
-<a id="without-the-gem"></a>
+Bundler は `boot/redmine_kit_issue_template.rb` を読み込みます。このファイルが gem のフォルダーを Redmine のプラグインローダーに渡すので、Redmine は `plugins/` のプラグインと同じように、gem の `init.rb` を実行し、アセット、文字列、ビュー、マイグレーションを使い、`lib/` と `app/` を Rails のコードローダーに追加して、ルートを登録します。`plugins/` に同じ ID のフォルダーがあれば、そちらが優先されます。
 
-### gem を使わないとき
+<a id="in-plugins"></a>
 
-リポジトリを `plugins/redmine_kit_issue_template` にクローンします。ほかの gem は要りません。
+### plugins/ に置く場合
+
+リポジトリを `plugins/redmine_kit_issue_template` にクローンし、マイグレーションを実行します。ほかの gem は不要です。
 
 ```sh
 git clone https://github.com/redmine-kit/redmine_issue_template.git plugins/redmine_kit_issue_template
+bin/rails redmine:plugins:migrate RAILS_ENV=production
 ```
 
 <a id="configuration"></a>
@@ -105,6 +104,7 @@ bin/test
 bin/test --redmine
 REDMINE_BRANCH=master bin/test   # Redmine の master ブランチで実行
 COVERAGE=1 bin/test              # プラグインのカバレッジも (coverage/coverage.xml)
+bin/test-gem                     # gem としてインストールしたプラグイン、続けて plugins/ のプラグイン
 bin/services --down              # PostgreSQL を止める
 bin/lint                         # RuboCop と Brakeman (同じコンテナのツールで)
 bin/screenshots                  # ドキュメントのスクリーンショット(docs/images/、docs/ja/images/)
@@ -119,4 +119,4 @@ bin/screenshots                  # ドキュメントのスクリーンショッ
 ## 未確認の事項
 
 - Subversion、Mercurial など、Git 以外の SCM に置いたテンプレート(テストは Git で行っています)。
-- 大きなリポジトリでの所要時間。取り込みは、リポジトリを取得するたびにテンプレートフォルダーを読みます。
+- 大きなリポジトリでの所要時間。取り込みは、リポジトリの取得で新しいコミットが追加されるたびにテンプレートフォルダーを読みます。

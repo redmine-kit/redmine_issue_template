@@ -51,7 +51,8 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 
 ### Tests
 
-- **Commands.** `bin/test` runs the plugin's tests and Redmine's tests of the issue form in a container (Apple container, else Docker) with PostgreSQL ([setup.md](docs/setup.md#tests)); `bin/lint` runs RuboCop and Brakeman; `bin/screenshots` makes the docs' images. Run all three before pushing.
+- **Commands.** `bin/test` runs the plugin's tests and Redmine's tests of the issue form in a container (Apple container, else Docker) with PostgreSQL ([setup.md](docs/setup.md#tests)); `bin/test-gem` checks the plugin installed as a gem; `bin/lint` runs RuboCop and Brakeman; `bin/screenshots` makes the docs' images. Run them all before pushing.
+- **Installed as a gem or in `plugins/`.** `boot/redmine_kit_issue_template.rb` hands the gem's folder to Redmine's plugin loader, `init.rb` registers the plugin with its own `directory`, and `lib/` and `app/` are loaded by Rails' code loader (Zeitwerk), never required by name: one constant per file, named after it.
 - The example templates in `test/fixtures/github/` are tested as they are.
 - A change to what a template does to an issue has a functional test that creates the issue and checks the saved values.
 
