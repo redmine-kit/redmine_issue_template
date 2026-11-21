@@ -6,7 +6,7 @@
 
 ## フォルダー
 
-Redmine は、プロジェクトのリポジトリのデフォルトブランチで `.redmine/ISSUE_TEMPLATE/` を読みます。`.github/ISSUE_TEMPLATE/` のファイルは読みません (2026-11-18 に決定)。Redmine で使うテンプレートは `.redmine/ISSUE_TEMPLATE/` に置きます。
+Redmine は、プロジェクトのリポジトリのデフォルトブランチで `.redmine/ISSUE_TEMPLATE/` を読みます。`.github/ISSUE_TEMPLATE/` のファイルは読みません。Redmine で使うテンプレートは `.redmine/ISSUE_TEMPLATE/` に置きます。
 
 テンプレート選択画面には、YAML フォーム(`.yml`、`.yaml`)が先、Markdown テンプレート(`.md`)が後で、それぞれファイル名の順です。順番を決めるには、ファイル名の先頭に番号を付けます(`1-bug.yml`、`2-feature.md`)。拡張子を除いたファイル名が、URL でのテンプレートの ID になります(`?issue_template=1-bug`)。
 

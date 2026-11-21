@@ -11,7 +11,7 @@ The templates are files in the project's repository. Redmine reads `.redmine/ISS
 | [Setup](setup.md) | Requirements, installation, configuration and tests |
 | [Template format](format.md) | Markdown templates, YAML forms, `config.yml`, Redmine's keys and the other keys |
 | [Import and sync](sync.md) | Where the templates come from, when they are imported, and Redmine Kit GitHub |
-| [Design](design.md) | Goals, decisions and what is not covered |
+| [Design](design.md) | Goals, files, import and sync, screens, permissions and what is not covered |
 
 ## Screens
 

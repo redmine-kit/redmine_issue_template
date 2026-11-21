@@ -13,7 +13,7 @@ Redmine Kit Issue Template は、Redmine にチケットテンプレートを加
 | [導入](setup.md) | 動作環境、インストール、設定、テスト |
 | [テンプレートの形式](format.md) | Markdown テンプレート、YAML フォーム、`config.yml`、Redmine のキーとほかのキー |
 | [取り込みと同期](sync.md) | テンプレートの取得元、取り込むタイミング、Redmine Kit GitHub との連携 |
-| [設計](design.md) | 目的、決定事項、対象外 |
+| [設計](design.md) | 目的、ファイル、取り込みと同期、画面、権限、対象外 |
 
 <a id="screens"></a>
 

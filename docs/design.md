@@ -4,7 +4,7 @@ Redmine Kit Issue Template adds issue templates to Redmine. "New issue" opens a 
 
 ## Goals
 
-- **Template files in the repository.** Markdown templates, YAML forms and `config.yml`, in `.redmine/ISSUE_TEMPLATE/`. The files of `.github/ISSUE_TEMPLATE/` are not read (decided 2026-11-18).
+- **Template files in the repository.** Markdown templates, YAML forms and `config.yml`, in `.redmine/ISSUE_TEMPLATE/`. The files of `.github/ISSUE_TEMPLATE/` are not read.
 - **Redmine's own concepts on top.** The tracker (bug, feature…), the priority, the category, the target version, the private flag, custom fields, and which fields of the issue form are shown, hidden or required, are set in the same files.
 - **The chooser replaces the first step of "New issue".** Users pick a template before the form, instead of choosing a template inside the form.
 - **The repository is the source.** Templates follow the default branch. Projects without a repository keep their templates in the project settings.

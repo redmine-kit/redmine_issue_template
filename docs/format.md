@@ -4,7 +4,7 @@ The templates are Markdown templates, YAML forms and `config.yml`, in the format
 
 ## Folder
 
-Redmine reads `.redmine/ISSUE_TEMPLATE/` on the default branch of the project's repository. The files of `.github/ISSUE_TEMPLATE/` are not read (decided 2026-11-18): copy the templates to use in Redmine into `.redmine/ISSUE_TEMPLATE/`.
+Redmine reads `.redmine/ISSUE_TEMPLATE/` on the default branch of the project's repository. The files of `.github/ISSUE_TEMPLATE/` are not read: copy the templates to use in Redmine into `.redmine/ISSUE_TEMPLATE/`.
 
 The chooser lists YAML forms (`.yml`, `.yaml`) first, then Markdown templates (`.md`), each sorted by file name. Prefix the file names with numbers to set the order (`1-bug.yml`, `2-feature.md`). The file name without its extension is the template's id in URLs (`?issue_template=1-bug`).
 
