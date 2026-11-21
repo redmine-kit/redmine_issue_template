@@ -51,7 +51,7 @@ module RedmineKit
         @controller.instance_variable_get(:@issue)
       end
 
-      # A kit request: redmine_kit_ui's rule (RedmineKitUi.kit_request?, the
+      # A kit request: redmine_kit_ui's rule (RedmineKit::Ui.kit_request?, the
       # session's JSON with X-Redmine-Kit) answers yes.
       def as_kit_user(user)
         IssuesController.any_instance.stubs(:find_current_user).returns(user)

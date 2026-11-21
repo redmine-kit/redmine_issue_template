@@ -92,7 +92,7 @@ module RedmineKit
       end
 
       def kit_shell_page?
-        defined?(RedmineKitUi.shell_page?) && RedmineKitUi.shell_page?(self)
+        defined?(RedmineKit::Ui.shell_page?) && RedmineKit::Ui.shell_page?(self)
       end
 
       # A template that could no longer be used: the form again, with what
@@ -141,9 +141,9 @@ module RedmineKit
 
       # A kit request of the new UI (redmine_kit_ui's rule; without it, none).
       def issue_template_kit_request?
-        return false unless defined?(RedmineKitUi.kit_request?)
+        return false unless defined?(RedmineKit::Ui.kit_request?)
 
-        RedmineKitUi.kit_request?(self)
+        RedmineKit::Ui.kit_request?(self)
       end
 
       # A refusal of the new UI's create, as Redmine's REST API answers one.

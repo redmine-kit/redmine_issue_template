@@ -41,7 +41,7 @@ module RedmineKit
       test "redmine_kit_ui takes the file's own page: a screen beside the settings tab, at the classic page's route" do
         skip 'without redmine_kit_ui (bin/test runs this with it)' unless Redmine::Plugin.installed?(:redmine_kit_ui)
 
-        manifest, reason = RedmineKitUi::UiExtensionManifest.check(Redmine::Plugin.find(:redmine_kit_issue_template))
+        manifest, reason = RedmineKit::Ui::UiExtensionManifest.check(Redmine::Plugin.find(:redmine_kit_issue_template))
         assert manifest, reason
         page = manifest.screens.find { |screen| screen[:component] == 'IssueTemplateFile' }
         assert_equal ['/projects/:project_id/issue_templates/:id', 'issue_templates', 'manage_issue_templates'],
