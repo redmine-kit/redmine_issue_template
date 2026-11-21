@@ -31,9 +31,6 @@ module RedmineKit
     class KitForm
       PLUGIN = 'redmine_kit_issue_template'
       NAME = 'template'
-      # The labels of the values a template sets (issue_templates/_preset_values).
-      LABELS = { 'priority_id' => :field_priority, 'category_id' => :field_category,
-                 'fixed_version_id' => :field_fixed_version, 'is_private' => :field_is_private }.freeze
 
       def self.answer(issue, params, user: User.current)
         new(issue, params, user).answer
@@ -134,28 +131,20 @@ module RedmineKit
                        locked: { reason: ::I18n.t(:label_issue_template_readonly), fields: preset } })
       end
 
-      # The values the template sets, as text (issue_templates/_preset_values).
-      # The tracker is the form's own field.
+      # The values the template sets, as text (PresetValues). The tracker is
+      # the form's own field.
       def preset_values
-        preset = @issue.issue_template_visibility[:preset]
-        core = LABELS.filter_map do |name, label|
-          next unless preset.include?(name)
-
-          { field: name, label: ::I18n.t(label), value: core_value(name) }
-        end
-        core + @issue.custom_field_values.filter_map do |value|
-          field = value.custom_field
-          next unless preset.include?(field.id.to_s) && field.visible_by?(@project, @user)
-
-          { field: field.id.to_s, label: field.name,
-            value: field.format.formatted_custom_value(nil, value, false).to_s }
+        PresetValues.new(@issue, @user, except: ['tracker_id']).map do |entry|
+          { field: entry.field, label: entry.label, value: preset_text(entry.value) }
         end
       end
 
-      def core_value(name)
-        return ::I18n.t(@issue.is_private? ? :general_text_Yes : :general_text_No) if name == 'is_private'
-
-        @issue.public_send(name.delete_suffix('_id'))&.name.to_s
+      def preset_text(value)
+        case value
+        when CustomFieldValue then value.custom_field.format.formatted_custom_value(nil, value, false).to_s
+        when true, false then ::I18n.t(value ? :general_text_Yes : :general_text_No)
+        else value&.name.to_s
+        end
       end
 
       # A form's elements as issue_templates/_form_fields draws them: the ones
@@ -203,17 +192,14 @@ module RedmineKit
         linked && field_label(linked.attribute)
       end
 
-      # A field with a link (issue_templates/_linked_field): the kind of the
-      # issue's field it sets, and its choices.
+      # A field with a link (LinkedFieldView): the kind of the issue's field it
+      # sets, and its choices.
       def link(element, value)
-        linked = @issue.issue_template_links.find { |candidate| candidate.element.equal?(element) }
-        kind = linked ? linked.kind(@issue) : :select
-        data = { kind: kind.to_s, multiple: linked&.multiple?(@issue) || false, value: value,
-                 field: linked_label(linked) }
-        return data unless kind == :select
+        view = LinkedFieldView.new(@issue, element)
+        data = { kind: view.kind.to_s, multiple: view.multiple?, value: value, field: linked_label(view.link) }
+        return data unless view.kind == :select
 
-        choices = linked ? linked.choices(@issue) : element.options.map { |option| [option.to_s, option.to_s] }
-        data.merge(options: choices.map { |label, choice| { value: choice.to_s, label: label.to_s } })
+        data.merge(options: view.choices.map { |label, choice| { value: choice.to_s, label: label.to_s } })
       end
     end
   end

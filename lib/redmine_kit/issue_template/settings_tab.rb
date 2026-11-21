@@ -47,8 +47,17 @@ module RedmineKit
         messages.select { |message| message.path == file.path }
       end
 
+      def errors_for(file)
+        messages_for(file).select(&:error?)
+      end
+
       def errors?
         messages.any?(&:error?)
+      end
+
+      # Redmine's name of the CommonMark text formatting, which templates use.
+      def common_mark_name
+        Redmine::WikiFormatting.formats_for_select.to_h.invert['common_mark']
       end
 
       # Templates are read as CommonMark: another text formatting is warned of.
@@ -117,10 +126,6 @@ module RedmineKit
       # config.yml), as the new issue's step draws it.
       def chooser_data
         KitPreview.chooser(set, project)
-      end
-
-      def common_mark_name
-        Redmine::WikiFormatting.formats_for_select.to_h.invert['common_mark']
       end
     end
   end

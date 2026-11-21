@@ -4,8 +4,6 @@
 <% tab = RedmineKit::IssueTemplate::SettingsTab.new(@project) %>
 <% source = tab.source %>
 <% manual = tab.manual? %>
-<% set = tab.set %>
-<% messages = tab.messages %>
 <% files = tab.files %>
 
 <p>
@@ -19,13 +17,12 @@
 <%= render partial: 'issue_templates/source', locals: { source: source } unless manual %>
 
 <%# The problems themselves are on each file's page. %>
-<% if messages.any?(&:error?) %>
+<% if tab.errors? %>
 <div id="errorExplanation"><%= notice_icon('error') %><%= l(:text_issue_template_files_with_errors) %></div>
 <% end %>
 
 <% if tab.text_formatting_warning? %>
-<% common_mark = Redmine::WikiFormatting.formats_for_select.to_h.invert['common_mark'] %>
-<p class="warning"><%= l(:warning_issue_template_text_formatting, name: common_mark) %></p>
+<p class="warning"><%= l(:warning_issue_template_text_formatting, name: tab.common_mark_name) %></p>
 <% end %>
 
 <% if files.any? %>
@@ -39,8 +36,8 @@
   </tr></thead>
   <tbody>
   <% files.each do |file| %>
-    <% template = set.templates.detect { |t| t.path == file.path } %>
-    <% errors = messages.select { |m| m.path == file.path && m.error? } %>
+    <% template = tab.template_for(file) %>
+    <% errors = tab.errors_for(file) %>
     <tr>
       <td class="name"><%= link_to file.path, project_issue_template_path(@project, file) %></td>
       <td class="description"><%= template&.name %></td>
@@ -67,7 +64,7 @@
 
 <%# The chooser's settings, kept in config.yml. Saved from here when the
     templates are edited in Redmine; shown only when they come from elsewhere. %>
-<% config = set.config %>
+<% config = tab.set.config %>
 <% content_for :header_tags do %><%= stylesheet_link_tag 'issue_template', plugin: 'redmine_kit_issue_template' %><% end %>
 <%= form_tag project_issue_template_settings_path(@project), method: :patch do %>
 <fieldset class="box issue-template-chooser-settings">
