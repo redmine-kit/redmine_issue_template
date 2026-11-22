@@ -26,9 +26,10 @@ module RedmineKit
         assert_response :success
         assert_select 'select#issue_template_sharing option', 4
         assert_select 'select#issue_template_sharing option[selected]', text: 'Not shared'
-        assert_select '#tab-content-issue_templates p', text: /Shared from: eCookbook/
+        assert_select 'p.issue-template-provider label', text: 'Shared from'
+        assert_select 'p.issue-template-provider a', text: 'eCookbook'
         get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
-        assert_select '#tab-content-issue_templates p', text: /Shared from/, count: 0
+        assert_select 'p.issue-template-provider', 0
         assert_select 'select#issue_template_sharing option[selected]', text: 'With subprojects'
       end
 

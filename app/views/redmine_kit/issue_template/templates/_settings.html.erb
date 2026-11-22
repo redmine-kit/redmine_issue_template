@@ -16,9 +16,16 @@
 
 <%= render partial: 'redmine_kit/issue_template/templates/source', locals: { source: source } unless manual %>
 
-<%# Another project's templates, shared with this one, while it has none of its own. %>
-<% if (provider = tab.provider) %>
-<p><%= l(:label_issue_template_provider) %>: <%= link_to_project provider %></p>
+<%# 共有, as a version's form has it (versions/_form), and 共有元: another project's templates, shared with this one,
+    while it has none of its own (a value shown in place of a field, as on Redmine's forms). %>
+<%= form_tag project_issue_template_sharing_path(@project), method: :patch do %>
+<div class="box tabular">
+  <p><%= label_tag 'issue_template_sharing', l(:field_sharing) %><%= select_tag 'sharing', options_for_select(tab.sharing_options, tab.sharing), id: 'issue_template_sharing' %></p>
+  <% if (provider = tab.provider) %>
+  <p class="issue-template-provider"><label><%= l(:label_issue_template_provider) %></label><%= link_to_project provider %></p>
+  <% end %>
+</div>
+<p><%= submit_tag l(:button_save) %></p>
 <% end %>
 
 <%# The problems themselves are on each file's page. %>
@@ -105,12 +112,4 @@
   <% unless manual %><em class="info"><%= l(:text_issue_template_chooser_elsewhere) %></em><% end %>
 </fieldset>
 <%= submit_tag l(:button_save) if manual %>
-<% end %>
-
-<%# 共有, as a version's form has it (versions/_form). %>
-<%= form_tag project_issue_template_sharing_path(@project), method: :patch do %>
-<div class="box tabular">
-  <p><%= label_tag 'issue_template_sharing', l(:field_sharing) %><%= select_tag 'sharing', options_for_select(tab.sharing_options, tab.sharing), id: 'issue_template_sharing' %></p>
-</div>
-<%= submit_tag l(:button_save) %>
 <% end %>
