@@ -80,9 +80,23 @@ checkout next to this repository and installs the frontend's packages; then `cd 
 it, runs its tests (`npm test`: Vitest and Testing Library, with `@redmine-kit/plugin/testing`), builds it and runs
 `kit-check-ui`. Commit the built file with the source.
 
+## MCP
+
+With [redmine_kit_mcp](https://github.com/redmine-kit/redmine_kit_mcp) installed, AI clients use the templates through
+MCP, with the user's permissions and the token's scopes:
+
+| Tool | What | Writes | Permission (scope) |
+| --- | --- | --- | --- |
+| `issue_template.list_templates` | The templates the user may use in a project (key, name, description, tracker; a form's fields with their options and the values the template sets) and whether a blank issue is allowed | | `add_issues` |
+| `issue_template.create_issue` | A new issue from a template, as Redmine's form makes it: the template's values for what isn't given, the fields it sets and hides out of reach, a form's `answers` (by field ref; dropdowns and checkboxes by option value) composed into the description and checked | yes | `add_issues` |
+
+Where `blank_issues_enabled` is false, MCP's own `create_issue` is refused with Choose a template to create an issue.,
+as in the browser, unless the user manages the templates and the token has the scope `manage_issue_templates`
+(both tools offer it, as Redmine asks a token's scopes for every permission). Upload fields can't be answered through MCP.
+
 ## Tests
 
-`bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed. `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
+`bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed, then the tests of the MCP tools with redmine_kit_mcp and redmine_kit_ui (the checkouts next to this one, or `REDMINE_KIT_MCP_DIR` and `REDMINE_KIT_UI`; `REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` runs them alone). `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
 
 ```sh
 bin/test

@@ -18,9 +18,14 @@ module RedmineKit
         # The new UI's form draws the tracker and the subject in its own fields
         # (KitForm), not in the form's part as Redmine's form does.
         base.attr_accessor :issue_template_host_fields
+        # Whether the path that makes the issue follows the project's blank
+        # issue rule (#issue_template_missing?): the browser (IssuesControllerPatch)
+        # and MCP (McpHooks); the REST API, email, imports and copies don't set it.
+        base.attr_accessor :issue_template_check
         base.before_validation :apply_issue_template_links, on: :create, prepend: true
         base.before_validation :compose_issue_template_description, on: :create
         base.validate :validate_issue_template_answers, on: :create
+        base.validate :validate_issue_template_chosen, on: :create
         # After Redmine's attach_saved_attachments (after_save).
         base.after_create :attach_issue_template_uploads
       end
@@ -38,6 +43,17 @@ module RedmineKit
       # Redmine's own form.
       def issue_template_active?
         new_record? && issue_template.present?
+      end
+
+      # The one rule of blank issues: a new issue of a checked path
+      # (issue_template_check) that no template applies to, in a project whose
+      # templates don't allow blank issues for its author (config.yml's
+      # blank_issues_enabled, TemplateSet.blank_issue_allowed?). Copies are made
+      # from their issue, not from a template.
+      def issue_template_missing?
+        return false unless issue_template_check && new_record? && project && !copy? && !issue_template_active?
+
+        !TemplateSet.blank_issue_allowed?(project, author || User.current)
       end
 
       # The template's values for the project, given by the controller for the
@@ -118,6 +134,10 @@ module RedmineKit
       end
 
       private
+
+      def validate_issue_template_chosen
+        errors.add(:base, ::I18n.t(:error_issue_template_required)) if issue_template_missing?
+      end
 
       # On create, Redmine resets the custom fields the user can't edit to their
       # defaults. Fields the template hides, sets or links are not editable in

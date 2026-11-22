@@ -122,7 +122,7 @@ contact_links:
     about: Please ask and answer questions here.
 ```
 
-- `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser. Users with "Manage issue templates" can still create one. Issues from the REST API and from email are not affected.
+- `blank_issues_enabled: false` hides "Blank issue" from the chooser, and an issue created in the browser without a template goes back to the chooser; one created through MCP's `create_issue` is refused with the same message (Choose a template to create an issue.), and `issue_template.create_issue` makes it from a template ([setup.md](setup.md#mcp)). Users with "Manage issue templates" can still create one. Issues from the REST API, from email, from CSV imports and copies of issues are not affected.
 - `contact_links` are listed after the templates, under "Other contacts". A link's `about` is Markdown, and can have several lines.
 
 The project settings show these settings under "Template chooser". When the templates are edited in Redmine, they can be changed there: saving makes `config.yml` again from the form, without its comments. Templates from a repository or GitHub keep `config.yml` there.

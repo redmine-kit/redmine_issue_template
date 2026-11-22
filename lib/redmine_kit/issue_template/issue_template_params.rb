@@ -4,16 +4,12 @@ module RedmineKit
   module IssueTemplate
     # The request's parameters for a template, read safely: part of
     # IssuesControllerPatch. They belong to the template's project
-    # (IssueTemplateProject).
+    # (IssueTemplateProject); what the template does to the issue's
+    # attributes is TemplateApplication's.
     module IssueTemplateParams
       include IssueTemplateProject
 
       private
-
-      # The REST API's form of custom field values, without the given ids.
-      def api_custom_fields(fields, ids)
-        Array(fields).select { |field| field.is_a?(Hash) && !ids.include?(field['id'].to_s) }
-      end
 
       def issue_params_hash
         hash_param(params[:issue])
@@ -81,74 +77,6 @@ module RedmineKit
           text = Array(value).map(&:to_s).reject(&:blank?).join(', ')
           "### #{name}\n\n#{text}" if text.present?
         end.join("\n\n")
-      end
-
-      # The template's values, for the fields the request doesn't give. Only
-      # when the form opens: later requests carry the user's own values.
-      def issue_template_defaults_into_params(template)
-        defaults = issue_template_defaults(template).attributes.dup
-        given = issue_params_hash
-        custom = defaults.delete('custom_field_values') || {}
-        merged = defaults.merge(given)
-        merged['custom_field_values'] = custom.merge(hash_param(given['custom_field_values'])) if custom.any?
-        params[:issue] = ActionController::Parameters.new(merged)
-      end
-
-      # Takes out of the request what it can't set while a template applies:
-      # the project (outside a project's URL, it stays the template's project),
-      # hidden fields (Redmine's defaults apply, then the
-      # template's values), a form's description (made from the answers) and
-      # linked fields (set by the answers). The preset values go in now, before
-      # Redmine assigns the attributes, so that the tracker comes first.
-      # Redmine's safe_attributes stays the list of what the user may set.
-      def restrict_issue_template_params(template)
-        preset = issue_template_defaults(template).preset
-        hidden = template.options.visibility(issue_template_project)[:hidden]
-        out = issue_template_params_out(template, hidden)
-        given = issue_params_hash
-        @issue_template_held = hidden_input(given, hidden)
-        attrs = given.except(*out)
-        attrs['custom_fields'] = api_custom_fields(attrs['custom_fields'], out | preset.keys) if attrs['custom_fields']
-        attrs = with_template_project(with_preset(attrs, preset.except(*out), out))
-        params[:issue] = ActionController::Parameters.new(attrs)
-      end
-
-      # The attributes and custom field ids the request can't set.
-      def issue_template_params_out(template, hidden)
-        out = ['project_id'] | hidden
-        out |= ['description'] if template.form?
-        out | LinkedField.attributes(template, issue_template_project)
-      end
-
-      # The attributes with the preset values in place of the request's.
-      def with_preset(attrs, preset, out)
-        custom = hash_param(attrs['custom_field_values']).except(*out)
-        preset.each do |name, value|
-          RedmineKit::IssueTemplate.custom_field_id?(name) ? custom[name] = value : attrs[name] = value
-        end
-        attrs['custom_field_values'] = custom if custom.any?
-        attrs
-      end
-
-      # What the request gave for hidden fields, kept for those the form shows
-      # again because Redmine requires them (restore_shown_hidden_input).
-      def hidden_input(given, hidden)
-        custom = hash_param(given['custom_field_values']).slice(*hidden)
-        input = given.slice(*hidden)
-        input['custom_field_values'] = custom if custom.any?
-        input
-      end
-
-      # Hidden fields the form shows again get what was typed in them, through
-      # Redmine's safe_attributes.
-      def restore_shown_hidden_input(issue, template)
-        shown = template.options.visibility(issue_template_project)[:hidden] - issue.issue_template_visibility[:hidden]
-        return if shown.empty? || @issue_template_held.blank?
-
-        input = @issue_template_held.slice(*shown)
-        custom = hash_param(@issue_template_held['custom_field_values']).slice(*shown)
-        input['custom_field_values'] = custom if custom.any?
-        issue.safe_attributes = input if input.any?
       end
     end
   end

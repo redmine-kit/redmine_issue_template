@@ -93,11 +93,24 @@ bin/rails redmine:plugins:migrate RAILS_ENV=production
 `cd frontend && npm run check` で型チェック、テスト (`npm test`。Vitest と Testing Library、`@redmine-kit/plugin/testing`)、ビルド、`kit-check-ui` を実行します。ビルドしたファイルはソースと一緒に
 コミットします。
 
+<a id="mcp"></a>
+
+## MCP
+
+[redmine_kit_mcp](https://github.com/redmine-kit/redmine_kit_mcp) をインストールすると、AI のクライアントが、ユーザーの権限とトークンのスコープで、MCP からテンプレートを使えます。
+
+| ツール | 内容 | 書き込み | 権限 (スコープ) |
+| --- | --- | --- | --- |
+| `issue_template.list_templates` | プロジェクトでユーザーが使えるテンプレート (キー、名前、説明、トラッカー。フォームは入力欄とその選択肢、テンプレートが設定する値) と、空白のチケットを作れるか | | `add_issues` |
+| `issue_template.create_issue` | テンプレートからのチケットの作成。Redmine の画面と同じく、指定のない項目にテンプレートの値を入れ、テンプレートが設定する項目と非表示の項目は変更できず、フォームの `answers` (入力欄の ref ごと。選択欄とチェックボックスは選択肢の値) を説明にまとめて入力チェックします | ○ | `add_issues` |
+
+`blank_issues_enabled` が false のプロジェクトでは、MCP の `create_issue` も画面と同じく「チケットを作成するには、テンプレートを選択してください。」で拒否します。テンプレートを管理できるユーザーで、トークンにスコープ `manage_issue_templates` がある場合は除きます (Redmine はすべての権限をトークンのスコープでも確認するので、両方のツールがこのスコープを提示します)。アップロードの入力欄には MCP から回答できません。
+
 <a id="tests"></a>
 
 ## テスト
 
-`bin/test` は、コンテナ ([Apple container](https://github.com/apple/container) がインストールされて動いていればそれ、なければ Docker。`CONTAINER_CLI=container` または `CONTAINER_CLI=docker` で選べます) の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
+`bin/test` は、コンテナ ([Apple container](https://github.com/apple/container) がインストールされて動いていればそれ、なければ Docker。`CONTAINER_CLI=container` または `CONTAINER_CLI=docker` で選べます) の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行し、最後に redmine_kit_mcp と redmine_kit_ui (このリポジトリの隣のチェックアウト。`REDMINE_KIT_MCP_DIR` と `REDMINE_KIT_UI` で変更できます) を入れて MCP のツールのテストを実行します。`REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` はこれだけを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
 
 ```sh
 bin/test

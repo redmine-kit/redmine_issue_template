@@ -18,6 +18,24 @@ git ls-files -co --exclude-standard . |
   grep -E '^(init\.rb|Gemfile|[^/]*\.gemspec|LICENSE|(app|assets|boot|config|db|lib|test)/)' |
   while IFS= read -r file; do if [[ -e "$file" ]]; then printf '%s\n' "$file"; fi; done | tar -cf - -T - |
   tar -xf - -C "$test_context/plugins/$plugin"
+# With REDMINE_KIT_MCP=1 (bin/test's MCP run): redmine_kit_mcp and the
+# redmine_kit_ui it requires, for the tests of the plugin's MCP tools
+# (test/integration/mcp_tools_test.rb, skipped without them):
+# REDMINE_KIT_MCP_DIR=<dir> and REDMINE_KIT_UI=<dir>, default the checkouts next
+# to this one; REDMINE_KIT_MCP_REF and REDMINE_KIT_UI_REF=<commit>, default HEAD.
+if [[ "${REDMINE_KIT_MCP:-}" == 1 ]]; then
+  for sibling in ui mcp; do
+    if [[ "$sibling" == ui ]]; then
+      dir=${REDMINE_KIT_UI:-../redmine_kit_ui} ref=${REDMINE_KIT_UI_REF:-HEAD} paths=(assets)
+    else
+      dir=${REDMINE_KIT_MCP_DIR:-../redmine_kit_mcp} ref=${REDMINE_KIT_MCP_REF:-HEAD} paths=()
+    fi
+    [[ -f "$dir/init.rb" ]] || { echo "redmine_kit_$sibling is not in $dir" >&2; exit 1; }
+    mkdir -p "$test_context/plugins/redmine_kit_$sibling"
+    git -C "$dir" archive "$ref" init.rb Gemfile boot app config db lib ${paths[@]+"${paths[@]}"} |
+      tar -xf - -C "$test_context/plugins/redmine_kit_$sibling"
+  done
+fi
 # Redmine from its repository instead of the 7.0.3 release: REDMINE_BRANCH=
 # <branch> (master) at the branch's current commit, or REDMINE_COMMIT=<sha>;
 # a base image of its own, tagged with the commit.

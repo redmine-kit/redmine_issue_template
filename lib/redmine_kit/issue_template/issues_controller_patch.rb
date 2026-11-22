@@ -29,22 +29,38 @@ module RedmineKit
         response.location = location.to_s
       end
 
+      # The template's attributes (TemplateApplication, the one way every path
+      # applies a template), Redmine's own build, then the template on the
+      # issue; and whether the issue is one the template rule checks
+      # (IssuePatch#issue_template_missing?).
       def build_new_issue_from_params
         template = current_issue_template
-        if template
-          issue_template_defaults_into_params(template) if request.get?
-          restrict_issue_template_params(template)
-        end
+        params[:issue] = ActionController::Parameters.new(template_attributes(template)) if template
         super
-        return if performed? || template.nil? || @issue.nil?
+        return if performed? || @issue.nil?
 
-        @issue.issue_template = template
-        @issue.issue_template_defaults = issue_template_defaults(template)
-        @issue.issue_template_answers = issue_template_answers_param(template)
-        @issue.issue_template_uploads = issue_template_uploads_param(template)
-        @issue.issue_template_upload_ids = issue_template_upload_ids_param(template)
-        issue_template_defaults(template).apply_to_hidden_fields(@issue)
-        restore_shown_hidden_input(@issue, template)
+        @issue.issue_template_check = issue_without_template_checked?
+        return if template.nil?
+
+        issue_template_application(template).apply(
+          @issue, answers: issue_template_answers_param(template), uploads: issue_template_uploads_param(template),
+                  upload_ids: issue_template_upload_ids_param(template)
+        )
+      end
+
+      # The request's attributes as the template lets them be: with its values
+      # when the form opens (later requests carry the user's own), and without
+      # what it locks. Outside a project's URL the project stays the template's.
+      def template_attributes(template)
+        application = issue_template_application(template)
+        given = issue_params_hash
+        given = application.with_defaults(given) if request.get?
+        application.restricted(given, pin_project: @project.nil?)
+      end
+
+      # The template applied to the request's project, once per request.
+      def issue_template_application(template)
+        @issue_template_application ||= TemplateApplication.new(template, issue_template_project)
       end
 
       def issue_template_set
@@ -56,11 +72,6 @@ module RedmineKit
       # The templates the user can use in the project, once per request.
       def usable_issue_templates
         @usable_issue_templates ||= issue_template_set&.usable_for(issue_template_project) || []
-      end
-
-      # The template's values, resolved once per request.
-      def issue_template_defaults(template)
-        @issue_template_defaults ||= IssueTemplateDefaults.new(template, issue_template_project)
       end
 
       # The template the request names: nil for none and for "blank".
@@ -108,22 +119,22 @@ module RedmineKit
       end
 
       # Creating an issue in the browser without a template, when the project
-      # it goes to doesn't allow blank issues. The REST API and email are left
-      # to Redmine; copies are not made from templates.
+      # it goes to doesn't allow blank issues (IssuePatch#issue_template_missing?,
+      # the one rule; its validation refuses the issue on every checked path):
+      # the browser goes back to the chooser with the message, before Redmine's
+      # form would show it. The REST API and email are left to Redmine; copies
+      # are not made from templates.
       def refuse_issue_without_template
-        return unless issue_without_template_checked?
-
-        project = @issue&.project || @project
-        return if project.nil? || issue_without_template_allowed?(project)
+        return unless @issue&.issue_template_missing?
         return render_issue_template_error(l(:error_issue_template_required)) if api_request?
 
-        redirect_to_chooser_with_error(project)
+        redirect_to_chooser_with_error(@issue.project)
       end
 
-      # A new issue of the browser that no template applies to (a copy is made
-      # from its issue, not from a template).
+      # A new issue of the browser (the classic form and the new UI) that is not
+      # a copy: a copy is made from its issue, not from a template.
       def issue_without_template_checked?
-        browser_request? && !@issue&.issue_template_active? && params[:copy_from].blank?
+        browser_request? && params[:copy_from].blank?
       end
 
       def redirect_to_chooser_with_error(project)

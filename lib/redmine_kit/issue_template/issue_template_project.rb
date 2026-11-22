@@ -14,7 +14,7 @@ module RedmineKit
       # add issues to. Redmine's own Issue#safe_attributes= decides it, on an
       # issue of its own: an id or an identifier, of a project the user may add
       # issues to. KitForm reads the built issue's project, which is this one
-      # (the template keeps the project: restrict_issue_template_params).
+      # (the template keeps the project: TemplateApplication#restricted).
       def issue_template_project
         return @project if @project
         return @issue_template_project if defined?(@issue_template_project)
@@ -24,12 +24,6 @@ module RedmineKit
         issue.project = issue.allowed_target_projects.first unless request.post?
         issue.safe_attributes = issue_params_hash.slice('project_id')
         @issue_template_project = issue.project
-      end
-
-      # Outside a project's URL the request names the project: it stays the
-      # template's (issue_template_project).
-      def with_template_project(attrs)
-        @project ? attrs : attrs.merge('project_id' => issue_template_project.id.to_s)
       end
     end
   end

@@ -4,6 +4,7 @@
 #   bin/test              # the plugin's tests, then Redmine's tests of the issue form
 #   bin/test --redmine    # also every Redmine test, with the plugin installed
 #   bin/test <files>      # some files of the plugin's tests
+#   REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb   # with redmine_kit_mcp
 #   REDMINE_BRANCH=master bin/test   # on Redmine's master branch
 #   COVERAGE=1 bin/test   # also the plugin's coverage, in coverage/coverage.xml
 # bin/test-gem checks the plugin installed as a gem.
@@ -52,4 +53,6 @@ elif (($#)); then
 else
   run_plugin bin/rails test plugins/redmine_kit_issue_template/test
   run bin/rails test --exclude "/^($known)\$/" "${redmine_tests[@]}"
+  # the MCP tools, with redmine_kit_mcp and redmine_kit_ui (bin/test_image)
+  REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb
 fi

@@ -36,6 +36,10 @@ module RedmineKit
       RepositoryPatch.install
       # the chooser's line and a form's part of Redmine's issue form (view hooks)
       Hooks.instance
+      # MCP (redmine_kit_mcp, when installed): its create_issue follows the
+      # blank issue rule, and the plugin's tools make issues from templates
+      McpHooks.instance
+      ActiveSupport.on_load(:redmine_kit_mcp) { McpTools.register(self) }
     end
   end
 end

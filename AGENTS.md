@@ -15,6 +15,8 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 | `lib/redmine_kit/issue_template/template_set.rb` | A project's parsed templates, cached per process by a database key |
 | `lib/redmine_kit/issue_template/importer.rb`, `repository_source.rb`, `repository_patch.rb` | Importing and storing files (the entry point for redmine_kit_github) |
 | `lib/redmine_kit/issue_template/issue_patch.rb` (`issue_template_visibility`, the one place), `redmine_rules.rb`, `issue_template_defaults.rb`, `issue_template_answers.rb`, `linked_field.rb`, `body_composer.rb` | What a template does to a new issue: hidden, preset, linked and required fields, the template's values, the description from the answers, the files of upload fields |
+| `lib/redmine_kit/issue_template/template_application.rb` | A template applied to a new issue's attributes and to the issue: the one way for the browser and MCP |
+| `lib/redmine_kit/issue_template/mcp_tools.rb`, `mcp_hooks.rb` | The MCP tools `issue_template.list_templates` and `issue_template.create_issue`, and MCP's `create_issue` under the blank issue rule (with redmine_kit_mcp) |
 | `lib/redmine_kit/issue_template/issues_controller_patch.rb`, `issue_template_params.rb` | The chooser redirect, refusing issues without a template; the request's parameters (permitted answers and uploads, preset values, what the request can't set) |
 | `app/models/redmine_kit/issue_template/template_file.rb`, `template_source.rb` | The stored files (`redmine_kit_issue_template_files`) and where they came from (`redmine_kit_issue_template_sources`) |
 | `app/controllers/redmine_kit/issue_template/templates_controller.rb`, `app/views/redmine_kit/issue_template/templates/` | The chooser, the settings tab, the file pages, a YAML form's part at the top of Redmine's form |
@@ -36,7 +38,7 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 - **Within Redmine's rules for the user.** A template hides, presets, links or requires a field only when Redmine lets the user set that field (`Issue#issue_template_settable?`, which asks Redmine's own `safe_attribute_names` and `editable_custom_field_values`). Redmine's validations still run on every field, including the ones the form leaves out.
 - **One place.** The template's effect on a new issue (hidden, preset, linked and required fields, and the fields shown again because Redmine requires them) is decided in one place and read by the controller, the issue patch and the views. When adding a rule, add it there; never compute it again elsewhere.
 - **The project** can't change while a template applies, and preset values can't be changed by the request.
-- **Blank issues** follow `blank_issues_enabled` in `config.yml`, for issues created in the browser; the REST API and email are left to Redmine.
+- **Blank issues** follow `blank_issues_enabled` in `config.yml` for issues created in the browser (Redmine's form and the new UI) and through MCP (redmine_kit_mcp's `create_issue`); the REST API, email, CSV imports and copies are left to Redmine. The rule is `Issue#issue_template_missing?` (`IssuePatch`), checked by the issue's validation on the paths that set `issue_template_check`; a template is applied to a new issue only by `TemplateApplication`, the one way for the browser and the MCP tool `issue_template.create_issue`.
 
 ### Screens
 
