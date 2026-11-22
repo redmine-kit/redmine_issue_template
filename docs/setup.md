@@ -99,6 +99,8 @@ as in the browser, unless the user manages the templates and the token has the s
 
 `bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed, then the tests of the MCP tools with redmine_kit_mcp and redmine_kit_ui (the checkouts next to this one, or `REDMINE_KIT_MCP_DIR` and `REDMINE_KIT_UI`; `REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` runs them alone). `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
 
+A run stops the service containers it started (it doesn't remove them) when it ends, whether the tests pass, fail or are interrupted. Containers that were running before the run, or that another run of this repository still uses, are left running. `KEEP_SERVICES=1` keeps them running after the run.
+
 ```sh
 bin/test
 bin/test --redmine

@@ -20,6 +20,7 @@ name=redmine-kit-issue-template-test
 # the plugin; empty when the plugin has no routes.
 route=/projects/1/issues/templates
 source bin/container_cli
+stop_services_at_exit "$name"
 bin/services >/dev/null
 source bin/test_image
 

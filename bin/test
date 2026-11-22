@@ -15,6 +15,7 @@ cd "$(dirname "$0")/.."
 source bin/container_cli
 name=redmine-kit-issue-template-test
 plugin=redmine_kit_issue_template
+stop_services_at_exit "$name"
 bin/services >/dev/null
 source bin/test_image
 setup='bin/rails db:drop db:create db:migrate redmine:plugins:migrate db:schema:dump >/dev/null'

@@ -113,6 +113,8 @@ bin/rails redmine:plugins:migrate RAILS_ENV=production
 
 `bin/test` は、コンテナ ([Apple container](https://github.com/apple/container) がインストールされて動いていればそれ、なければ Docker。`CONTAINER_CLI=container` または `CONTAINER_CLI=docker` で選べます) の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行し、最後に redmine_kit_mcp と redmine_kit_ui (このリポジトリの隣のチェックアウト。`REDMINE_KIT_MCP_DIR` と `REDMINE_KIT_UI` で変更できます) を入れて MCP のツールのテストを実行します。`REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` はこれだけを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
 
+実行は、終わったときに (テストの成功、失敗、中断のいずれでも)、自分が起動したサービスのコンテナを停止します (削除はしません)。実行の前から動いていたコンテナと、このリポジトリの別の実行がまだ使っているコンテナは、そのまま動かしておきます。`KEEP_SERVICES=1` を指定すると、実行の後も動かしたままにします。
+
 ```sh
 bin/test
 bin/test --redmine
