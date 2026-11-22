@@ -45,6 +45,8 @@ var base = (project) => `/projects/${encodeURIComponent(project.identifier)}/iss
 var settingsPath = (project) => `${base(project)}.json`;
 var filePath = (project, id) => `${base(project)}/${encodeURIComponent(String(id))}.json`;
 var chooserSettingsPath = (project) => `${base(project)}/settings.json`;
+/** 共有 (PUT { sharing }) */
+var sharingPath = (project) => `${base(project)}/sharing.json`;
 var syncPath = (project) => `${base(project)}/sync.json`;
 var previewPath = (project) => `${base(project)}/preview.json`;
 /** the pages the app draws (init.rb's screens) and Redmine's settings tab */
@@ -846,6 +848,17 @@ function IssueTemplateSettings() {
 							href
 						}))
 					}),
+					/* @__PURE__ */ jsx(SharingField, {
+						data,
+						onSaved: () => {
+							setBand({
+								tone: "neutral",
+								text: t("notice_successful_update")
+							});
+							invalidate();
+						},
+						onError: fail
+					}, data.sharing),
 					/* @__PURE__ */ jsx(SectionHeading, {
 						heading: t("label_issue_template_plural"),
 						count: templates.length,
@@ -939,6 +952,52 @@ function IssueTemplateSettings() {
 				if (deleting) remove(deleting);
 				setDeleting(null);
 			}
+		})
+	] });
+}
+/** 共有 (Redmine's version sharings, the values the user may set) with 保存 once changed, and 共有元 when another project's
+*  templates are used. */
+function SharingField({ data, onSaved, onError }) {
+	const t = useT();
+	const { project } = useExtensionContext();
+	const [sharing, setSharing] = useState(data.sharing);
+	const [saving, setSaving] = useState(false);
+	const save = () => {
+		if (!project) return;
+		setSaving(true);
+		kitApi.put(sharingPath(project), { sharing }).then(onSaved).catch(onError).finally(() => setSaving(false));
+	};
+	return /* @__PURE__ */ jsxs(Fragment, { children: [
+		/* @__PURE__ */ jsx(SectionHeading, {
+			heading: t("field_sharing"),
+			inset: 24,
+			className: "mt-section"
+		}),
+		/* @__PURE__ */ jsxs("div", {
+			className: "flex min-w-0 items-center gap-2 px-gutter",
+			children: [/* @__PURE__ */ jsx(Select, {
+				"aria-label": t("field_sharing"),
+				value: sharing,
+				options: data.sharings.map((value) => ({
+					value,
+					label: t(`label_version_sharing_${value}`)
+				})),
+				onValueChange: setSharing,
+				className: "min-w-0 flex-1"
+			}), /* @__PURE__ */ jsx(Button, {
+				disabled: sharing === data.sharing || saving,
+				onClick: save,
+				children: t("button_save")
+			})]
+		}),
+		data.provider && /* @__PURE__ */ jsx(AttrGrid, {
+			columns: 1,
+			className: "mt-3 px-gutter",
+			items: [{
+				label: t("label_issue_template_provider"),
+				value: data.provider.name,
+				href: `/projects/${encodeURIComponent(data.provider.identifier)}`
+			}]
 		})
 	] });
 }
@@ -1332,6 +1391,21 @@ function SettingsSkeleton() {
 								className: "inline-block align-middle"
 							})
 						}]
+					}),
+					/* @__PURE__ */ jsx(SectionHeading, {
+						heading: t("field_sharing"),
+						inset: 24,
+						className: "mt-section"
+					}),
+					/* @__PURE__ */ jsxs("div", {
+						className: "flex min-w-0 items-center gap-2 px-gutter",
+						children: [/* @__PURE__ */ jsx(Skeleton, {
+							height: 32,
+							className: "min-w-0 flex-1"
+						}), /* @__PURE__ */ jsx(Skeleton, {
+							width: 64,
+							height: 32
+						})]
 					}),
 					/* @__PURE__ */ jsx(SectionHeading, {
 						heading: t("label_issue_template_plural"),

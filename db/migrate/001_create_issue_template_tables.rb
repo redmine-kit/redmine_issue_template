@@ -27,8 +27,10 @@ class CreateIssueTemplateTables < ActiveRecord::Migration[8.1]
     add_index :redmine_kit_issue_template_files, %i[project_id path], unique: true
   end
 
-  # Where a project's template files come from, and the last import. The
-  # errors and warnings are worked out from the stored files when shown.
+  # Where a project's template files come from, the last import, and the
+  # projects its templates are shared with (Redmine's version sharings: none,
+  # descendants, hierarchy, tree, system). The errors and warnings are worked
+  # out from the stored files when shown.
   def create_sources
     create_table :redmine_kit_issue_template_sources do |t|
       t.references :project, null: false, index: { unique: true }, foreign_key: false
@@ -37,6 +39,7 @@ class CreateIssueTemplateTables < ActiveRecord::Migration[8.1]
       t.string :revision
       t.string :digest
       t.datetime :synced_at
+      t.string :sharing, null: false, default: 'none', limit: 20
       t.timestamps
     end
   end

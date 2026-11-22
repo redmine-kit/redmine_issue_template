@@ -3,7 +3,9 @@
 module RedmineKit
   module IssueTemplate
     # The templates of a project and the chooser's configuration, read from
-    # its stored files.
+    # its stored files: .own(project) the project's own (its settings tab),
+    # .for(project) those it uses (its own, or those another project shares
+    # with it: TemplateSource.provider_for).
     class TemplateSet
       attr_reader :templates, :config, :messages
 
@@ -13,9 +15,14 @@ module RedmineKit
       # before it is stored, so that no request changes what another reads.
       CACHE = ActiveSupport::Cache::MemoryStore.new(size: 32.megabytes, coder: nil)
 
+      # The templates a project uses for its new issues.
+      def self.for(project)
+        own(TemplateSource.provider_for(project))
+      end
+
       # The parsed files of a project, kept while the stored files are the same
       # (their number, last change and last id, without reading the contents).
-      def self.for(project)
+      def self.own(project)
         scope = TemplateFile.where(project_id: project.id)
         count, updated, last = scope.pick(Arel.sql('COUNT(*)'), Arel.sql('MAX(updated_at)'), Arel.sql('MAX(id)'))
         # the time with its fractions of a second (Time#to_param drops them)

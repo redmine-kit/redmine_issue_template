@@ -8,6 +8,7 @@ ja:
   label_issue_template_blank: 空白のチケット
   label_issue_template_contact_links: その他の連絡先
   label_issue_template_chooser: "テンプレートの選択画面"
+  label_issue_template_provider: "共有元"
   text_issue_template_chooser_elsewhere: "これらの設定は、テンプレートの取得元の config.yml で変更します。"
   label_issue_template_blank_issues_enabled: "空白のチケットを許可"
   label_issue_template_file_new: 新しいテンプレート

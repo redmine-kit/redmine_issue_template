@@ -28,7 +28,7 @@ module RedmineKit
       end
 
       def set
-        @set ||= TemplateSet.for(project)
+        @set ||= TemplateSet.own(project)
       end
 
       def messages
@@ -65,8 +65,34 @@ module RedmineKit
         Setting.text_formatting != 'common_mark'
       end
 
+      # The project whose templates the project uses, when it is another one
+      # (TemplateSource.provider_for: shared with it, as Redmine shares a
+      # version); nil when it uses its own.
+      def provider
+        return @provider if defined?(@provider)
+
+        found = TemplateSource.provider_for(project)
+        @provider = found == project ? nil : found
+      end
+
+      # 共有: the value now and those the user may choose (Version's rule and
+      # Redmine's labels).
+      def sharing
+        source&.sharing || 'none'
+      end
+
+      def sharings(user = User.current)
+        (source || TemplateSource.new(project:)).allowed_sharings(user)
+      end
+
+      def sharing_options(user = User.current)
+        RedmineKit::Subprojects::Sharing.options(sharings(user))
+      end
+
       def to_h
         { manual: manual?, has_repository: project.repository.present?, source: source_data,
+          sharing: sharing, sharings: sharings,
+          provider: provider && { name: provider.name, identifier: provider.identifier },
           errors: errors?, text_formatting: text_formatting_warning? ? common_mark_name : nil,
           files: files.map { |file| file_row(file) }, config: config_data, chooser: chooser_data }
       end

@@ -17,6 +17,21 @@ module RedmineKit
         @request.session[:user_id] = 2
       end
 
+      test "共有 with the values the user may choose, and 共有元 where another project's templates are used" do
+        import({ 'bug.md' => "---\nname: Bug\nabout: a\n---\n" })
+        TemplateSource.find_by!(project_id: 1).update!(sharing: 'descendants')
+        enable_issue_templates(Project.find(3))
+        Member.create!(principal: User.find(2), project: Project.find(3), role_ids: [1])
+        get :settings, params: { id: 'subproject1', tab: 'issue_templates' }
+        assert_response :success
+        assert_select 'select#issue_template_sharing option', 4
+        assert_select 'select#issue_template_sharing option[selected]', text: 'Not shared'
+        assert_select '#tab-content-issue_templates p', text: /Shared from: eCookbook/
+        get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
+        assert_select '#tab-content-issue_templates p', text: /Shared from/, count: 0
+        assert_select 'select#issue_template_sharing option[selected]', text: 'With subprojects'
+      end
+
       test 'the tab lists the files and says when some can\'t be used' do
         import(github_files.merge('broken.yml' => "name: x\n"))
         get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
@@ -50,7 +65,9 @@ module RedmineKit
         # config.yml is the repository's: shown, not edited.
         assert_select 'input[type=checkbox][name=blank_issues_enabled][disabled=disabled]'
         assert_select 'table.issue-template-contact-links tbody tr', 2
-        assert_select '#tab-content-issue_templates input[type=submit]', 0
+        assert_select 'fieldset.issue-template-chooser-settings ~ input[type=submit]', 0
+        # 共有 is the source's, whatever the files come from: its own form saves it
+        assert_select 'form[action=?] input[type=submit]', '/projects/ecookbook/issue_templates/sharing', 1
       end
 
       test 'the tab warns when the text formatting is not CommonMark' do

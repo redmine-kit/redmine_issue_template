@@ -7,7 +7,7 @@ module RedmineKit
     # settings' actions also answer the new UI's kit requests (redmine_kit_ui,
     # JSON with the browser's session): the same checks, 201 or 204 for a save,
     # 422 with Redmine's messages, 403 where Redmine's page refuses.
-    class TemplatesController < ApplicationController
+    class TemplatesController < ApplicationController # rubocop:disable Metrics/ClassLength -- the tab and its files
       include SettingsParams
 
       menu_item :new_issue, only: :index
@@ -38,7 +38,7 @@ module RedmineKit
       # The chooser's settings from the project settings: the config file the
       # chooser reads, made again from the form and checked as an edited file.
       def settings
-        path = TemplateSet.for(@project).config.path || 'config.yml'
+        path = TemplateSet.own(@project).config.path || 'config.yml'
         file = nil
         saved = save_files do
           file = TemplateFile.find_or_initialize_by(project_id: @project.id, path: path)
@@ -48,6 +48,18 @@ module RedmineKit
         return render_saved(saved, file) if request.format.json?
 
         settings_flash(saved, file)
+        redirect_to_settings
+      end
+
+      # 共有: the projects the project's templates are shared with, one of the
+      # values the user may choose (TemplateSource#allowed_sharings); another
+      # value or shape is refused with Redmine's message, and nothing is saved.
+      def sharing
+        source = TemplateSource.for(@project)
+        saved = source.share(params[:sharing], User.current)
+        return render_saved(saved, source) if request.format.json?
+
+        settings_flash(saved, source)
         redirect_to_settings
       end
 

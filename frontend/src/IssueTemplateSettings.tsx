@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, ExternalLink, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, RequestErrorState, SectionHeading, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
+import { AttrGrid, Badge, Button, Checkbox, ConfirmDialog, EmptyState, ExternalLink, FormActions, FormRow, Icon, IconButton, Input, ListRow, Notice, Pane, Panes, RequestErrorState, SectionHeading, Select, Skeleton, SkeletonRegion, Tabs, TabsContent, Textarea } from '@redmine-kit/ui';
 import { CardHeaderActions, kitApi, useApiErrorTexts, useExtensionContext, useKitInvalidate, useKitQuery, useT } from '@redmine-kit/plugin';
 import { ChooserList } from './ChooserList';
 import { IssueTemplateFileDrawer } from './IssueTemplateFileDrawer';
 import { TemplatePreview } from './TemplatePreview';
 import { PreviewSkeleton } from './useTemplateFileForm';
 import { sourceRows } from './source';
-import { DOCS, chooserSettingsPath, filePath, settingsPath, syncPath, type ContactLink, type FileData, type FileRow, type Message, type SettingsData } from './api';
+import { DOCS, chooserSettingsPath, filePath, settingsPath, sharingPath, syncPath, type ContactLink, type FileData, type FileRow, type Message, type SettingsData } from './api';
 
 // Project settings › Issue templates (the manifest's project_settings tab), as Redmine's tab has it (SettingsTab), in two
 // panes: the files at the start (取得元: where they come from, the repository's folder or プロジェクトの設定 for files edited
 // here, as the new issue's sidebar says it: sourceRows; each template with its state: errors, warnings, or usable; then
-// テンプレートの選択画面, config.yml), the chosen one at the end: its name with 編集 and 削除, its errors and warnings, and
+// テンプレートの選択画面, config.yml; 共有, the projects the templates are shared with, as a version's 共有, with 保存 once
+// changed, and 共有元, the project whose templates are used while the project has none of its own), the chosen one at the end: its name with 編集 and 削除, its errors and warnings, and
 // its tabs: プレビュー (what users see with it, KitPreview, with the new issue form's components), 内容 (the text), and for
 // config.yml 設定 (blank_issues_enabled and contact_links, saved into config.yml). Below 1024px the panes stack.
 // A file's messages are headed エラー / 警告. 設定 explains 空白のチケットを許可 and notes that saving rewrites config.yml.
@@ -98,6 +99,7 @@ export function IssueTemplateSettings() {
           {/* where the templates come from: the repository's folder, or the project's settings (edited here) */}
           <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
           <AttrGrid columns={1} className="px-gutter" items={sourceRows(data.source, t).map(({ label, value, href }) => ({ label, value, href }))} />
+          <SharingField key={data.sharing} data={data} onSaved={() => { setBand({ tone: 'neutral', text: t('notice_successful_update') }); invalidate(); }} onError={fail} />
           <SectionHeading heading={t('label_issue_template_plural')} count={templates.length} inset={24} className="mt-section" />
           {templates.length === 0 && <EmptyState variant="block" text={t('label_no_data')} />}
           {templates.map((file) => (
@@ -154,6 +156,36 @@ export function IssueTemplateSettings() {
           setDeleting(null);
         }}
       />
+    </>
+  );
+}
+
+/** 共有 (Redmine's version sharings, the values the user may set) with 保存 once changed, and 共有元 when another project's
+ *  templates are used. */
+function SharingField({ data, onSaved, onError }: { data: SettingsData; onSaved: () => void; onError: (error: unknown) => void }) {
+  const t = useT();
+  const { project } = useExtensionContext();
+  const [sharing, setSharing] = useState(data.sharing);
+  const [saving, setSaving] = useState(false);
+  const save = () => {
+    if (!project) return;
+    setSaving(true);
+    kitApi
+      .put(sharingPath(project), { sharing })
+      .then(onSaved)
+      .catch(onError)
+      .finally(() => setSaving(false));
+  };
+  return (
+    <>
+      <SectionHeading heading={t('field_sharing')} inset={24} className="mt-section" />
+      <div className="flex min-w-0 items-center gap-2 px-gutter">
+        <Select aria-label={t('field_sharing')} value={sharing} options={data.sharings.map((value) => ({ value, label: t(`label_version_sharing_${value}`) }))} onValueChange={setSharing} className="min-w-0 flex-1" />
+        <Button disabled={sharing === data.sharing || saving} onClick={save}>
+          {t('button_save')}
+        </Button>
+      </div>
+      {data.provider && <AttrGrid columns={1} className="mt-3 px-gutter" items={[{ label: t('label_issue_template_provider'), value: data.provider.name, href: `/projects/${encodeURIComponent(data.provider.identifier)}` }]} />}
     </>
   );
 }
@@ -419,6 +451,12 @@ function SettingsSkeleton() {
           {/* 取得元 with its first row (the source's other rows follow it when it is a repository) */}
           <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
           <AttrGrid columns={1} className="px-gutter" items={[{ label: t('label_issue_template_source'), value: <Skeleton width={120} height={12} className="inline-block align-middle" /> }]} />
+          {/* 共有 with its select and 保存 (共有元, rare, comes with the data) */}
+          <SectionHeading heading={t('field_sharing')} inset={24} className="mt-section" />
+          <div className="flex min-w-0 items-center gap-2 px-gutter">
+            <Skeleton height={32} className="min-w-0 flex-1" />
+            <Skeleton width={64} height={32} />
+          </div>
           <SectionHeading heading={t('label_issue_template_plural')} inset={24} className="mt-section" />
           <RowSkeleton id="1" width={120} />
           <RowSkeleton id="2" width={96} />

@@ -22,7 +22,7 @@ Redmine::Plugin.register :redmine_kit_issue_template do
   project_module :issue_templates do
     permission :manage_issue_templates,
                { 'redmine_kit/issue_template/templates' =>
-                   %i[files sync settings show new create edit update destroy preview],
+                   %i[files sync settings sharing show new create edit update destroy preview],
                  projects: :settings },
                require: :member
   end

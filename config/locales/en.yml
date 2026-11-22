@@ -8,6 +8,7 @@ en:
   label_issue_template_blank: Blank issue
   label_issue_template_contact_links: Other contacts
   label_issue_template_chooser: "Template chooser"
+  label_issue_template_provider: "Shared from"
   text_issue_template_chooser_elsewhere: "Change these settings in config.yml where the templates are kept."
   label_issue_template_blank_issues_enabled: "Allow blank issues"
   label_issue_template_file_new: New template

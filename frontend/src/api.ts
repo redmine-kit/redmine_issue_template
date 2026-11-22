@@ -92,6 +92,12 @@ export interface SettingsData {
   config: { path: string; blank_issues_enabled: boolean; contact_links: ContactLink[] };
   /** the chooser the project's templates make now (config.yml's preview) */
   chooser: ChooserData;
+  /** 共有: the projects the templates are shared with (Redmine's version sharings) */
+  sharing: string;
+  /** the sharings the user may set (TemplateSource#allowed_sharings, as Version#allowed_sharings) */
+  sharings: string[];
+  /** the project whose templates the project uses while it has none of its own (shared with it); null: its own */
+  provider: { name: string; identifier: string } | null;
 }
 
 export interface FileRow {
@@ -134,6 +140,8 @@ export const settingsPath = (project: { identifier: string }) => `${base(project
 export const filesPath = settingsPath;
 export const filePath = (project: { identifier: string }, id: number | string) => `${base(project)}/${encodeURIComponent(String(id))}.json`;
 export const chooserSettingsPath = (project: { identifier: string }) => `${base(project)}/settings.json`;
+/** 共有 (PUT { sharing }) */
+export const sharingPath = (project: { identifier: string }) => `${base(project)}/sharing.json`;
 export const syncPath = (project: { identifier: string }) => `${base(project)}/sync.json`;
 export const previewPath = (project: { identifier: string }) => `${base(project)}/preview.json`;
 /** the pages the app draws (init.rb's screens) and Redmine's settings tab */

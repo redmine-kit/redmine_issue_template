@@ -79,6 +79,9 @@ const files = [bugFile, configFile, brokenFile];
 export function settings(patch: Partial<SettingsData> = {}): { issue_templates: SettingsData } {
   return {
     issue_templates: {
+      sharing: 'none',
+      sharings: ['none', 'descendants', 'hierarchy', 'tree'],
+      provider: null,
       manual: true,
       has_repository: true,
       source: null,

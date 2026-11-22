@@ -12,6 +12,23 @@ module RedmineKit
       def kit_ui_new_issue_form(context)
         KitForm.answer(context[:issue], context[:params])
       end
+
+      # Redmine's project copy: チケットテンプレート in the copy page's list
+      # (with the number of files, as Redmine's items), and the copy itself
+      # when it was chosen (ProjectCopy).
+      def view_projects_copy_only_items(context = {})
+        project = context[:project]
+        RedmineKit::Subprojects::ProjectCopy.check_box(context[:hook_caller], ProjectCopy::ITEM,
+                                                       l(:label_issue_template_plural),
+                                                       TemplateFile.where(project_id: project.id).count)
+      end
+
+      def model_project_copy_before_save(context = {})
+        destination = context[:destination_project]
+        return unless RedmineKit::Subprojects::ProjectCopy.chosen?(destination, ProjectCopy::ITEM)
+
+        ProjectCopy.copy(context[:source_project], destination)
+      end
     end
   end
 end

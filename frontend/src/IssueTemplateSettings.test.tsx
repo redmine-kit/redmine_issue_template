@@ -23,6 +23,9 @@ const settings = (patch: Partial<SettingsData> = {}): SettingsData => ({
   files: [{ id: 1, path: 'bug.yml', kind: 'form', name: 'Bug report', tracker: 'Bug', errors: 1, warnings: 1 }],
   config: { path: 'config.yml', blank_issues_enabled: true, contact_links: [] },
   chooser: CHOOSER,
+  sharing: 'none',
+  sharings: ['none', 'descendants'],
+  provider: null,
   ...patch,
 });
 const FILE: FileData = {
@@ -114,5 +117,21 @@ describe('the settings tab that couldn’t load', () => {
     renderKit(<InCard />, { context, requests, responses: { 'GET /projects/ecookbook/issue_templates.json': new ApiError(500, []) } });
     await userEvent.click(await screen.findByRole('button', { name: /再読み込み/ }));
     await waitFor(() => expect(requests.filter((r) => r.path === '/projects/ecookbook/issue_templates.json')).toHaveLength(2));
+  });
+  it('共有: the values the user may set, saved with 保存 once changed (PUT sharing.json)', async () => {
+    const requests: KitTestRequest[] = [];
+    renderKit(<InCard />, { context, requests, responses: { ...responses(settings()), 'PUT /projects/ecookbook/issue_templates/sharing.json': null } });
+    const save = await screen.findByRole('button', { name: '保存' });
+    expect(save).toBeDisabled();
+    await userEvent.click(screen.getByRole('combobox', { name: '共有' }));
+    await userEvent.click(await screen.findByRole('option', { name: 'サブプロジェクト単位' }));
+    await userEvent.click(save);
+    await waitFor(() => expect(requests.find((r) => r.method === 'put')?.body).toEqual({ sharing: 'descendants' }));
+  });
+
+  it("共有元: the project whose templates are used, linked, while the project has none of its own", async () => {
+    renderKit(<InCard />, { context, responses: responses(settings({ files: [], provider: { name: 'Parent', identifier: 'parent' } })) });
+    expect(await screen.findByText('共有元')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Parent' })).toHaveAttribute('href', '/projects/parent');
   });
 });

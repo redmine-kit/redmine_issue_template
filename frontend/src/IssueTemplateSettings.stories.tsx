@@ -29,6 +29,17 @@ export const Empty: Story = kitStory({
   },
 });
 
+/** A subproject without templates of its own: 共有元 names the parent whose templates it uses (shared with it). */
+export const SharedFromParent: Story = kitStory({
+  responses: {
+    ...fileResponses,
+    'GET /projects/:project_id/issue_templates.json': settings({
+      files: [], errors: false, sharing: 'none', provider: { name: 'eCookbook', identifier: 'ecookbook' },
+      chooser: { templates: [], blank: true, contact_links: [] },
+    }),
+  },
+});
+
 /** The tab still coming: its panes' skeleton. */
 export const Loading: Story = kitStory({ state: 'loading' });
 
