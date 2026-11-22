@@ -86,8 +86,21 @@ module RedmineKit
       # the template, when one applies), the fields it hides, and the settings
       # tab for a user who manages the templates.
       def sidebar(template = nil)
-        { source: SettingsTab.new(@project).source_data, path: template&.path, hidden: hidden_labels(template),
+        { source: visible_source(SettingsTab.new(@project).source_data), path: template&.path,
+          hidden: hidden_labels(template),
           settings_path: (settings_path if @user.allowed_to?(:manage_issue_templates, @project)) }
+      end
+
+      # The source as Redmine shows a repository to the user: its revision and
+      # the revision's page with view_changesets, the folder's page with
+      # browse_repository (the settings tab, for the templates' managers, shows all).
+      def visible_source(source)
+        return source unless source && source[:kind] == 'repository'
+
+        source = source.dup
+        source.except!(:revision, :revision_path) unless @user.allowed_to?(:view_changesets, @project)
+        source.except!(:folder_path) unless @user.allowed_to?(:browse_repository, @project)
+        source
       end
 
       def settings_path
