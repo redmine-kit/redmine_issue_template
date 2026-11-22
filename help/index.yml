@@ -1,0 +1,6 @@
+# The sidebar section of this plugin's help, read by Redmine Kit Help
+# (redmine_kit_help's docs/extending.md).
+sections:
+  - id: issue-template
+    title: Redmine Kit Issue Template
+    topics: [issue-template/issue-templates]

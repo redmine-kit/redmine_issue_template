@@ -19,6 +19,14 @@ Redmine Kit Issue Template (`redmine_kit_issue_template`) is a Redmine plugin fo
 - Website: https://redmine-kit.github.io/redmine_issue_template/ ([日本語](https://redmine-kit.github.io/redmine_issue_template/ja/))
 - Markdown: [docs/README.md](docs/README.md) ([日本語](docs/ja/README.md))
 
+## Help
+
+With [Redmine Kit Help](https://github.com/redmine-kit/redmine_help) installed, the plugin's help is in `help/`: the topic Issue templates (English and Japanese), and sections in the guide's topics Issue tracking (after Adding a new issue) and Project Settings, labelled with the plugin's name. The template chooser, the template files' pages and the project settings' Issue templates tab open the topic from the Help panel in both UIs (`help/map.yml`). Check it against the installed guide from Redmine's folder:
+
+```sh
+bin/rails redmine_kit:help:check PLUGIN=redmine_kit_issue_template
+```
+
 ## Sponsors
 
 <a href="https://www.keyselect.co.jp/">

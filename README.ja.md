@@ -21,6 +21,16 @@ Redmine Kit Issue Template(`redmine_kit_issue_template`)は、チケットテン
 - Web サイト: https://redmine-kit.github.io/redmine_issue_template/ja/ (English: https://redmine-kit.github.io/redmine_issue_template/)
 - Markdown: [docs/ja/README.md](docs/ja/README.md) (English: [docs/README.md](docs/README.md))
 
+<a id="help"></a>
+
+## ヘルプ
+
+[Redmine Kit Help](https://github.com/redmine-kit/redmine_help) をインストールしていれば、プラグインのヘルプは `help/` にあります。トピック「チケットテンプレート」(英語と日本語) と、ガイドのトピック「チケットトラッキング」(新しいチケットの追加のあと) と「プロジェクト設定」のセクション (プラグインの名前のラベル付き) です。どちらの UI でも、テンプレートの選択画面、テンプレートファイルの画面、プロジェクトの設定の「チケットテンプレート」タブで、ヘルプのパネルがこのトピックを開きます (`help/map.yml`)。Redmine のディレクトリで、インストールされたガイドに対してチェックできます。
+
+```sh
+bin/rails redmine_kit:help:check PLUGIN=redmine_kit_issue_template
+```
+
 <a id="sponsors"></a>
 
 ## スポンサー

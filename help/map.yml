@@ -1,0 +1,9 @@
+# This plugin's screens -> help topics, read by Redmine Kit Help (redmine_kit_help's docs/mapping.md).
+# Redmine's own UI names the controller by its name (templates); the new UI's screens by the route's controller
+# (redmine_kit/issue_template/templates), so both are listed. The project settings' tab is
+# projects#settings?tab=issue_templates in both UIs; the chooser of New issue is issues#new (the guide's section).
+templates#index: issue-template/issue-templates#The-template-chooser
+templates: issue-template/issue-templates#The-Issue-templates-tab
+redmine_kit/issue_template/templates#index: issue-template/issue-templates#The-template-chooser
+redmine_kit/issue_template/templates: issue-template/issue-templates#The-Issue-templates-tab
+projects#settings?tab=issue_templates: issue-template/issue-templates#The-Issue-templates-tab
