@@ -7,6 +7,7 @@
 - Redmine 7.0 以降。
 - Redmine のテキスト書式が CommonMark Markdown であること(管理 › 設定 › 全般)。テンプレートと YAML フォームの回答は Markdown なので、Textile では説明が意図どおりに表示されません。
 - テンプレートをリポジトリに置く場合は、Redmine が読めるプロジェクトのリポジトリ(Git、または Redmine が対応するほかの SCM)。
+- [Redmine Kit Subprojects](https://github.com/redmine-kit/redmine_kit_subprojects): テンプレートのほかのプロジェクトとの共有と、プロジェクトのコピーの項目に使います。gem はこれもインストールします。`plugins/` に置く場合は、これも `plugins/` にインストールします。ないときは、Redmine が起動時にプラグインの要件のエラーで停止します。
 
 <a id="installation"></a>
 

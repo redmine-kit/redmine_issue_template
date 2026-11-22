@@ -5,6 +5,7 @@
 - Redmine 7.0 or later.
 - CommonMark Markdown as Redmine's text formatting (Administration › Settings › General). Templates and the answers of YAML forms are Markdown; with Textile the descriptions are not shown as intended.
 - For templates in a repository: a project repository that Redmine can read (Git or any other SCM Redmine supports).
+- [Redmine Kit Subprojects](https://github.com/redmine-kit/redmine_kit_subprojects): the sharing of templates with other projects and the item of the project's copy. The gem installs it; in `plugins/`, install it there too. Without it Redmine stops at boot with a plugin requirement error.
 
 ## Installation
 

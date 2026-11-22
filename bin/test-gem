@@ -51,8 +51,11 @@ check='
 "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="redmine_test_$$" \
   -e PLUGIN="$plugin" -e ROUTE="$route" -e CHECK="$check" "$image" sh -ec '
   (cd "plugins/$PLUGIN" && gem build --quiet "$PLUGIN.gemspec" --output "/tmp/$PLUGIN.gem")
+  # redmine_kit_subprojects, which the gem depends on, as a gem too (its folder stays in plugins/, which wins)
+  (cd plugins/redmine_kit_subprojects && gem build --quiet redmine_kit_subprojects.gemspec \
+    --output /tmp/redmine_kit_subprojects.gem)
   mv "plugins/$PLUGIN" /tmp/checkout
-  gem install --local --no-document --quiet "/tmp/$PLUGIN.gem"
+  gem install --local --no-document --quiet /tmp/redmine_kit_subprojects.gem "/tmp/$PLUGIN.gem"
   printf "%s\n" "production:" "  adapter: postgresql" "  host: ${TEST_DATABASE_HOST:-postgres}" "  database: $TEST_DATABASE" \
     "  username: postgres" >> config/database.yml
   printf "%s\n" "gem '\''$PLUGIN'\''" "gem '\''simplecov-cobertura'\'', '\''3.2.0'\'', group: :test" > Gemfile.local

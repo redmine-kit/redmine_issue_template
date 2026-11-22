@@ -10,7 +10,8 @@
 # working tree; not the module's source, whose build is in assets/). The
 # image's entrypoint copies them into Redmine's plugins/ and installs the gems
 # the plugin's Gemfile adds into its named volume ($name-gems), kept between
-# runs. This plugin's tests need no other plugin.
+# runs. The other plugin: redmine_kit_subprojects (below); for the MCP run,
+# redmine_kit_mcp and redmine_kit_ui.
 : "${name:?}" "${plugin:?}" "${cli:?}"
 test_context=$(mktemp -d)
 mkdir -p "$test_context/plugins/$plugin"
@@ -18,6 +19,17 @@ git ls-files -co --exclude-standard . |
   grep -E '^(init\.rb|Gemfile|[^/]*\.gemspec|LICENSE|(app|assets|boot|config|db|lib|test)/)' |
   while IFS= read -r file; do if [[ -e "$file" ]]; then printf '%s\n' "$file"; fi; done | tar -cf - -T - |
   tar -xf - -C "$test_context/plugins/$plugin"
+# redmine_kit_subprojects, which this plugin requires (the projects a
+# project's list covers, the sharing of definitions as versions, the project
+# copy's items): REDMINE_KIT_SUBPROJECTS=<dir>, default
+# ../redmine_kit_subprojects; REDMINE_KIT_SUBPROJECTS_REF=<commit>, default HEAD.
+subprojects=${REDMINE_KIT_SUBPROJECTS:-../redmine_kit_subprojects}
+subprojects_ref=${REDMINE_KIT_SUBPROJECTS_REF:-HEAD}
+[[ -f "$subprojects/init.rb" ]] ||
+  { echo "redmine_kit_subprojects is not in $subprojects; set REDMINE_KIT_SUBPROJECTS" >&2; exit 1; }
+mkdir -p "$test_context/plugins/redmine_kit_subprojects"
+git -C "$subprojects" archive "$subprojects_ref" init.rb boot lib redmine_kit_subprojects.gemspec |
+  tar -xf - -C "$test_context/plugins/redmine_kit_subprojects"
 # With REDMINE_KIT_MCP=1 (bin/test's MCP run): redmine_kit_mcp and the
 # redmine_kit_ui it requires, for the tests of the plugin's MCP tools
 # (test/integration/mcp_tools_test.rb, skipped without them):

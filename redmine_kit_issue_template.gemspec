@@ -18,6 +18,8 @@ Gem::Specification.new do |spec|
   # boot/ only: lib/ is the code loader's (Zeitwerk), never required by name.
   spec.require_paths = ['boot']
   spec.metadata['github_repo'] = 'ssh://github.com/redmine-kit/redmine_issue_template'
+  # The projects a list covers, the sharing as versions, the project copy's items.
+  spec.add_dependency 'redmine_kit_subprojects', '~> 0.1'
   spec.metadata['rubygems_mfa_required'] = 'true'
   spec.metadata['source_code_uri'] = spec.homepage
   spec.metadata['documentation_uri'] = 'https://redmine-kit.github.io/redmine_issue_template/'

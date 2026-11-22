@@ -18,6 +18,8 @@
 # through the code loader, as in plugins/, so that it reloads and Zeitwerk
 # checks it.
 require 'active_support/lazy_load_hooks'
+# redmine_kit_subprojects, which the plugin requires, from its gem (its boot file).
+require 'redmine_kit_subprojects'
 
 ActiveSupport.on_load(:before_configuration, yield: true) do |app|
   dir = File.expand_path('..', __dir__)
