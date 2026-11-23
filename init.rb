@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+# The plugins this one requires (config/dependencies.yml): without one,
+# Redmine stops here and names it.
+load File.expand_path('config/dependencies.rb', __dir__)
+
 # Redmine Kit Issue Template (lib/redmine_kit/issue_template.rb). It is
 # installed as a gem (boot/redmine_kit_issue_template.rb) or in plugins/
 # (docs/setup.md, "Installation"); RedmineKit::IssueTemplate comes from lib/

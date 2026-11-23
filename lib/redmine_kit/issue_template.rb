@@ -24,7 +24,6 @@ module RedmineKit
     end
 
     def setup
-      require_subprojects
       Project.has_many :issue_template_files, class_name: 'RedmineKit::IssueTemplate::TemplateFile',
                                               dependent: :delete_all
       Project.has_one :issue_template_source, class_name: 'RedmineKit::IssueTemplate::TemplateSource',
@@ -41,18 +40,6 @@ module RedmineKit
       # blank issue rule, and the plugin's tools make issues from templates
       McpHooks.instance
       ActiveSupport.on_load(:redmine_kit_mcp) { McpTools.register(self) }
-    end
-
-    # Redmine Kit Subprojects (required: templates shared as versions are,
-    # RedmineKit::Subprojects::Sharing, and the project copy's item). Redmine
-    # runs the plugins' init.rb in the order of their names, so it isn't
-    # registered yet here (requires_redmine_plugin would raise); its lib/ is in
-    # Rails' code loader already, so its constant says whether it is installed.
-    def require_subprojects
-      return if defined?(RedmineKit::Subprojects::VERSION)
-
-      raise Redmine::PluginRequirementError,
-            'Redmine Kit Issue Template requires Redmine Kit Subprojects (redmine_kit_subprojects): install it'
     end
   end
 end

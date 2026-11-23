@@ -5,7 +5,23 @@
 - Redmine 7.0 or later.
 - CommonMark Markdown as Redmine's text formatting (Administration › Settings › General). Templates and the answers of YAML forms are Markdown; with Textile the descriptions are not shown as intended.
 - For templates in a repository: a project repository that Redmine can read (Git or any other SCM Redmine supports).
-- [Redmine Kit Subprojects](https://github.com/redmine-kit/redmine_kit_subprojects): the sharing of templates with other projects and the item of the project's copy. The gem installs it; in `plugins/`, install it there too. Without it Redmine stops at boot with a plugin requirement error.
+
+### Required plugins
+
+| Plugin | Used for |
+| --- | --- |
+| [Redmine Kit Subprojects](https://github.com/redmine-kit/redmine_kit_subprojects) | the sharing of templates with other projects and the project copy's item |
+
+Without it, Redmine stops at boot and names it. Installed as a gem, this plugin installs it
+([Installation](#installation)).
+
+### Optional plugins
+
+| Plugin | With it |
+| --- | --- |
+| [Redmine Kit UI](https://github.com/redmine-kit/redmine_kit_ui) | the new UI's screens |
+| [Redmine Kit MCP](https://github.com/redmine-kit/redmine_kit_mcp) | the templates in MCP's tools |
+| [Redmine Kit Help](https://github.com/redmine-kit/redmine_help) | this plugin's help in the Help panel |
 
 ## Installation
 
@@ -13,7 +29,7 @@ The plugin is installed as a gem (first choice) or in `plugins/`. Its migrations
 
 ### Gem
 
-Each version tag (`v*`) publishes the plugin as a gem to GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`). Installing from GitHub Packages needs a GitHub token with `read:packages`, even for a public package. Add the gem to Redmine's `Gemfile.local`, then install and migrate from Redmine's folder:
+`bin/release` publishes each version of the plugin as a gem to GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`, [Releasing](#releasing)). Installing from GitHub Packages needs a GitHub token with `read:packages`, even for a public package. Add the gem to Redmine's `Gemfile.local`, then install and migrate from Redmine's folder:
 
 ```ruby
 # Redmine's Gemfile.local
@@ -115,6 +131,16 @@ bin/screenshots                  # the screenshots of the docs (docs/images/, do
 `COVERAGE=1 bin/test` also measures the coverage of the plugin's files by its tests ([SimpleCov](https://github.com/simplecov-ruby/simplecov), in one worker, so it takes longer) and writes it as Cobertura XML to `coverage/coverage.xml`. CI runs it on Redmine 7.0.3 and uploads the file to [Codecov](https://app.codecov.io/gh/redmine-kit/redmine_issue_template) with GitHub's OIDC token, without a Codecov token (`.github/workflows/ci.yml`, `codecov.yml`).
 
 `bin/screenshots` (in Apple container or Docker, as `bin/test`) takes the screenshots in headless Chromium from Redmine's test data and GitHub's examples (`test/screenshots/screens.rb`). Run it after changing a screen.
+
+## Releasing
+
+`bin/release` publishes the gem of the gemspec's version to Redmine Kit's registry on GitHub Packages, from a clean
+`main` only: the version must be newer than the last tag `v<version>`, the required plugins must resolve from the
+registry at their ranges (`config/dependencies.yml`), and `bin/lint`, `bin/test` and `bin/test-gem` must pass. It
+pushes with the key `github` of `~/.gem/credentials` (`:github: Bearer <token>`, a token with `write:packages`) and
+reads the registry with `BUNDLE_RUBYGEMS__PKG__GITHUB__COM`; no token goes into the repository or the output. It makes
+the signed tag `v<version>` and prints the command that pushes it. Versions are semantic: a change that breaks a plugin
+using this one raises the major version (the minor one before 1.0), and the ranges in the plugins that require it.
 
 ## To verify
 

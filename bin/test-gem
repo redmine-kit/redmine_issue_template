@@ -52,11 +52,12 @@ check='
 "$cli" run --rm --network "$network" ${opts[@]+"${opts[@]}"} -e TEST_DATABASE="redmine_test_$$" \
   -e PLUGIN="$plugin" -e ROUTE="$route" -e CHECK="$check" "$image" sh -ec '
   (cd "plugins/$PLUGIN" && gem build --quiet "$PLUGIN.gemspec" --output "/tmp/$PLUGIN.gem")
-  # redmine_kit_subprojects, which the gem depends on, as a gem too (its folder stays in plugins/, which wins)
-  (cd plugins/redmine_kit_subprojects && gem build --quiet redmine_kit_subprojects.gemspec \
-    --output /tmp/redmine_kit_subprojects.gem)
+  # the gems of the plugins it requires (config/dependencies.yml), which the gem depends on, built from their
+  # folders (which stay in plugins/, and win)
+  deps=$(ruby -ryaml -e "puts YAML.safe_load_file(%(plugins/#{ENV[%(PLUGIN)]}/config/dependencies.yml))[%(requires)].keys")
+  for dep in $deps; do (cd "plugins/$dep" && gem build --quiet "$dep.gemspec" --output "/tmp/$dep.gem"); done
   mv "plugins/$PLUGIN" /tmp/checkout
-  gem install --local --no-document --quiet /tmp/redmine_kit_subprojects.gem "/tmp/$PLUGIN.gem"
+  gem install --local --no-document --quiet $(for dep in $deps; do echo "/tmp/$dep.gem"; done) "/tmp/$PLUGIN.gem"
   printf "%s\n" "production:" "  adapter: postgresql" "  host: ${TEST_DATABASE_HOST:-postgres}" "  database: $TEST_DATABASE" \
     "  username: postgres" >> config/database.yml
   printf "%s\n" "gem '\''$PLUGIN'\''" "gem '\''simplecov-cobertura'\'', '\''3.2.0'\'', group: :test" > Gemfile.local

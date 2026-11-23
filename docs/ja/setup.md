@@ -7,7 +7,26 @@
 - Redmine 7.0 以降。
 - Redmine のテキスト書式が CommonMark Markdown であること(管理 › 設定 › 全般)。テンプレートと YAML フォームの回答は Markdown なので、Textile では説明が意図どおりに表示されません。
 - テンプレートをリポジトリに置く場合は、Redmine が読めるプロジェクトのリポジトリ(Git、または Redmine が対応するほかの SCM)。
-- [Redmine Kit Subprojects](https://github.com/redmine-kit/redmine_kit_subprojects): テンプレートのほかのプロジェクトとの共有と、プロジェクトのコピーの項目に使います。gem はこれもインストールします。`plugins/` に置く場合は、これも `plugins/` にインストールします。ないときは、Redmine が起動時にプラグインの要件のエラーで停止します。
+
+<a id="required-plugins"></a>
+
+### 必須プラグイン
+
+| プラグイン | 用途 |
+| --- | --- |
+| [Redmine Kit Subprojects](https://github.com/redmine-kit/redmine_kit_subprojects) | テンプレートのほかのプロジェクトとの共有と、プロジェクトのコピーの項目 |
+
+ないときは、Redmine が起動時に停止し、そのプラグインの名前を示します。gem としてインストールすると、このプラグインがそれもインストールします ([インストール](#installation))。
+
+<a id="optional-plugins"></a>
+
+### オプションのプラグイン
+
+| プラグイン | 使える機能 |
+| --- | --- |
+| [Redmine Kit UI](https://github.com/redmine-kit/redmine_kit_ui) | 新しい UI の画面 |
+| [Redmine Kit MCP](https://github.com/redmine-kit/redmine_kit_mcp) | MCP のツールでのテンプレート |
+| [Redmine Kit Help](https://github.com/redmine-kit/redmine_help) | ヘルプのパネルに表示するこのプラグインのヘルプ |
 
 <a id="installation"></a>
 
@@ -19,7 +38,7 @@
 
 ### gem
 
-バージョンのタグ (`v*`) ごとに、プラグインを gem として GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`) に公開します。GitHub Packages からのインストールには、公開のパッケージでも `read:packages` の権限を持つ GitHub のトークンが必要です。Redmine の `Gemfile.local` に gem を追加し、Redmine のフォルダーでインストールとマイグレーションを実行します。
+`bin/release` が、各バージョンのプラグインを gem として GitHub Packages (`https://rubygems.pkg.github.com/redmine-kit`。[リリース](#releasing)) に公開します。GitHub Packages からのインストールには、公開のパッケージでも `read:packages` の権限を持つ GitHub のトークンが必要です。Redmine の `Gemfile.local` に gem を追加し、Redmine のフォルダーでインストールとマイグレーションを実行します。
 
 ```ruby
 # Redmine の Gemfile.local
@@ -129,6 +148,11 @@ bin/screenshots                  # ドキュメントのスクリーンショッ
 `COVERAGE=1 bin/test` は、テストによるプラグインのファイルのカバレッジも [SimpleCov](https://github.com/simplecov-ruby/simplecov) で測り、Cobertura XML として `coverage/coverage.xml` に書き出します。1 ワーカーで実行するため、時間が長くかかります。CI は Redmine 7.0.3 でこれを実行し、ファイルを GitHub の OIDC トークンで [Codecov](https://app.codecov.io/gh/redmine-kit/redmine_issue_template) にアップロードします。Codecov のトークンは使いません (`.github/workflows/ci.yml`、`codecov.yml`)。
 
 `bin/screenshots` (`bin/test` と同じく Apple container または Docker) は、Redmine のテストのデータと GitHub の例を使い、ヘッドレスの Chromium でスクリーンショットを撮ります(`test/screenshots/screens.rb`)。画面を変えたら実行します。
+
+<a id="releasing"></a>
+## リリース
+
+`bin/release` は、gemspec のバージョンの gem を GitHub Packages の Redmine Kit のレジストリに公開します。実行できるのは変更のない `main` からだけで、バージョンが最後のタグ `v<version>` より新しいこと、必須プラグインがレジストリから範囲どおりに解決できること (`config/dependencies.yml`)、`bin/lint`、`bin/test`、`bin/test-gem` が成功することが条件です。公開には `~/.gem/credentials` のキー `github` (`:github: Bearer <token>`。`write:packages` を持つトークン) を使い、レジストリの読み取りには `BUNDLE_RUBYGEMS__PKG__GITHUB__COM` を使います。トークンはリポジトリにも出力にも含めません。署名付きのタグ `v<version>` を作り、それをプッシュするコマンドを表示します。バージョンはセマンティックバージョニングに従います。このプラグインを使うプラグインが動かなくなる変更ではメジャーバージョン (1.0 より前はマイナーバージョン) を上げ、それを必要とするプラグインの範囲も変えます。
 
 <a id="to-verify"></a>
 
