@@ -81,6 +81,14 @@ module RedmineKit
         source&.sharing || 'none'
       end
 
+      # The templates the project uses from the provider while it has none of
+      # its own (those its new issues offer: TemplateSet.for's usable ones),
+      # read-only here, with the tracker each sets in this project. None
+      # without a provider.
+      def shared_files
+        @shared_files ||= provider ? TemplateSet.for(project).usable : []
+      end
+
       def sharings(user = User.current)
         (source || TemplateSource.new(project:)).allowed_sharings(user)
       end
@@ -93,6 +101,7 @@ module RedmineKit
         { manual: manual?, has_repository: project.repository.present?, source: source_data,
           sharing: sharing, sharings: sharings,
           provider: provider && { name: provider.name, identifier: provider.identifier },
+          shared_files: shared_files.map { |template| shared_row(template) },
           errors: errors?, text_formatting: text_formatting_warning? ? common_mark_name : nil,
           files: files.map { |file| file_row(file) }, config: config_data, chooser: chooser_data }
       end
@@ -132,6 +141,11 @@ module RedmineKit
         base = { controller: 'repositories', id: project, repository_id: repository.identifier_param, only_path: true }
         { folder_path: routes.url_for(base.merge(action: 'show', path: folder)),
           revision_path: source.revision && routes.url_for(base.merge(action: 'revision', rev: source.revision)) }
+      end
+
+      def shared_row(template)
+        { path: template.path, kind: Parser.kind(template.path).to_s, name: template.name,
+          tracker: template.tracker(project)&.name, form: template.form? }
       end
 
       def file_row(file)

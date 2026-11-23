@@ -82,6 +82,7 @@ export function settings(patch: Partial<SettingsData> = {}): { issue_templates: 
       sharing: 'none',
       sharings: ['none', 'descendants', 'hierarchy', 'tree'],
       provider: null,
+      shared_files: [],
       manual: true,
       has_repository: true,
       source: null,

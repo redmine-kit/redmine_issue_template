@@ -861,14 +861,24 @@ function IssueTemplateSettings() {
 					}, data.sharing),
 					/* @__PURE__ */ jsx(SectionHeading, {
 						heading: t("label_issue_template_plural"),
-						count: templates.length,
+						count: templates.length + data.shared_files.length,
 						inset: 24,
 						className: "mt-section"
 					}),
-					templates.length === 0 && /* @__PURE__ */ jsx(EmptyState, {
+					templates.length === 0 && data.shared_files.length === 0 && /* @__PURE__ */ jsx(EmptyState, {
 						variant: "block",
 						text: t("label_no_data")
 					}),
+					data.provider && data.shared_files.map((file) => /* @__PURE__ */ jsx(ListRow, {
+						id: `shared-${file.path}`,
+						icon: "link",
+						title: file.name ?? file.path,
+						sub: [
+							file.path,
+							file.tracker,
+							data.provider?.name
+						].filter(Boolean).join(" · ")
+					}, `shared-${file.path}`)),
 					templates.map((file) => /* @__PURE__ */ jsx(ListRow, {
 						id: String(file.id),
 						icon: file.kind === "form" ? "grid" : "document",

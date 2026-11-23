@@ -26,6 +26,7 @@ const settings = (patch: Partial<SettingsData> = {}): SettingsData => ({
   sharing: 'none',
   sharings: ['none', 'descendants'],
   provider: null,
+  shared_files: [],
   ...patch,
 });
 const FILE: FileData = {
@@ -133,5 +134,17 @@ describe('the settings tab that couldn’t load', () => {
     renderKit(<InCard />, { context, responses: responses(settings({ files: [], provider: { name: 'Parent', identifier: 'parent' } })) });
     expect(await screen.findByText('共有元')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Parent' })).toHaveAttribute('href', '/projects/parent');
+    // no templates of its own or shared: the list's empty state
+    expect(within(screen.getByRole('navigation', { name: 'チケットテンプレート' })).getByText('表示するデータがありません')).toBeInTheDocument();
+  });
+
+  it('the templates used from 共有元: read-only rows with the file, tracker and project; no empty state', async () => {
+    renderKit(<InCard />, {
+      context,
+      responses: responses(settings({ files: [], provider: { name: 'Parent', identifier: 'parent' }, shared_files: [{ path: 'store.md', kind: 'markdown', name: 'Store review', tracker: 'Bug' }] })),
+    });
+    expect(await screen.findByText('Store review')).toBeInTheDocument();
+    expect(screen.getByText('store.md · Bug · Parent')).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'チケットテンプレート' })).queryByText('表示するデータがありません')).toBeNull();
   });
 });

@@ -78,6 +78,10 @@ module RedmineKit
         provider = { 'name' => 'eCookbook', 'identifier' => 'ecookbook' }
         assert_equal ['none', %w[none descendants hierarchy tree], provider],
                      data.values_at('sharing', 'sharings', 'provider')
+        # the provider's templates the project uses, read-only (no id: they aren't the project's files)
+        assert_equal [{ 'path' => 'bug.md', 'kind' => 'markdown', 'name' => 'Bug', 'tracker' => nil, 'form' => false }],
+                     data['shared_files']
+        assert_empty data['files']
       end
     end
   end

@@ -28,6 +28,12 @@ module RedmineKit
         assert_select 'select#issue_template_sharing option[selected]', text: 'Not shared'
         assert_select 'p.issue-template-provider label', text: 'Shared from'
         assert_select 'p.issue-template-provider a', text: 'eCookbook'
+        # the provider's templates the project uses, read-only, with their project; no empty state
+        assert_select 'table.issue-template-files.shared tr.shared td.name', text: 'bug.md'
+        assert_select 'table.issue-template-files.shared tr.shared td.description', text: 'Bug'
+        assert_select 'table.issue-template-files.shared td.project a', text: 'eCookbook'
+        assert_select 'table.issue-template-files.shared td.buttons', 0
+        assert_select '#tab-content-issue_templates p.nodata', 0
         get :settings, params: { id: 'ecookbook', tab: 'issue_templates' }
         assert_select 'p.issue-template-provider', 0
         assert_select 'select#issue_template_sharing option[selected]', text: 'With subprojects'

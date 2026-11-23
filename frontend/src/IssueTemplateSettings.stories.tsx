@@ -29,12 +29,17 @@ export const Empty: Story = kitStory({
   },
 });
 
-/** A subproject without templates of its own: 共有元 names the parent whose templates it uses (shared with it). */
+/** A subproject without templates of its own: 共有元 names the parent whose templates it uses (shared with it), and they
+ *  are listed read-only. */
 export const SharedFromParent: Story = kitStory({
   responses: {
     ...fileResponses,
     'GET /projects/:project_id/issue_templates.json': settings({
       files: [], errors: false, sharing: 'none', provider: { name: 'eCookbook', identifier: 'ecookbook' },
+      shared_files: [
+        { path: 'bug.yml', kind: 'form', name: 'Bug report', tracker: 'Bug' },
+        { path: 'question.md', kind: 'markdown', name: 'Question', tracker: null },
+      ],
       chooser: { templates: [], blank: true, contact_links: [] },
     }),
   },

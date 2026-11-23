@@ -98,6 +98,16 @@ export interface SettingsData {
   sharings: string[];
   /** the project whose templates the project uses while it has none of its own (shared with it); null: its own */
   provider: { name: string; identifier: string } | null;
+  /** the provider's templates the project uses while it has none of its own (read-only here), with the tracker each sets
+   *  in the project; [] without a provider */
+  shared_files: SharedFile[];
+}
+
+export interface SharedFile {
+  path: string;
+  kind: 'form' | 'markdown' | '';
+  name: string | null;
+  tracker: string | null;
 }
 
 export interface FileRow {

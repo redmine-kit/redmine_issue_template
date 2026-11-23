@@ -16,6 +16,8 @@ import { DOCS, chooserSettingsPath, filePath, settingsPath, sharingPath, syncPat
 // its tabs: プレビュー (what users see with it, KitPreview, with the new issue form's components), 内容 (the text), and for
 // config.yml 設定 (blank_issues_enabled and contact_links, saved into config.yml). Below 1024px the panes stack.
 // A file's messages are headed エラー / 警告. 設定 explains 空白のチケットを許可 and notes that saving rewrites config.yml.
+// A project without templates of its own lists those it uses from 共有元 read-only (the link mark, their file, tracker and
+// project); the empty state only when it has none at all.
 // The card's header has ヘルプ, インポート (the project's repository; its tip says it reads the folder now) and
 // 新しいテンプレート (CardHeaderActions). A new file and
 // 編集 open the file's form in a drawer (IssueTemplateFileDrawer; its URL is the file's page); 削除 asks first. Templates
@@ -100,8 +102,20 @@ export function IssueTemplateSettings() {
           <SectionHeading heading={t('label_issue_template_source')} inset={24} className="mt-section" />
           <AttrGrid columns={1} className="px-gutter" items={sourceRows(data.source, t).map(({ label, value, href }) => ({ label, value, href }))} />
           <SharingField key={data.sharing} data={data} onSaved={() => { setBand({ tone: 'neutral', text: t('notice_successful_update') }); invalidate(); }} onError={fail} />
-          <SectionHeading heading={t('label_issue_template_plural')} count={templates.length} inset={24} className="mt-section" />
-          {templates.length === 0 && <EmptyState variant="block" text={t('label_no_data')} />}
+          <SectionHeading heading={t('label_issue_template_plural')} count={templates.length + data.shared_files.length} inset={24} className="mt-section" />
+          {templates.length === 0 && data.shared_files.length === 0 && <EmptyState variant="block" text={t('label_no_data')} />}
+          {/* the provider's templates the project uses, read-only: the link mark and their project, as a shared route or
+              version is marked */}
+          {data.provider &&
+            data.shared_files.map((file) => (
+              <ListRow
+                key={`shared-${file.path}`}
+                id={`shared-${file.path}`}
+                icon="link"
+                title={file.name ?? file.path}
+                sub={[file.path, file.tracker, data.provider?.name].filter(Boolean).join(' · ')}
+              />
+            ))}
           {templates.map((file) => (
             <ListRow
               key={file.id}

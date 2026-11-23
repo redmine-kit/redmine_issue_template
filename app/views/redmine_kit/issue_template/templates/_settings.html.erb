@@ -70,6 +70,27 @@
   <% end %>
   </tbody>
 </table>
+<% elsif (shared = tab.shared_files).any? %>
+<%# The provider's templates the project uses, read-only, with the link mark and their project, as the settings' tab
+    Versions shows a shared version. %>
+<table class="list issue-template-files shared">
+  <thead><tr>
+    <th><%= l(:field_filename) %></th>
+    <th><%= l(:field_name) %></th>
+    <th><%= l(:field_tracker) %></th>
+    <th><%= l(:field_project) %></th>
+  </tr></thead>
+  <tbody>
+  <% shared.each do |template| %>
+    <tr class="shared">
+      <td class="name"><span class="icon"><%= sprite_icon('link') %> <%= template.path %></span></td>
+      <td class="description"><%= template.name %></td>
+      <td><%= template.tracker(@project)&.name %></td>
+      <td class="project"><%= link_to_project tab.provider %></td>
+    </tr>
+  <% end %>
+  </tbody>
+</table>
 <% else %>
 <p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>
