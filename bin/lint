@@ -5,7 +5,7 @@
 # No lock is committed; bundle update resolves the gems again on every run.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-RUBY=ruby:4.0@sha256:a69f361db050bb2c65ec66ef75411bfc4ce2e1d993ba1179fac4e4ba6ecfe91f
+RUBY=ruby:4.0@sha256:4de17567bc750e8a509fd2181e5c5eda3137bbb635b046943277c90271e4ec1c
 source bin/container_cli
 "$cli" run --rm -v "$PWD:/work" -w /work -v redmine-kit-issue-template-bundle:/usr/local/bundle \
   -e BUNDLE_GEMFILE=Gemfile.lint "$RUBY" \

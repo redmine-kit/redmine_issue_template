@@ -2,7 +2,7 @@
 # container on the same network.
 services:
   postgres:
-    image: postgres:16@sha256:f9a7b9ebf6f56201f949db745e47bc423c0f0f8294bafe991cc10bf74b029657
+    image: postgres:16.16@sha256:3950ad7c3148ca2175ef1b6c36c9efbf78957ae8fbe8b3a5d7c35af50500382f
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
     healthcheck:
@@ -13,7 +13,7 @@ services:
   # Headless Chromium for the screenshots of the docs (bin/screenshots), only
   # with the "screenshots" profile. Multi-architecture, so it runs on arm64 too.
   chrome:
-    image: selenium/standalone-chromium:155.0-chromedriver-155.0-grid-4.51.0-20261010@sha256:c7c17cd79c62819a8329df00e610dbc4073c279da034a6f37135d454eb0d8870
+    image: selenium/standalone-chromium:156.0-chromedriver-156.0-grid-4.54.0-20261123@sha256:cc12c26af3faada21e60cc813cd9cd5ada30f8ce54dec6f9cc1ee66bf2cc125d
     profiles: ["screenshots"]
     shm_size: 2gb
     healthcheck:

@@ -15,7 +15,7 @@ Gem::Specification.new do |spec|
   spec.license = 'GPL-2.0-or-later'
   spec.homepage = 'https://github.com/redmine-kit/redmine_issue_template'
   # The Ruby versions of Redmine 7.0 (its Gemfile: ruby '>= 3.2.0', '< 4.1.0').
-  spec.required_ruby_version = '>= 3.2'
+  spec.required_ruby_version = ['>= 3.2', '< 4.1']
   spec.files = Dir['{init.rb,LICENSE}', '{app,assets,boot,config,db,help,lib}/**/*']
   # boot/ only: lib/ is the code loader's (Zeitwerk), never required by name.
   spec.require_paths = ['boot']

@@ -9,7 +9,7 @@
 # /extra-gems, a named volume of the plugin (kept between runs).
 # REDMINE_COMMIT=<sha> takes that commit of Redmine's repository instead of the
 # release (Redmine's master branch: REDMINE_BRANCH=master bin/test).
-FROM ruby:4.0@sha256:a69f361db050bb2c65ec66ef75411bfc4ce2e1d993ba1179fac4e4ba6ecfe91f
+FROM ruby:4.0@sha256:4de17567bc750e8a509fd2181e5c5eda3137bbb635b046943277c90271e4ec1c
 # Ghostscript for Redmine's tests that export PDF and PNG.
 RUN apt-get update && apt-get install -y --no-install-recommends ghostscript && rm -rf /var/lib/apt/lists/*
 ARG REDMINE_VERSION=7.0.3

@@ -17,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REGISTRY=https://rubygems.pkg.github.com/redmine-kit
-RUBY=ruby:4.0@sha256:a69f361db050bb2c65ec66ef75411bfc4ce2e1d993ba1179fac4e4ba6ecfe91f
+RUBY=ruby:4.0@sha256:4de17567bc750e8a509fd2181e5c5eda3137bbb635b046943277c90271e4ec1c
 source bin/container_cli
 die() { echo "release: $*" >&2; exit 1; }
 
