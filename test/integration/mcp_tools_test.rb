@@ -76,6 +76,29 @@ module RedmineKit
         end
       end
 
+      # redmine_kit_mcp's Changes by AI clients => the tools offered. Both create_issue tools write directly: only Save
+      # directly offers them. Save as drafts offers Redmine Kit Drafts' draft tools instead, and reads as Read-only
+      # without that plugin (bin/test doesn't install it): the same tools then.
+      {
+        'read_only' => %w[issue_template.list_templates],
+        'drafts' => %w[issue_template.list_templates],
+        'direct' => %w[create_issue issue_template.create_issue issue_template.list_templates]
+      }.each do |changes, offered|
+        test "Changes by AI clients #{changes}: #{offered.join(', ')}" do
+          blank_issues(true)
+          with_mcp_changes(changes) do
+            listed = mcp_list(token: mcp_token(User.find(3), scopes: SCOPES))
+            assert_equal offered, listed & %w[create_issue issue_template.create_issue issue_template.list_templates]
+            next if offered.include?('issue_template.create_issue')
+
+            count = Issue.count
+            answer = call('issue_template.create_issue', { project: 'ecookbook', template: 'idea' })
+            assert answer.error?
+            assert_equal count, Issue.count
+          end
+        end
+      end
+
       # A manager's blank issue needs the scope too, as Redmine's allowed_to? asks a token's scopes.
       { 'with the scope manage_issue_templates' => [SCOPES + %w[manage_issue_templates], true],
         'without it' => [SCOPES, false] }.each do |name, (scopes, saved)|
