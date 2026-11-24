@@ -111,6 +111,10 @@ Where `blank_issues_enabled` is false, MCP's own `create_issue` is refused with 
 as in the browser, unless the user manages the templates and the token has the scope `manage_issue_templates`
 (both tools offer it, as Redmine asks a token's scopes for every permission). Upload fields can't be answered through MCP.
 
+`issue_template.create_issue` writes, as MCP's `create_issue` does: both are offered only while redmine_kit_mcp's
+setting Changes by AI clients is Save directly. With Read-only or Save as drafts, AI clients get
+`issue_template.list_templates` only.
+
 ## Tests
 
 `bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed, then the tests of the MCP tools with redmine_kit_mcp and redmine_kit_ui (the checkouts next to this one, or `REDMINE_KIT_MCP_DIR` and `REDMINE_KIT_UI`; `REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` runs them alone). `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.

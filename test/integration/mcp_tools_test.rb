@@ -39,7 +39,9 @@ module RedmineKit
 
         Setting.rest_api_enabled = '1'
         Setting.host_name = 'www.example.com'
-        Setting.plugin_redmine_kit_mcp = RedmineKit::Mcp::Settings::DEFAULTS.dup
+        # Changes by AI clients: Save directly, so that the writing tools are offered (redmine_kit_mcp's default is
+        # Read-only without Redmine Kit Drafts)
+        Setting.plugin_redmine_kit_mcp = RedmineKit::Mcp::Settings::DEFAULTS.merge('changes' => 'direct')
         @project = enable_issue_templates
         Role.find(2).add_permission!(:add_issues)
       end

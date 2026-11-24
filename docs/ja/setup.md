@@ -126,6 +126,8 @@ bin/rails redmine:plugins:migrate RAILS_ENV=production
 
 `blank_issues_enabled` が false のプロジェクトでは、MCP の `create_issue` も画面と同じく「チケットを作成するには、テンプレートを選択してください。」で拒否します。テンプレートを管理できるユーザーで、トークンにスコープ `manage_issue_templates` がある場合は除きます (Redmine はすべての権限をトークンのスコープでも確認するので、両方のツールがこのスコープを提示します)。アップロードの入力欄には MCP から回答できません。
 
+`issue_template.create_issue` は、MCP の `create_issue` と同じく書き込むツールです。どちらも、redmine_kit_mcp の設定「AI クライアントによる変更」が「直接保存」のときだけ提供します。「読み取り専用」や「下書きとして保存」のときは、AI クライアントが使えるのは `issue_template.list_templates` だけです。
+
 <a id="tests"></a>
 
 ## テスト
