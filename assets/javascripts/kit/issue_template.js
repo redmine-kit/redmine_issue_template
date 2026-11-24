@@ -945,7 +945,8 @@ function IssueTemplateSettings() {
 			open: importing,
 			onOpenChange: setImporting,
 			title: t("button_import"),
-			description: t("text_issue_template_import_replace"),
+			message: t("text_issue_template_import_question"),
+			detail: t("text_issue_template_import_replace"),
 			action: t("button_import"),
 			onConfirm: () => {
 				setImporting(false);
@@ -956,7 +957,7 @@ function IssueTemplateSettings() {
 			open: !!deleting,
 			onOpenChange: (open) => !open && setDeleting(null),
 			title: t("kit.confirm.delete_title", { name: deleting?.path ?? "" }),
-			description: t("text_are_you_sure"),
+			message: t("kit.confirm.delete_question", { name: deleting?.path ?? "" }),
 			action: t("button_delete"),
 			onConfirm: () => {
 				if (deleting) remove(deleting);
@@ -1758,7 +1759,7 @@ function IssueTemplateFile() {
 				open: true,
 				onOpenChange: (open) => !open && setDeleting(false),
 				title: t("kit.confirm.delete_title", { name: file.path }),
-				description: t("text_are_you_sure"),
+				message: t("kit.confirm.delete_question", { name: file.path }),
 				action: t("button_delete"),
 				onConfirm: () => {
 					setDeleting(false);

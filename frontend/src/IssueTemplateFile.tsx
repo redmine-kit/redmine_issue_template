@@ -93,7 +93,7 @@ export function IssueTemplateFile() {
           open
           onOpenChange={(open) => !open && setDeleting(false)}
           title={t('kit.confirm.delete_title', { name: file.path })}
-          description={t('text_are_you_sure')}
+          message={t('kit.confirm.delete_question', { name: file.path })}
           action={t('button_delete')}
           onConfirm={() => {
             setDeleting(false);

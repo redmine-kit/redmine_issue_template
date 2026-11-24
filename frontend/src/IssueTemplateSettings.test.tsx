@@ -93,13 +93,13 @@ describe('the settings tab', () => {
     expect(screen.getByText('保存すると config.yml を作り直します')).toBeInTheDocument();
   });
 
-  it('削除 asks with the same question as the file’s page: 「bug.yml を削除」, よろしいですか？', async () => {
+  it('削除 asks with the same question as the file’s page: 「bug.yml を削除」, 「「bug.yml」を削除しますか？」', async () => {
     const user = userEvent.setup();
     renderKit(<InCard />, { context, responses: responses(settings()) });
     await user.click(await screen.findByRole('button', { name: '削除' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveAccessibleName('bug.yml を削除');
-    expect(within(dialog).getByText('よろしいですか？')).toBeInTheDocument();
+    expect(dialog).toHaveAccessibleDescription('「bug.yml」を削除しますか？');
   });
 });
 
