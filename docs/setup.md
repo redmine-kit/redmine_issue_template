@@ -124,7 +124,7 @@ to answer a form by each field's ref, to leave the values the template sets to i
 
 | Skill | URI | Shown when |
 | --- | --- | --- |
-| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | The token may use `issue_template.list_templates` and `issue_template.create_issue` (Operations allowed to AI clients: Create issues, and the scope `add_issues`), and the user has Add issues in some project |
+| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | The token may use `issue_template.list_templates` and `issue_template.create_issue` (Operations allowed to AI clients: Create issues, and the scope `add_issues`), and the user has Add issues in some project with Issue tracking on |
 
 Its text is `config/mcp_skills/use-issue-templates/SKILL.md`. Without Create issues, clients don't get it.
 

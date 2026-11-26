@@ -112,6 +112,14 @@ module RedmineKit
         assert_mcp_skill_hidden(SKILL, token: mcp_token(User.find(3), scopes: SCOPES - %w[add_issues]))
       end
 
+      # add_issues is Issue tracking's: where that module is off in every project, the skill isn't shown.
+      test 'the skill is hidden from a user who may add issues only where Issue tracking is off' do
+        token = mcp_token(User.find(3), scopes: SCOPES)
+        assert_mcp_skill_served(SKILL, token: token)
+        EnabledModule.where(name: 'issue_tracking').delete_all
+        assert_mcp_skill_hidden(SKILL, token: token)
+      end
+
       test 'the skill is hidden from a user who may add issues in no project, though the token has the scope' do
         Role.find_each { |role| role.remove_permission!(:add_issues) }
         assert_mcp_skill_hidden(SKILL, token: mcp_token(User.find(3), scopes: SCOPES))

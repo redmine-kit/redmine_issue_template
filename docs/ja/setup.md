@@ -136,7 +136,7 @@ redmine_kit_mcp があるとき、このプラグインはスキル (MCP の Ski
 
 | スキル | URI | 表示する条件 |
 | --- | --- | --- |
-| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | トークンで `issue_template.list_templates` と `issue_template.create_issue` を使える (「AI クライアントに許す操作」で「チケットの作成」を許し、スコープ `add_issues` がある)。ユーザーがいずれかのプロジェクトで「チケットの追加」を持つ |
+| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | トークンで `issue_template.list_templates` と `issue_template.create_issue` を使える (「AI クライアントに許す操作」で「チケットの作成」を許し、スコープ `add_issues` がある)。ユーザーが、モジュール「チケットトラッキング」が有効ないずれかのプロジェクトで「チケットの追加」を持つ |
 
 本文は `config/mcp_skills/use-issue-templates/SKILL.md` です。「チケットの作成」を許していないときは、クライアントに提供しません。
 
