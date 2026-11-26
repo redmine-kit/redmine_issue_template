@@ -128,11 +128,23 @@ bin/rails redmine:plugins:migrate RAILS_ENV=production
 
 `issue_template.create_issue` は、MCP の `create_issue` と同じく書き込むツールです。どちらも、redmine_kit_mcp の設定「AI クライアントによる変更」が「直接保存」のときだけ提供します。「読み取り専用」や「下書きとして保存」のときは、AI クライアントが使えるのは `issue_template.list_templates` だけです。
 
+<a id="skill"></a>
+
+### スキル
+
+redmine_kit_mcp があるとき、このプラグインはスキル (MCP の Skills 拡張: redmine_kit_mcp の[スキル](https://github.com/redmine-kit/redmine_kit_mcp/blob/main/README.ja.md#skills)) も登録します。スキルは、先にテンプレートの一覧を読むこと、フォームに入力欄の ref ごとに回答すること、テンプレートが設定する値はテンプレートに任せること、`issue_template.create_issue` でチケットを作成することをクライアントに指示します。
+
+| スキル | URI | 表示する条件 |
+| --- | --- | --- |
+| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | トークンで `issue_template.list_templates` と `issue_template.create_issue` を使える (「AI クライアントによる変更」が「直接保存」で、スコープ `add_issues` がある)。ユーザーがいずれかのプロジェクトで「チケットの追加」を持つ |
+
+本文は `config/mcp_skills/use-issue-templates/SKILL.md` です。「読み取り専用」や「下書きとして保存」のときは、クライアントに提供しません。
+
 <a id="tests"></a>
 
 ## テスト
 
-`bin/test` は、コンテナ ([Apple container](https://github.com/apple/container) がインストールされて動いていればそれ、なければ Docker。`CONTAINER_CLI=container` または `CONTAINER_CLI=docker` で選べます) の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行し、最後に redmine_kit_mcp と redmine_kit_ui (このリポジトリの隣のチェックアウト。`REDMINE_KIT_MCP_DIR` と `REDMINE_KIT_UI` で変更できます) を入れて MCP のツールのテストを実行します。`REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` はこれだけを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
+`bin/test` は、コンテナ ([Apple container](https://github.com/apple/container) がインストールされて動いていればそれ、なければ Docker。`CONTAINER_CLI=container` または `CONTAINER_CLI=docker` で選べます) の中の Redmine 7.0.3 と PostgreSQL 16 で、プラグインのテストを実行します。続けて、プラグインをインストールした状態で、Redmine のチケットの入力画面、プロジェクトの設定、Git リポジトリのテストを実行し、最後に redmine_kit_mcp と redmine_kit_ui (このリポジトリの隣のチェックアウト。`REDMINE_KIT_MCP_DIR` と `REDMINE_KIT_UI` で変更できます) を入れて MCP のツールとスキルのテストを実行します。`REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` はこれだけを実行します。`bin/test --redmine` は、Redmine のすべてのテストを実行します。GitHub のドキュメントの例は `test/fixtures/github/` にあり、そのままの形でテストします。
 
 実行は、終わったときに (テストの成功、失敗、中断のいずれでも)、自分が起動したサービスのコンテナを停止します (削除はしません)。実行の前から動いていたコンテナと、このリポジトリの別の実行がまだ使っているコンテナは、そのまま動かしておきます。`KEEP_SERVICES=1` を指定すると、実行の後も動かしたままにします。
 

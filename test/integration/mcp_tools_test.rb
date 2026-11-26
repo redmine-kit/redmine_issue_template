@@ -99,6 +99,36 @@ module RedmineKit
         end
       end
 
+      SKILL = 'skill://plugins/issue_template/use-issue-templates/SKILL.md'
+
+      test 'the skill use-issue-templates as registered: its tools exist, its SKILL.md is valid' do
+        assert_mcp_skill_contract('issue_template.use-issue-templates')
+      end
+
+      # Changes by AI clients => the skill: shown where both of its tools are offered, Save directly only.
+      { 'read_only' => false, 'drafts' => false, 'direct' => true }.each do |changes, served|
+        test "Changes by AI clients #{changes}: the skill is #{served ? 'served' : 'hidden'}" do
+          with_mcp_changes(changes) do
+            token = mcp_token(User.find(3), scopes: SCOPES)
+            if served
+              skill = assert_mcp_skill_served(SKILL, token: token)
+              assert_equal 'use-issue-templates', skill.frontmatter['name']
+            else
+              assert_mcp_skill_hidden(SKILL, token: token)
+            end
+          end
+        end
+      end
+
+      test 'the skill is hidden from a token without the scope add_issues' do
+        assert_mcp_skill_hidden(SKILL, token: mcp_token(User.find(3), scopes: SCOPES - %w[add_issues]))
+      end
+
+      test 'the skill is hidden from a user who may add issues in no project, though the token has the scope' do
+        Role.find_each { |role| role.remove_permission!(:add_issues) }
+        assert_mcp_skill_hidden(SKILL, token: mcp_token(User.find(3), scopes: SCOPES))
+      end
+
       # A manager's blank issue needs the scope too, as Redmine's allowed_to? asks a token's scopes.
       { 'with the scope manage_issue_templates' => [SCOPES + %w[manage_issue_templates], true],
         'without it' => [SCOPES, false] }.each do |name, (scopes, saved)|

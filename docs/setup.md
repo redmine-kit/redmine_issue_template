@@ -115,9 +115,22 @@ as in the browser, unless the user manages the templates and the token has the s
 setting Changes by AI clients is Save directly. With Read-only or Save as drafts, AI clients get
 `issue_template.list_templates` only.
 
+### Skill
+
+With redmine_kit_mcp, the plugin also registers a skill (MCP's Skills extension: redmine_kit_mcp's
+[Skills](https://github.com/redmine-kit/redmine_kit_mcp#skills)), which tells the client to list the templates first,
+to answer a form by each field's ref, to leave the values the template sets to it, and to create the issue with
+`issue_template.create_issue`:
+
+| Skill | URI | Shown when |
+| --- | --- | --- |
+| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | The token may use `issue_template.list_templates` and `issue_template.create_issue` (Changes by AI clients: Save directly, and the scope `add_issues`), and the user has Add issues in some project |
+
+Its text is `config/mcp_skills/use-issue-templates/SKILL.md`. With Read-only or Save as drafts, clients don't get it.
+
 ## Tests
 
-`bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed, then the tests of the MCP tools with redmine_kit_mcp and redmine_kit_ui (the checkouts next to this one, or `REDMINE_KIT_MCP_DIR` and `REDMINE_KIT_UI`; `REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` runs them alone). `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
+`bin/test` runs the plugin's tests in Redmine 7.0.3 on PostgreSQL 16 in a container ([Apple container](https://github.com/apple/container) when it is installed and running, else Docker; `CONTAINER_CLI=container` or `CONTAINER_CLI=docker` chooses), then Redmine's tests of the issue form, the project settings and the Git repository with the plugin installed, then the tests of the MCP tools and skill with redmine_kit_mcp and redmine_kit_ui (the checkouts next to this one, or `REDMINE_KIT_MCP_DIR` and `REDMINE_KIT_UI`; `REDMINE_KIT_MCP=1 bin/test test/integration/mcp_tools_test.rb` runs them alone). `bin/test --redmine` runs every Redmine test. The examples of GitHub's documentation are in `test/fixtures/github/` and are tested as they are.
 
 A run stops the service containers it started (it doesn't remove them) when it ends, whether the tests pass, fail or are interrupted. Containers that were running before the run, or that another run of this repository still uses, are left running. `KEEP_SERVICES=1` keeps them running after the run.
 

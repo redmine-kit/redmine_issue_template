@@ -17,10 +17,24 @@ module RedmineKit
 
       module_function
 
+      # The skill that tells a client how to use the two tools (README.md, "MCP"): shown where both are offered
+      # (Changes by AI clients: Save directly, and their scopes) to a user who may add issues in some project.
+      SKILL = 'use-issue-templates'
+
       # Called in ActiveSupport.on_load(:redmine_kit_mcp), with RedmineKit::Mcp.
       def register(mcp)
         register_list(mcp)
         register_create(mcp)
+        register_skill(mcp)
+      end
+
+      # Its folder is config/mcp_skills/<name> of the plugin's directory as Redmine found it (plugins/<id> or the
+      # gem's: init.rb).
+      def register_skill(mcp)
+        directory = File.join(Redmine::Plugin.find(:redmine_kit_issue_template).directory, 'config/mcp_skills', SKILL)
+        mcp.register_skill("issue_template.#{SKILL}",
+                           directory: directory, permission: :add_issues,
+                           tools: %w[issue_template.list_templates issue_template.create_issue])
       end
 
       def register_list(mcp)
