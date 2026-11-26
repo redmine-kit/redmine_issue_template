@@ -39,9 +39,9 @@ module RedmineKit
 
         Setting.rest_api_enabled = '1'
         Setting.host_name = 'www.example.com'
-        # Changes by AI clients: Save directly, so that the writing tools are offered (redmine_kit_mcp's default is
-        # Read-only without Redmine Kit Drafts)
-        Setting.plugin_redmine_kit_mcp = RedmineKit::Mcp::Settings::DEFAULTS.merge('changes' => 'direct')
+        # Operations allowed to AI clients: Create issues, so that both create_issue tools are offered (off by default)
+        create = RedmineKit::Mcp::OperationRegistry.find(:create_issues).setting
+        Setting.plugin_redmine_kit_mcp = RedmineKit::Mcp::Settings::DEFAULTS.merge(create => '1')
         @project = enable_issue_templates
         Role.find(2).add_permission!(:add_issues)
       end
@@ -76,47 +76,35 @@ module RedmineKit
         end
       end
 
-      # redmine_kit_mcp's Changes by AI clients => the tools offered. Both create_issue tools write directly: only Save
-      # directly offers them. Save as drafts offers Redmine Kit Drafts' draft tools instead, and reads as Read-only
-      # without that plugin (bin/test doesn't install it): the same tools then.
-      {
-        'read_only' => %w[issue_template.list_templates],
-        'drafts' => %w[issue_template.list_templates],
-        'direct' => %w[create_issue issue_template.create_issue issue_template.list_templates]
-      }.each do |changes, offered|
-        test "Changes by AI clients #{changes}: #{offered.join(', ')}" do
-          blank_issues(true)
-          with_mcp_changes(changes) do
-            listed = mcp_list(token: mcp_token(User.find(3), scopes: SCOPES))
-            assert_equal offered, listed & %w[create_issue issue_template.create_issue issue_template.list_templates]
-            next if offered.include?('issue_template.create_issue')
-
-            count = Issue.count
-            answer = call('issue_template.create_issue', { project: 'ecookbook', template: 'idea' })
-            assert answer.error?
-            assert_equal count, Issue.count
-          end
-        end
-      end
-
+      # redmine_kit_mcp's operations AI clients may do => the tools and the skill. Both create_issue tools are the
+      # operation Create issues: without it the clients get list_templates only, and not the skill, which needs both
+      # of the plugin's tools. (Save drafts is Redmine Kit Drafts' operation, which this run doesn't install.)
       SKILL = 'skill://plugins/issue_template/use-issue-templates/SKILL.md'
+      CREATING = %w[create_issue issue_template.create_issue issue_template.list_templates].freeze
 
       test 'the skill use-issue-templates as registered: its tools exist, its SKILL.md is valid' do
         assert_mcp_skill_contract('issue_template.use-issue-templates')
       end
 
-      # Changes by AI clients => the skill: shown where both of its tools are offered, Save directly only.
-      { 'read_only' => false, 'drafts' => false, 'direct' => true }.each do |changes, served|
-        test "Changes by AI clients #{changes}: the skill is #{served ? 'served' : 'hidden'}" do
-          with_mcp_changes(changes) do
+      {
+        'Create issues' => [%i[create_issues], CREATING],
+        'Read-only' => [nil, %w[issue_template.list_templates]]
+      }.each do |name, (operations, offered)|
+        test "#{name}: #{offered.join(', ')}, the skill #{offered.size > 1 ? 'served' : 'hidden'}" do
+          blank_issues(true)
+          check = lambda do
             token = mcp_token(User.find(3), scopes: SCOPES)
-            if served
-              skill = assert_mcp_skill_served(SKILL, token: token)
-              assert_equal 'use-issue-templates', skill.frontmatter['name']
+            assert_equal offered, mcp_list(token: token) & CREATING
+            if offered.include?('issue_template.create_issue')
+              assert_equal 'use-issue-templates', assert_mcp_skill_served(SKILL, token: token).frontmatter['name']
             else
               assert_mcp_skill_hidden(SKILL, token: token)
+              count = Issue.count
+              assert call('issue_template.create_issue', { project: 'ecookbook', template: 'idea' }).error?
+              assert_equal count, Issue.count
             end
           end
+          operations ? with_mcp_operations(*operations, &check) : with_mcp_read_only(&check)
         end
       end
 

@@ -111,9 +111,9 @@ Where `blank_issues_enabled` is false, MCP's own `create_issue` is refused with 
 as in the browser, unless the user manages the templates and the token has the scope `manage_issue_templates`
 (both tools offer it, as Redmine asks a token's scopes for every permission). Upload fields can't be answered through MCP.
 
-`issue_template.create_issue` writes, as MCP's `create_issue` does: both are offered only while redmine_kit_mcp's
-setting Changes by AI clients is Save directly. With Read-only or Save as drafts, AI clients get
-`issue_template.list_templates` only.
+`issue_template.create_issue` writes, as MCP's `create_issue` does: both are the operation Create issues of
+redmine_kit_mcp's setting Operations allowed to AI clients, and are offered only while it is allowed. Without it, AI
+clients get `issue_template.list_templates` only.
 
 ### Skill
 
@@ -124,9 +124,9 @@ to answer a form by each field's ref, to leave the values the template sets to i
 
 | Skill | URI | Shown when |
 | --- | --- | --- |
-| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | The token may use `issue_template.list_templates` and `issue_template.create_issue` (Changes by AI clients: Save directly, and the scope `add_issues`), and the user has Add issues in some project |
+| `issue_template.use-issue-templates` | `skill://plugins/issue_template/use-issue-templates/SKILL.md` | The token may use `issue_template.list_templates` and `issue_template.create_issue` (Operations allowed to AI clients: Create issues, and the scope `add_issues`), and the user has Add issues in some project |
 
-Its text is `config/mcp_skills/use-issue-templates/SKILL.md`. With Read-only or Save as drafts, clients don't get it.
+Its text is `config/mcp_skills/use-issue-templates/SKILL.md`. Without Create issues, clients don't get it.
 
 ## Tests
 

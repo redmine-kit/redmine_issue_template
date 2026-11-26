@@ -17,8 +17,8 @@ module RedmineKit
 
       module_function
 
-      # The skill that tells a client how to use the two tools (README.md, "MCP"): shown where both are offered
-      # (Changes by AI clients: Save directly, and their scopes) to a user who may add issues in some project.
+      # The skill that tells a client how to use the two tools (docs/setup.md, "MCP"): shown where both are offered
+      # (the operation Create issues allowed, and their scopes) to a user who may add issues in some project.
       SKILL = 'use-issue-templates'
 
       # Called in ActiveSupport.on_load(:redmine_kit_mcp), with RedmineKit::Mcp.
@@ -61,7 +61,8 @@ module RedmineKit
                                  answers: { type: 'object', additionalProperties: ANSWER,
                                             description: "A form's answers by field ref" } }.merge(attributes),
                    required: %w[project template], additionalProperties: false },
-          permission: :add_issues, optional_permissions: MANAGE, read_only: false, destructive: false
+          permission: :add_issues, optional_permissions: MANAGE, read_only: false, destructive: false,
+          operation: :create_issues
         ) { |call| create(call) }
       end
 
